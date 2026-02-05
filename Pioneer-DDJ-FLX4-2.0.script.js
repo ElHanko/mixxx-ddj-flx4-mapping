@@ -252,39 +252,41 @@ PioneerDDJFLX4.toggleLight = function(midiIn, active) {
 // - short press: move focus between tree/tracklist (Forward/Backward depending on which MIDI note)
 //
 
-PioneerDDJFLX4.browseLongPressTimer = -1;
-PioneerDDJFLX4.browseLongPressFired = false;
+PioneerDDJFLX4._browseLP = {
+    timer: { 0x41: -1, 0x42: -1 },
+    fired: { 0x41: false, 0x42: false },
+};
 PioneerDDJFLX4.BROWSE_LONGPRESS_MS = 300;
 
 PioneerDDJFLX4.browsePress = function(_channel, control, value, _status, _group) {
     const THRESH = PioneerDDJFLX4.BROWSE_LONGPRESS_MS;
 
-    if (value) { // key down
-        if (PioneerDDJFLX4.browseLongPressTimer !== -1) {
-            try { engine.stopTimer(PioneerDDJFLX4.browseLongPressTimer); } catch (e) {}
-            PioneerDDJFLX4.browseLongPressTimer = -1;
-        }
-        PioneerDDJFLX4.browseLongPressFired = false;
+    if (control !== 0x41 && control !== 0x42) return;
 
-        PioneerDDJFLX4.browseLongPressTimer = engine.beginTimer(THRESH, function() {
-            PioneerDDJFLX4.browseLongPressFired = true;
-            PioneerDDJFLX4.browseLongPressTimer = -1;
-            // expand/open folder in tree view
+    if (value) { // down
+        const t = PioneerDDJFLX4._browseLP.timer[control];
+        if (t !== -1) {
+            try { engine.stopTimer(t); } catch (e) {}
+        }
+        PioneerDDJFLX4._browseLP.fired[control] = false;
+
+        PioneerDDJFLX4._browseLP.timer[control] = engine.beginTimer(THRESH, function() {
+            PioneerDDJFLX4._browseLP.fired[control] = true;
+            PioneerDDJFLX4._browseLP.timer[control] = -1;
             script.triggerControl("[Library]", "MoveRight");
         }, true);
 
         return;
     }
 
-    // key up
-    if (PioneerDDJFLX4.browseLongPressTimer !== -1) {
-        try { engine.stopTimer(PioneerDDJFLX4.browseLongPressTimer); } catch (e) {}
-        PioneerDDJFLX4.browseLongPressTimer = -1;
+    // up
+    const t = PioneerDDJFLX4._browseLP.timer[control];
+    if (t !== -1) {
+        try { engine.stopTimer(t); } catch (e) {}
+        PioneerDDJFLX4._browseLP.timer[control] = -1;
     }
 
-    if (!PioneerDDJFLX4.browseLongPressFired) {
-        // short press -> keep your existing semantics:
-        // 0x41 = MoveFocusForward, 0x42 = MoveFocusBackward
+    if (!PioneerDDJFLX4._browseLP.fired[control]) {
         script.triggerControl("[Library]", control === 0x42 ? "MoveFocusBackward" : "MoveFocusForward");
     }
 };
