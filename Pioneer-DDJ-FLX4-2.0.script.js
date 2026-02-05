@@ -247,6 +247,49 @@ PioneerDDJFLX4.toggleLight = function(midiIn, active) {
 };
 
 //
+// Library / Browser: BROWSE short/long press
+// - long press: expand folder/tree (MoveRight)
+// - short press: move focus between tree/tracklist (Forward/Backward depending on which MIDI note)
+//
+
+PioneerDDJFLX4.browseLongPressTimer = -1;
+PioneerDDJFLX4.browseLongPressFired = false;
+PioneerDDJFLX4.BROWSE_LONGPRESS_MS = 300;
+
+PioneerDDJFLX4.browsePress = function(_channel, control, value, _status, _group) {
+    const THRESH = PioneerDDJFLX4.BROWSE_LONGPRESS_MS;
+
+    if (value) { // key down
+        if (PioneerDDJFLX4.browseLongPressTimer !== -1) {
+            try { engine.stopTimer(PioneerDDJFLX4.browseLongPressTimer); } catch (e) {}
+            PioneerDDJFLX4.browseLongPressTimer = -1;
+        }
+        PioneerDDJFLX4.browseLongPressFired = false;
+
+        PioneerDDJFLX4.browseLongPressTimer = engine.beginTimer(THRESH, function() {
+            PioneerDDJFLX4.browseLongPressFired = true;
+            PioneerDDJFLX4.browseLongPressTimer = -1;
+            // expand/open folder in tree view
+            script.triggerControl("[Library]", "MoveRight");
+        }, true);
+
+        return;
+    }
+
+    // key up
+    if (PioneerDDJFLX4.browseLongPressTimer !== -1) {
+        try { engine.stopTimer(PioneerDDJFLX4.browseLongPressTimer); } catch (e) {}
+        PioneerDDJFLX4.browseLongPressTimer = -1;
+    }
+
+    if (!PioneerDDJFLX4.browseLongPressFired) {
+        // short press -> keep your existing semantics:
+        // 0x41 = MoveFocusForward, 0x42 = MoveFocusBackward
+        script.triggerControl("[Library]", control === 0x42 ? "MoveFocusBackward" : "MoveFocusForward");
+    }
+};
+
+//
 // Init
 //
 
