@@ -963,7 +963,28 @@
                     <fourteen-bit-lsb/>
                 </options>
             </control>
+<!-- SMART CFX -->
+<control>
+    <description>SMART CFX - press - toggle Smart CFX mode</description>
+    <group>[App]</group>
+    <key>PioneerDDJFLX4.smartCfxPress</key>
+    <status>0x96</status>
+    <midino>0x00</midino>
+    <options>
+        <Script-Binding/>
+    </options>
+</control>
 
+<control>
+    <description>SMART CFX +SHIFT - press - cycle Smart CFX preset</description>
+    <group>[App]</group>
+    <key>PioneerDDJFLX4.smartCfxPress</key>
+    <status>0x96</status>
+    <midino>0x08</midino>
+    <options>
+        <Script-Binding/>
+    </options>
+</control>
             <!-- BEAT FX SECTION START -->
 
             <control>

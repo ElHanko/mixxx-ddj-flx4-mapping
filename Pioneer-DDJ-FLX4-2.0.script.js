@@ -494,7 +494,32 @@ PioneerDDJFLX4.beatFxChannel2 = function(_channel, control, value, _status, grou
 
     engine.setValue(group, "group_[Channel2]_enable", enableChannel);
 };
+// --- SMART CFX (Version A: universal) ---
+PioneerDDJFLX4._smartCfx = { enabled: false };
 
+PioneerDDJFLX4._qfxGroup = function(ch) {
+    return `[QuickEffectRack1_[Channel${ch}]]`;
+};
+
+PioneerDDJFLX4.smartCfxPress = function(_ch, control, value, _status, _group) {
+    if (value !== 0x7F) return; // only on press
+
+    const isShiftVariant = (control === 0x08); // SHIFT+SMART CFX note
+    const g1 = PioneerDDJFLX4._qfxGroup(1);
+    const g2 = PioneerDDJFLX4._qfxGroup(2);
+
+    if (isShiftVariant) {
+        // Cycle chain preset
+        engine.setValue(g1, "next_chain_preset", 1);
+        engine.setValue(g2, "next_chain_preset", 1);
+        return;
+    }
+
+    // Toggle Smart CFX mode => toggle QuickEffectRack enabled
+    PioneerDDJFLX4._smartCfx.enabled = !PioneerDDJFLX4._smartCfx.enabled;
+    engine.setValue(g1, "enabled", PioneerDDJFLX4._smartCfx.enabled ? 1 : 0);
+    engine.setValue(g2, "enabled", PioneerDDJFLX4._smartCfx.enabled ? 1 : 0);
+};
 //
 // Loop IN/OUT ADJUST
 //
