@@ -267,7 +267,7 @@ PioneerDDJFLX4.browsePress = function(_channel, control, value, _status, _group)
 
     if (control !== 0x41 && control !== 0x42) return;
 
-    if (value) { // down
+    if (value === 0x7F) { // down
         const t = PioneerDDJFLX4._browseLP.timer[control];
         if (t !== -1) {
             try { engine.stopTimer(t); } catch (e) {}
@@ -282,6 +282,7 @@ PioneerDDJFLX4.browsePress = function(_channel, control, value, _status, _group)
 
         return;
     }
+    if (value !== 0x00) return; // ignore any weird intermediate values
 
     // up
     const t = PioneerDDJFLX4._browseLP.timer[control];
@@ -336,10 +337,15 @@ PioneerDDJFLX4.init = function() {
     engine.makeConnection("[Channel1]", "loop_enabled", PioneerDDJFLX4.loopToggle);
     engine.makeConnection("[Channel2]", "loop_enabled", PioneerDDJFLX4.loopToggle);
 
-    for (i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 3; i++) {
         engine.makeConnection("[EffectRack1_EffectUnit1_Effect" + i +"]", "enabled", PioneerDDJFLX4.toggleFxLight);
     }
     engine.makeConnection("[EffectRack1_EffectUnit1]", "focused_effect", PioneerDDJFLX4.toggleFxLight);
+
+    // Smart CFX LED sync
+    engine.makeConnection(PioneerDDJFLX4._qfxGroup(1), "enabled", PioneerDDJFLX4.smartCfxLedFromEngine);
+    engine.makeConnection(PioneerDDJFLX4._qfxGroup(2), "enabled", PioneerDDJFLX4.smartCfxLedFromEngine);
+    PioneerDDJFLX4.smartCfxLedFromEngine(0, "", "");
 
     // Register callbacks for each deck, when a file is loaded and the number of stems is available
     engine.makeConnection("[Channel1]", "stem_count", PioneerDDJFLX4.stemCountChanged);
@@ -361,7 +367,7 @@ PioneerDDJFLX4.init = function() {
     engine.makeConnection("[Channel1]", "pitch_adjust", PioneerDDJFLX4.pitchAdjusted);
     engine.makeConnection("[Channel2]", "pitch_adjust", PioneerDDJFLX4.pitchAdjusted);
 
-    PioneerDDJFLX4.keepAliveTimer = engine.beginTimer(200, PioneerDDJFLX4.sendKeepAlive);
+    PioneerDDJFLX4.keepAliveTimer = engine.beginTimer(500, PioneerDDJFLX4.sendKeepAlive);
 
     // query the controller for current control positions on startup
     PioneerDDJFLX4.sendKeepAlive(); // the query seems to double as a keep alive message
@@ -505,6 +511,15 @@ PioneerDDJFLX4._qfxGroup = function(ch) {
     return `[QuickEffectRack1_[Channel${ch}]]`;
 };
 
+// Keep SMART CFX LED in sync with Mixxx state (and on startup)
+PioneerDDJFLX4.smartCfxLedFromEngine = function(_value, _group, _control) {
+    const e1 = engine.getValue(PioneerDDJFLX4._qfxGroup(1), "enabled");
+    const e2 = engine.getValue(PioneerDDJFLX4._qfxGroup(2), "enabled");
+    const on = (e1 > 0.5) || (e2 > 0.5);
+    PioneerDDJFLX4._smartCfx.enabled = on;
+    PioneerDDJFLX4.setLed(0x96, 0x00, on);
+};
+
 PioneerDDJFLX4.smartCfxPress = function(_ch, control, value, _status, _group) {
     if (value !== 0x7F) return; // only on press
 
@@ -533,7 +548,7 @@ PioneerDDJFLX4.smartCfxPress = function(_ch, control, value, _status, _group) {
 //
 
 PioneerDDJFLX4.toggleLoopAdjustIn = function(channel, _control, value, _status, group) {
-    if (value === 0 || engine.getValue(group, "loop_enabled" === 0)) {
+    if (value === 0 || engine.getValue(group, "loop_enabled") === 0) {
         return;
     }
     PioneerDDJFLX4.loopAdjustIn[channel] = !PioneerDDJFLX4.loopAdjustIn[channel];
@@ -541,7 +556,7 @@ PioneerDDJFLX4.toggleLoopAdjustIn = function(channel, _control, value, _status, 
 };
 
 PioneerDDJFLX4.toggleLoopAdjustOut = function(channel, _control, value, _status, group) {
-    if (value === 0 || engine.getValue(group, "loop_enabled" === 0)) {
+    if (value === 0 || engine.getValue(group, "loop_enabled") === 0) {
         return;
     }
     PioneerDDJFLX4.loopAdjustOut[channel] = !PioneerDDJFLX4.loopAdjustOut[channel];
