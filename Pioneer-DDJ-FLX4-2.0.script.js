@@ -166,6 +166,10 @@ PioneerDDJFLX4.lights = {
         },
     },
 };
+// LED Helper
+PioneerDDJFLX4.setLed = function(status, note, on) {
+    midi.sendShortMsg(status, note, on ? 0x7F : 0x00);
+};
 
 // Store timer IDs
 PioneerDDJFLX4.timers = {};
@@ -517,8 +521,12 @@ PioneerDDJFLX4.smartCfxPress = function(_ch, control, value, _status, _group) {
 
     // Toggle Smart CFX mode => toggle QuickEffectRack enabled
     PioneerDDJFLX4._smartCfx.enabled = !PioneerDDJFLX4._smartCfx.enabled;
+
     engine.setValue(g1, "enabled", PioneerDDJFLX4._smartCfx.enabled ? 1 : 0);
     engine.setValue(g2, "enabled", PioneerDDJFLX4._smartCfx.enabled ? 1 : 0);
+
+    // LED feedback (SMART CFX button)
+    PioneerDDJFLX4.setLed(0x96, 0x00, PioneerDDJFLX4._smartCfx.enabled);
 };
 //
 // Loop IN/OUT ADJUST
