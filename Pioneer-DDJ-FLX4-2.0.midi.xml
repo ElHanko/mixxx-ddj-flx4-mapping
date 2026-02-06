@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <MixxxControllerPreset schemaVersion="1" mixxxVersion="2.6">
     <info>
-        <name>Pioneer DDJ-FLX4</name>
-        <author>Robert904</author>
-        <description>Controller Midi Mapping for the Pioneer DDJ-FLX4 (based on DDJ-400 mapping)</description>
-        <manual>pioneer_ddj_FLX4</manual>
-        <forums>https://mixxx.discourse.group/t/pioneer-ddj-flx4</forums>
+        <name>Pioneer DDJ-FLX4 (Custom)</name>
+        <author>Robert904, ElHanko</author>
+        <description>
+            Community-maintained custom Mixxx MIDI mapping for the Pioneer DDJ-FLX4.
+            Not an official Pioneer or Mixxx default mapping.
+            Focused on predictable behavior, consistent LED feedback
+            and a Pioneer-like workflow without automation gimmicks.
+        </description>
+        <manual><manual>
+        <forums></forums>
     </info>
     <controller id="DDJ-FLX4">
         <scriptfiles>
