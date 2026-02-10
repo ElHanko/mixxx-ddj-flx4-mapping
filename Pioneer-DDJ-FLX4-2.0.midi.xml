@@ -14,7 +14,7 @@
     </info>
     <controller id="DDJ-FLX4">
         <scriptfiles>
-            <file functionprefix="PioneerDDJFLX4" filename="Pioneer-DDJ-FLX4-script.js"/>
+            <file functionprefix="PioneerDDJFLX4" filename="Pioneer-DDJ-FLX4-2.0.script.js"/>
         </scriptfiles>
         <controls>
             <!--
@@ -990,127 +990,135 @@
         <Script-Binding/>
     </options>
 </control>
-            <!-- BEAT FX SECTION START -->
+<!-- BEAT FX SECTION START -->
 
-            <control>
-              <description>BEAT FX SELECT - press once - select next effect</description>
-                <group>[EffectRack1_EffectUnit1]</group>
-                <key>PioneerDDJFLX4.beatFxSelectPressed</key>
-                <status>0x94</status>
-                <midino>0x63</midino>
-                <options>
-                    <Script-Binding/>
-                </options>
-            </control>
-            <control>
-              <description>BEAT FX SELECT + shift - press once - select previous effect</description>
-                <group>[EffectRack1_EffectUnit1]</group>
-                <key>PioneerDDJFLX4.beatFxSelectShiftPressed</key>
-                <status>0x94</status>
-                <midino>0x64</midino>
-                <options>
-                    <Script-Binding/>
-                </options>
-            </control>
+<control>
+    <description>BEAT FX SELECT - press once - (reserved / currently unused)</description>
+    <group>[EffectRack1_EffectUnit1]</group>
+    <key>PioneerDDJFLX4.beatFxSelectPressed</key>
+    <status>0x94</status>
+    <midino>0x63</midino>
+    <options>
+        <Script-Binding/>
+    </options>
+</control>
 
-            <control>
-                <description>BEAT LEFT - press - select previous effect unit</description>
-                <group>[EffectRack1_EffectUnit1]</group>
-                <key>PioneerDDJFLX4.beatFxLeftPressed</key>
-                <status>0x94</status>
-                <midino>0x4A</midino>
-                <options>
-                    <Script-Binding/>
-                </options>
-            </control>
+<control>
+    <description>BEAT FX SELECT +SHIFT - press once - (reserved / currently unused)</description>
+    <group>[EffectRack1_EffectUnit1]</group>
+    <key>PioneerDDJFLX4.beatFxSelectShiftPressed</key>
+    <status>0x94</status>
+    <midino>0x64</midino>
+    <options>
+        <Script-Binding/>
+    </options>
+</control>
 
-            <control>
-                <description>BEAT RIGHT - press - select next effect unit</description>
-                <group>[EffectRack1_EffectUnit1]</group>
-                <key>PioneerDDJFLX4.beatFxRightPressed</key>
-                <status>0x94</status>
-                <midino>0x4B</midino>
-                <options>
-                    <Script-Binding/>
-                </options>
-            </control>
+<control>
+    <description>BEAT LEFT - press - cycle chain preset backwards (applies to selected BeatFX target(s))</description>
+    <group>[EffectRack1_EffectUnit1]</group>
+    <key>PioneerDDJFLX4.beatFxLeftPressed</key>
+    <status>0x94</status>
+    <midino>0x4A</midino>
+    <options>
+        <Script-Binding/>
+    </options>
+</control>
 
-            <!-- Beat Fx channel selector -->
-            <control>
-                <description>BEAT FX CH SELECT CH1 - slide - Select FX on DECK 1</description>
-                <group>[EffectRack1_EffectUnit1]</group>
-                <key>PioneerDDJFLX4.beatFxChannel1</key>
-                <status>0x94</status>
-                <midino>0x10</midino>
-                <options>
-                    <Script-Binding/>
-                </options>
-            </control>
-            <control>
-                <description>BEAT FX CH SELECT CH2 - slide - Select FX on DECK 2</description>
-                <group>[EffectRack1_EffectUnit1]</group>
-                <key>PioneerDDJFLX4.beatFxChannel2</key>
-                <status>0x95</status>
-                <midino>0x11</midino>
-                <options>
-                    <Script-Binding/>
-                </options>
-            </control>
+<control>
+    <description>BEAT RIGHT - press - cycle chain preset forward (applies to selected BeatFX target(s))</description>
+    <group>[EffectRack1_EffectUnit1]</group>
+    <key>PioneerDDJFLX4.beatFxRightPressed</key>
+    <status>0x94</status>
+    <midino>0x4B</midino>
+    <options>
+        <Script-Binding/>
+    </options>
+</control>
 
-            <control>
-                <description>BEAT FX LEVEL/DEPTH - rotate (MSB) - Adjust FX Level (mix) and BEAT FX Depth (meta) in the
-                    selected slot
-                </description>
-                <group>[EffectRack1_EffectUnit1]</group>
-                <key>PioneerDDJFLX4.beatFxLevelDepthRotate</key>
-                <status>0xB4</status>
-                <midino>0x02</midino>
-                <options>
-                    <Script-Binding/>
-                </options>
-            </control>
+<!-- Beat Fx channel selector:
+     CH1  -> apply BeatFX to Deck 1 via FX1 (EffectUnit1)
+     CH2  -> apply BeatFX to Deck 2 via FX2 (EffectUnit2)
+     1&2  -> apply both (Deck1->FX1, Deck2->FX2)
+-->
+<control>
+    <description>BEAT FX CH SELECT CH1 - slide - target Deck 1 (FX1 / EffectUnit1)</description>
+    <group>[EffectRack1_EffectUnit1]</group>
+    <key>PioneerDDJFLX4.beatFxChannel1</key>
+    <status>0x94</status>
+    <midino>0x10</midino>
+    <options>
+        <Script-Binding/>
+    </options>
+</control>
 
-            <control>
-                <description>BEAT FX ON/OFF - press - Toggle FX in the selected Slot (when on CHAN1/1+2)</description>
-                <group>[EffectRack1_EffectUnit1]</group>
-                <key>PioneerDDJFLX4.beatFxOnOffPressed</key>
-                <status>0x94</status>
-                <midino>0x47</midino>
-                <options>
-                    <Script-Binding/>
-                </options>
-            </control>
-            <control>
-                <description>BEAT FX ON/OFF - press - Toggle FX in the selected Slot (when on CHAN2)</description>
-                <group>[EffectRack1_EffectUnit1]</group>
-                <key>PioneerDDJFLX4.beatFxOnOffPressed</key>
-                <status>0x95</status>
-                <midino>0x47</midino>
-                <options>
-                    <Script-Binding/>
-                </options>
-            </control>
-            <control>
-                <description>BEAT FX ON/OFF +SHIFT - press - Disable all enabled Beat FX Slots (when on CHAN1/1+2)</description>
-                <group>[EffectRack1_EffectUnit1]</group>
-                <key>PioneerDDJFLX4.beatFxOnOffShiftPressed</key>
-                <status>0x94</status>
-                <midino>0x43</midino>
-                <options>
-                    <Script-Binding/>
-                </options>
-            </control>
-            <control>
-                <description>BEAT FX ON/OFF +SHIFT - press - Disable all enabled Beat FX Slots (when on CHAN12)</description>
-                <group>[EffectRack1_EffectUnit1]</group>
-                <key>PioneerDDJFLX4.beatFxOnOffShiftPressed</key>
-                <status>0x95</status>
-                <midino>0x43</midino>
-                <options>
-                    <Script-Binding/>
-                </options>
-            </control>
-            <!-- BEAT FX SECTION END-->
+<control>
+    <description>BEAT FX CH SELECT CH2 - slide - target Deck 2 (FX2 / EffectUnit2)</description>
+    <group>[EffectRack1_EffectUnit1]</group>
+    <key>PioneerDDJFLX4.beatFxChannel2</key>
+    <status>0x95</status>
+    <midino>0x11</midino>
+    <options>
+        <Script-Binding/>
+    </options>
+</control>
+
+<control>
+    <description>BEAT FX LEVEL/DEPTH - rotate (MSB) - normal: preset macro (super1), SHIFT: mix (dry/wet)</description>
+    <group>[EffectRack1_EffectUnit1]</group>
+    <key>PioneerDDJFLX4.beatFxLevelDepthRotate</key>
+    <status>0xB4</status>
+    <midino>0x02</midino>
+    <options>
+        <Script-Binding/>
+    </options>
+</control>
+
+<control>
+    <description>BEAT FX ON/OFF - press - toggle chain enabled for selected BeatFX target(s) + update LED</description>
+    <group>[EffectRack1_EffectUnit1]</group>
+    <key>PioneerDDJFLX4.beatFxOnOffPressed</key>
+    <status>0x94</status>
+    <midino>0x47</midino>
+    <options>
+        <Script-Binding/>
+    </options>
+</control>
+
+<control>
+    <description>BEAT FX ON/OFF - press - toggle chain enabled for selected BeatFX target(s) + update LED</description>
+    <group>[EffectRack1_EffectUnit1]</group>
+    <key>PioneerDDJFLX4.beatFxOnOffPressed</key>
+    <status>0x95</status>
+    <midino>0x47</midino>
+    <options>
+        <Script-Binding/>
+    </options>
+</control>
+
+<control>
+    <description>BEAT FX ON/OFF +SHIFT - press - disable chain for selected BeatFX target(s) + update LED</description>
+    <group>[EffectRack1_EffectUnit1]</group>
+    <key>PioneerDDJFLX4.beatFxOnOffShiftPressed</key>
+    <status>0x94</status>
+    <midino>0x43</midino>
+    <options>
+        <Script-Binding/>
+    </options>
+</control>
+
+<control>
+    <description>BEAT FX ON/OFF +SHIFT - press - disable chain for selected BeatFX target(s) + update LED</description>
+    <group>[EffectRack1_EffectUnit1]</group>
+    <key>PioneerDDJFLX4.beatFxOnOffShiftPressed</key>
+    <status>0x95</status>
+    <midino>0x43</midino>
+    <options>
+        <Script-Binding/>
+    </options>
+</control>
+
+<!-- BEAT FX SECTION END -->
             <!-- EFFECT Section END -->
 
             <!-- PAD MODE SECTION START -->
