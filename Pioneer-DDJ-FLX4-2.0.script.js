@@ -393,7 +393,7 @@ PioneerDDJFLX4.init = function() {
     // initialize Beat FX routing + LED state
     PioneerDDJFLX4._applyBeatFxRouting();
 
-    PioneerDDJFLX4.keepAliveTimer = engine.beginTimer(500, PioneerDDJFLX4.sendKeepAlive);
+    PioneerDDJFLX4.keepAliveTimer = engine.beginTimer(200, PioneerDDJFLX4.sendKeepAlive);
 
     // query the controller for current control positions on startup
     PioneerDDJFLX4.sendKeepAlive(); // the query seems to double as a keep alive message
@@ -673,10 +673,254 @@ PioneerDDJFLX4.smartCfxPress = function(_ch, control, value, _status, _group) {
     // LED feedback (SMART CFX button)
     PioneerDDJFLX4.setLed(0x96, 0x00, PioneerDDJFLX4._smartCfx.enabled);
 };
+///////////////////////////////////////////////////////////////
+// PAD FX (Hercules-style) for FLX4
+// - PAD FX1 Mode: Deck1->Unit1, Deck2->Unit2
+// - PAD FX2 Mode: Deck1->Unit3, Deck2->Unit4
 //
-// Loop IN/OUT ADJUST
+// Pads (within PAD FX modes):
+//  1-3 : toggle slot 1-3
+//  4   : toggle unit enabled
+//  5   : toggle routing to own deck (group_[ChannelX]_enable)
+//  6   : toggle routing to other deck
+//  8   : toggle ALL slots (all-on <-> all-off)
+//  7   : unused
+///////////////////////////////////////////////////////////////
+
+PioneerDDJFLX4.padMode = PioneerDDJFLX4.padMode || {
+    "[Channel1]": "hotcue",
+    "[Channel2]": "hotcue",
+};
+
+PioneerDDJFLX4._padLedStatusesForGroup = function(group) {
+    // deck1: 0x97 normal, 0x98 shift
+    // deck2: 0x99 normal, 0x9A shift
+    return (group === "[Channel1]") ? [0x97, 0x98] : [0x99, 0x9A];
+};
+
+PioneerDDJFLX4._padLed = function(group, midino, on) {
+    const sts = PioneerDDJFLX4._padLedStatusesForGroup(group);
+    const v = on ? 0x7F : 0x00;
+    sts.forEach((s) => midi.sendShortMsg(s, midino, v));
+};
+
+PioneerDDJFLX4._fxUnitsForDeckAndMode = function(group) {
+    const deck = (group === "[Channel1]") ? 1 : 2;
+    const mode = PioneerDDJFLX4.padMode[group];
+
+    if (mode === "padfx1") {
+        return deck === 1 ? 1 : 2;
+    }
+    if (mode === "padfx2") {
+        return deck === 1 ? 3 : 4;
+    }
+    return null;
+};
+
+PioneerDDJFLX4._fxRouteKey = function(group) {
+    return `group_${group}_enable`; // e.g. group_[Channel1]_enable
+};
+
+PioneerDDJFLX4._otherDeckGroup = function(group) {
+    return (group === "[Channel1]") ? "[Channel2]" : "[Channel1]";
+};
+
+PioneerDDJFLX4._U = function(unitIdx) {
+    return `[EffectRack1_EffectUnit${unitIdx}]`;
+};
+
+PioneerDDJFLX4._S = function(unitIdx, slotIdx) {
+    return `[EffectRack1_EffectUnit${unitIdx}_Effect${slotIdx}]`;
+};
+
+PioneerDDJFLX4._slotEnabled = function(unitIdx, slotIdx) {
+    return engine.getValue(PioneerDDJFLX4._S(unitIdx, slotIdx), "enabled") > 0.5;
+};
+
+PioneerDDJFLX4._anySlotOn = function(unitIdx) {
+    return PioneerDDJFLX4._slotEnabled(unitIdx, 1) ||
+           PioneerDDJFLX4._slotEnabled(unitIdx, 2) ||
+           PioneerDDJFLX4._slotEnabled(unitIdx, 3);
+};
+
+PioneerDDJFLX4._allSlotsOn = function(unitIdx) {
+    const Uon = engine.getValue(PioneerDDJFLX4._U(unitIdx), "enabled") > 0.5;
+    return Uon &&
+           PioneerDDJFLX4._slotEnabled(unitIdx, 1) &&
+           PioneerDDJFLX4._slotEnabled(unitIdx, 2) &&
+           PioneerDDJFLX4._slotEnabled(unitIdx, 3);
+};
+
+PioneerDDJFLX4._autoArmIfNeeded = function(unitIdx, group) {
+    // Hercules-like: if any slot is on -> ensure Unit enabled + routing to current deck ON
+    if (!PioneerDDJFLX4._anySlotOn(unitIdx)) return;
+
+    const U = PioneerDDJFLX4._U(unitIdx);
+    const rk = PioneerDDJFLX4._fxRouteKey(group);
+
+    if (engine.getValue(U, "enabled") <= 0.5) engine.setValue(U, "enabled", 1);
+    if (engine.getValue(U, rk) <= 0.5) engine.setValue(U, rk, 1);
+};
+
+PioneerDDJFLX4._setUnitAndSlots = function(unitIdx, group, on) {
+    const U = PioneerDDJFLX4._U(unitIdx);
+    const S1 = PioneerDDJFLX4._S(unitIdx, 1);
+    const S2 = PioneerDDJFLX4._S(unitIdx, 2);
+    const S3 = PioneerDDJFLX4._S(unitIdx, 3);
+
+    const rk = PioneerDDJFLX4._fxRouteKey(group);
+
+    if (!on) {
+        // OFF: slots first, then unit, then optionally unrouted
+        engine.setValue(S3, "enabled", 0);
+        engine.setValue(S2, "enabled", 0);
+        engine.setValue(S1, "enabled", 0);
+        engine.setValue(U,  "enabled", 0);
+        try { engine.setValue(U, rk, 0); } catch (e) {}
+        return;
+    }
+
+    // ON: route + unit first, then slots
+    try { engine.setValue(U, rk, 1); } catch (e) {}
+    engine.setValue(U, "enabled", 1);
+    engine.setValue(S1, "enabled", 1);
+    engine.setValue(S2, "enabled", 1);
+    engine.setValue(S3, "enabled", 1);
+};
+
+PioneerDDJFLX4.updatePadFxUI = function(group) {
+    const unitIdx = PioneerDDJFLX4._fxUnitsForDeckAndMode(group);
+    if (!unitIdx) return;
+
+    // auto-arm if needed (prevents “it’s on but does nothing”)
+    PioneerDDJFLX4._autoArmIfNeeded(unitIdx, group);
+
+    const mode = PioneerDDJFLX4.padMode[group];
+    const base = (mode === "padfx1") ? 0x10 : 0x50; // pad notes: FX1=16..23, FX2=80..87
+
+    const U = PioneerDDJFLX4._U(unitIdx);
+    const rkOwn   = PioneerDDJFLX4._fxRouteKey(group);
+    const rkOther = PioneerDDJFLX4._fxRouteKey(PioneerDDJFLX4._otherDeckGroup(group));
+
+    const unitOn  = engine.getValue(U, "enabled") > 0.5;
+    const rOwnOn  = engine.getValue(U, rkOwn) > 0.5;
+    const rOthOn  = engine.getValue(U, rkOther) > 0.5;
+
+    // pads 1-3: slots
+    PioneerDDJFLX4._padLed(group, base + 0, PioneerDDJFLX4._slotEnabled(unitIdx, 1));
+    PioneerDDJFLX4._padLed(group, base + 1, PioneerDDJFLX4._slotEnabled(unitIdx, 2));
+    PioneerDDJFLX4._padLed(group, base + 2, PioneerDDJFLX4._slotEnabled(unitIdx, 3));
+
+    // pad 4: unit enabled
+    PioneerDDJFLX4._padLed(group, base + 3, unitOn);
+
+    // pad 5: routing own deck
+    PioneerDDJFLX4._padLed(group, base + 4, rOwnOn);
+
+    // pad 6: routing other deck
+    PioneerDDJFLX4._padLed(group, base + 5, rOthOn);
+
+    // pad 7: unused off
+    PioneerDDJFLX4._padLed(group, base + 6, false);
+
+    // pad 8: any slot on (quick status)
+    PioneerDDJFLX4._padLed(group, base + 7, PioneerDDJFLX4._anySlotOn(unitIdx));
+};
+
+PioneerDDJFLX4._toggleRoute = function(unitIdx, routeGroup) {
+    const U = PioneerDDJFLX4._U(unitIdx);
+    const rk = PioneerDDJFLX4._fxRouteKey(routeGroup);
+    const cur = engine.getValue(U, rk) > 0.5;
+    engine.setValue(U, rk, cur ? 0 : 1);
+};
+
+PioneerDDJFLX4.padFxPadPressed = function(_ch, control, value, _st, group) {
+    if (value !== 0x7F) return;
+
+    const unitIdx = PioneerDDJFLX4._fxUnitsForDeckAndMode(group);
+    if (!unitIdx) return;
+
+    const mode = PioneerDDJFLX4.padMode[group];
+    const base = (mode === "padfx1") ? 0x10 : 0x50;
+
+    const idx = (control - base) + 1; // 1..8
+    const U = PioneerDDJFLX4._U(unitIdx);
+
+    if (idx >= 1 && idx <= 3) {
+        const S = PioneerDDJFLX4._S(unitIdx, idx);
+        const cur = engine.getValue(S, "enabled") > 0.5;
+        engine.setValue(S, "enabled", cur ? 0 : 1);
+        // auto-arm prevents “slot on but routed off”
+        PioneerDDJFLX4._autoArmIfNeeded(unitIdx, group);
+        PioneerDDJFLX4.updatePadFxUI(group);
+        return;
+    }
+
+    if (idx === 4) {
+        const cur = engine.getValue(U, "enabled") > 0.5;
+        engine.setValue(U, "enabled", cur ? 0 : 1);
+        PioneerDDJFLX4.updatePadFxUI(group);
+        return;
+    }
+
+    if (idx === 5) {
+        PioneerDDJFLX4._toggleRoute(unitIdx, group);
+        PioneerDDJFLX4.updatePadFxUI(group);
+        return;
+    }
+
+    if (idx === 6) {
+        PioneerDDJFLX4._toggleRoute(unitIdx, PioneerDDJFLX4._otherDeckGroup(group));
+        PioneerDDJFLX4.updatePadFxUI(group);
+        return;
+    }
+
+    if (idx === 8) {
+        const allOn = PioneerDDJFLX4._allSlotsOn(unitIdx);
+        PioneerDDJFLX4._setUnitAndSlots(unitIdx, group, !allOn);
+        PioneerDDJFLX4.updatePadFxUI(group);
+        return;
+    }
+};
+
+// mode switches (call these from your PAD MODE buttons)
+PioneerDDJFLX4.setPadModePadFx1 = function(_ch, _ctrl, value, _st, group) {
+    if (value !== 0x7F) return;
+    PioneerDDJFLX4.padMode[group] = "padfx1";
+    PioneerDDJFLX4.updatePadFxUI(group);
+};
+
+PioneerDDJFLX4.setPadModePadFx2 = function(_ch, _ctrl, value, _st, group) {
+    if (value !== 0x7F) return;
+    PioneerDDJFLX4.padMode[group] = "padfx2";
+    PioneerDDJFLX4.updatePadFxUI(group);
+};
+//
+// Loop Features
 //
 
+// RELOOP/EXIT: Loop an -> exit (reloop_toggle), Loop aus -> 4-beat loop activate
+PioneerDDJFLX4.reloopExitPressed = function(_channel, _control, value, _status, group) {
+    if (value !== 0x7F) return; // only on press
+
+    // optional, aber sinnvoll: ohne geladenen Track keinen Loop erzwingen
+    if (engine.getValue(group, "track_loaded") !== 1) return;
+
+    const loopOn = engine.getValue(group, "loop_enabled") > 0;
+
+    if (loopOn) {
+        // entspricht "Exit" Verhalten
+        script.triggerControl(group, "reloop_toggle");
+        return;
+    }
+
+    // entspricht "Loop (4 Beats) an"
+    const size = 4; // wenn du später konfigurierbar willst, machen wir das als const/setting
+    engine.setValue(group, "beatloop_size", size);
+    script.triggerControl(group, "beatloop_activate");
+};
+
+// Loop IN/OUT ADJUST
 PioneerDDJFLX4.toggleLoopAdjustIn = function(channel, _control, value, _status, group) {
     if (value === 0 || engine.getValue(group, "loop_enabled") === 0) {
         return;
