@@ -251,6 +251,27 @@ PioneerDDJFLX4.toggleLight = function(midiIn, active) {
 };
 
 //
+// Shift button
+//
+
+
+PioneerDDJFLX4.shiftDown = false;
+
+PioneerDDJFLX4.shiftPressed = function(_channel, _control, value, status, _group) {
+    const down = (value === 0x7F);
+
+    // egal ob Deck1 oder Deck2: Shift zählt als "down"
+    // (bei FLX4 kommen separate Events pro Deck; wir wollen OR-Verhalten)
+    if (status === 0x90) {
+        PioneerDDJFLX4._shiftDeck1 = down;
+    } else if (status === 0x91) {
+        PioneerDDJFLX4._shiftDeck2 = down;
+    }
+
+    PioneerDDJFLX4.shiftDown = !!PioneerDDJFLX4._shiftDeck1 || !!PioneerDDJFLX4._shiftDeck2;
+};
+
+//
 // Library / Browser: BROWSE short/long press
 // - long press: expand folder/tree (MoveRight)
 // - short press: move focus between tree/tracklist (Forward/Backward depending on which MIDI note)
@@ -314,10 +335,10 @@ PioneerDDJFLX4.init = function() {
     engine.softTakeover("[EffectRack1_EffectUnit1_Effect1]", "meta", true);
     engine.softTakeover("[EffectRack1_EffectUnit1_Effect2]", "meta", true);
     engine.softTakeover("[EffectRack1_EffectUnit1_Effect3]", "meta", true);
-    engine.softTakeover("[EffectRack1_EffectUnit1]", "mix", true);
-    engine.softTakeover("[EffectRack1_EffectUnit1]", "super1", true);
-    engine.softTakeover("[EffectRack1_EffectUnit2]", "mix", true);
-    engine.softTakeover("[EffectRack1_EffectUnit2]", "super1", true);
+//  engine.softTakeover("[EffectRack1_EffectUnit1]", "mix", true);
+//  engine.softTakeover("[EffectRack1_EffectUnit1]", "super1", true);
+//    engine.softTakeover("[EffectRack1_EffectUnit2]", "mix", true);
+//    engine.softTakeover("[EffectRack1_EffectUnit2]", "super1", true);
 
     const samplerCount = 16;
     if (engine.getValue("[App]", "num_samplers") < samplerCount) {
@@ -419,6 +440,7 @@ PioneerDDJFLX4._beatFx = {
     assign: { ch1: true, ch2: true }, // default: 1&2
 };
 
+// ---- target selection (CH1 / CH2 / 1&2) ----
 PioneerDDJFLX4._beatFxTargets = function() {
     const t = [];
     if (PioneerDDJFLX4._beatFx.assign.ch1) t.push(PioneerDDJFLX4._beatFx.unit1);
@@ -426,51 +448,106 @@ PioneerDDJFLX4._beatFxTargets = function() {
     return t;
 };
 
+// ---- helpers: unit index, routing key, slot state ----
+PioneerDDJFLX4._beatFxUnitIdx = function(u) {
+    const m = /^\[EffectRack1_EffectUnit(\d+)\]$/.exec(u);
+    return m ? Number(m[1]) : null;
+};
+
+PioneerDDJFLX4._beatFxRouteKey = function(u) {
+    // fixed mapping: Unit1 -> Channel1, Unit2 -> Channel2
+    if (u === PioneerDDJFLX4._beatFx.unit1) return "group_[Channel1]_enable";
+    if (u === PioneerDDJFLX4._beatFx.unit2) return "group_[Channel2]_enable";
+    return null;
+};
+
+PioneerDDJFLX4._beatFxSlotGroup = function(unitIdx, slotIdx) {
+    return `[EffectRack1_EffectUnit${unitIdx}_Effect${slotIdx}]`;
+};
+
+PioneerDDJFLX4._beatFxAnySlotOn = function(u) {
+    const unitIdx = PioneerDDJFLX4._beatFxUnitIdx(u);
+    if (!unitIdx) return false;
+
+    for (let i = 1; i <= 3; i++) {
+        if (engine.getValue(PioneerDDJFLX4._beatFxSlotGroup(unitIdx, i), "enabled") > 0.5) return true;
+    }
+    return false;
+};
+
+PioneerDDJFLX4._beatFxAllSlotsOn = function(u) {
+    const unitIdx = PioneerDDJFLX4._beatFxUnitIdx(u);
+    if (!unitIdx) return false;
+
+    const Uon = engine.getValue(u, "enabled") > 0.5;
+    if (!Uon) return false;
+
+    for (let i = 1; i <= 3; i++) {
+        if (!(engine.getValue(PioneerDDJFLX4._beatFxSlotGroup(unitIdx, i), "enabled") > 0.5)) return false;
+    }
+    return true;
+};
+
+// ---- routing (called by CH select + also used defensively on toggle) ----
 PioneerDDJFLX4._applyBeatFxRouting = function() {
     const u1 = PioneerDDJFLX4._beatFx.unit1;
     const u2 = PioneerDDJFLX4._beatFx.unit2;
 
-    // CH1 selector => FX1 processes Deck 1
+    // Unit1 processes Channel1 (if selected)
     engine.setValue(u1, "group_[Channel1]_enable", PioneerDDJFLX4._beatFx.assign.ch1 ? 1 : 0);
     engine.setValue(u1, "group_[Channel2]_enable", 0);
 
-    // CH2 selector => FX2 processes Deck 2
+    // Unit2 processes Channel2 (if selected)
     engine.setValue(u2, "group_[Channel2]_enable", PioneerDDJFLX4._beatFx.assign.ch2 ? 1 : 0);
     engine.setValue(u2, "group_[Channel1]_enable", 0);
 
     PioneerDDJFLX4._updateBeatFxOnOffLed();
 };
 
+PioneerDDJFLX4._armBeatFxUnit = function(u) {
+    const routeKey = PioneerDDJFLX4._beatFxRouteKey(u);
+    if (!routeKey) return;
+
+    const enable = (u === PioneerDDJFLX4._beatFx.unit1)
+        ? (PioneerDDJFLX4._beatFx.assign.ch1 ? 1 : 0)
+        : (PioneerDDJFLX4._beatFx.assign.ch2 ? 1 : 0);
+
+    // route ON for its intended deck, OFF otherwise
+    try { engine.setValue(u, routeKey, enable); } catch (e) {}
+};
+
+// ---- LED ----
 PioneerDDJFLX4._setBeatFxOnOffLed = function(on) {
-    // same physical button exists on both halves (status differs)
     midi.sendShortMsg(0x94, 0x47, on ? 0x7F : 0x00);
     midi.sendShortMsg(0x95, 0x47, on ? 0x7F : 0x00);
 };
 
 PioneerDDJFLX4._updateBeatFxOnOffLed = function() {
     const targets = PioneerDDJFLX4._beatFxTargets();
-    const anyEnabled = targets.some((u) => engine.getValue(u, "enabled") === 1);
-    PioneerDDJFLX4._setBeatFxOnOffLed(anyEnabled);
+    const anySlotOn = targets.some((u) => PioneerDDJFLX4._beatFxAnySlotOn(u));
+    PioneerDDJFLX4._setBeatFxOnOffLed(anySlotOn);
 };
 
-// BEAT FX SELECT: intentionally left empty for now
-PioneerDDJFLX4.beatFxSelectPressed = function(_channel, _control, value) { if (value === 0) return; };
-PioneerDDJFLX4.beatFxSelectShiftPressed = function(_channel, _control, value) { if (value === 0) return; };
+// ---- BEAT FX SELECT: intentionally unused (per your plan) ----
+PioneerDDJFLX4.beatFxSelectPressed = function(_channel, _control, value) {
+    if (value !== 0x7F) return;
+};
+PioneerDDJFLX4.beatFxSelectShiftPressed = function(_channel, _control, value) {
+    if (value !== 0x7F) return;
+};
 
-// BEAT LEFT/RIGHT: cycle chain presets
+// ---- BEAT LEFT/RIGHT: cycle chain presets (targets only) ----
 PioneerDDJFLX4.beatFxLeftPressed = function(_channel, _control, value) {
-    if (value === 0) return;
+    if (value !== 0x7F) return;
     PioneerDDJFLX4._beatFxTargets().forEach((u) => engine.setValue(u, "prev_chain_preset", 1));
-    PioneerDDJFLX4._updateBeatFxOnOffLed();
 };
 
 PioneerDDJFLX4.beatFxRightPressed = function(_channel, _control, value) {
-    if (value === 0) return;
+    if (value !== 0x7F) return;
     PioneerDDJFLX4._beatFxTargets().forEach((u) => engine.setValue(u, "next_chain_preset", 1));
-    PioneerDDJFLX4._updateBeatFxOnOffLed();
 };
 
-// Channel selector: CH1 / CH2 / 1&2 (2-bit state)
+// ---- Channel selector: CH1 / CH2 / 1&2 ----
 PioneerDDJFLX4.beatFxChannel1 = function(_channel, _control, value) {
     PioneerDDJFLX4._beatFx.assign.ch1 = (value === 0x7F);
     PioneerDDJFLX4._applyBeatFxRouting();
@@ -481,36 +558,80 @@ PioneerDDJFLX4.beatFxChannel2 = function(_channel, _control, value) {
     PioneerDDJFLX4._applyBeatFxRouting();
 };
 
-// LEVEL/DEPTH knob:
-// - normal: super1 (macro)
-// - SHIFT:  mix (dry/wet)
-PioneerDDJFLX4.beatFxLevelDepthRotate = function(_channel, _control, value) {
-    const v = value / 0x7F;
-    const isShift = PioneerDDJFLX4.shiftButtonDown[0] || PioneerDDJFLX4.shiftButtonDown[1];
+// ---- LEVEL/DEPTH knob: 14-bit (MSB 0x02, LSB 0x22 on status 0xB4) ----
+// normal: super1, SHIFT: mix
+// Defaults anlegen, falls noch nicht vorhanden
+PioneerDDJFLX4._beatFxKnob = PioneerDDJFLX4._beatFxKnob || { msb: 0, lsb: 0 };
+PioneerDDJFLX4._beatFxKnobLast = PioneerDDJFLX4._beatFxKnobLast || { msb: -1, lsb: -1 };
 
-    PioneerDDJFLX4._beatFxTargets().forEach((u) => {
-        const key = isShift ? "mix" : "super1";
-        engine.softTakeoverIgnoreNextValue(u, key);
+PioneerDDJFLX4.beatFxLevelDepthRotate = function(_channel, control, value) {
+    if (control === 0x02) {
+        if (PioneerDDJFLX4._beatFxKnobLast.msb === value) return;
+        PioneerDDJFLX4._beatFxKnobLast.msb = value;
+        PioneerDDJFLX4._beatFxKnob.msb = value & 0x7F;
+    } else if (control === 0x22) {
+        if (PioneerDDJFLX4._beatFxKnobLast.lsb === value) return;
+        PioneerDDJFLX4._beatFxKnobLast.lsb = value;
+        PioneerDDJFLX4._beatFxKnob.lsb = value & 0x7F;
+    } else {
+        return;
+    }
+
+    const full14 = (PioneerDDJFLX4._beatFxKnob.msb << 7) | PioneerDDJFLX4._beatFxKnob.lsb;
+    const v = full14 / 0x3FFF;
+
+    const isShift = !!PioneerDDJFLX4.shiftDown;
+    const key = isShift ? "mix" : "super1";
+
+    (PioneerDDJFLX4._beatFxTargets ? PioneerDDJFLX4._beatFxTargets() : []).forEach((u) => {
         engine.setParameter(u, key, v);
     });
 };
+// ---- ON/OFF: toggle Unit + Slots 1..3 together (Hercules-style) ----
+PioneerDDJFLX4._beatFxSetUnitAndSlots = function(u, on) {
+    const unitIdx = PioneerDDJFLX4._beatFxUnitIdx(u);
+    if (!unitIdx) return;
 
-// ON/OFF: toggle chain enabled  LED
+    const S = (n) => PioneerDDJFLX4._beatFxSlotGroup(unitIdx, n);
+
+    // routing for the intended deck
+    PioneerDDJFLX4._armBeatFxUnit(u);
+
+    if (!on) {
+        // OFF: slots first, then unit, then optionally unrouted
+        engine.setValue(S(3), "enabled", 0);
+        engine.setValue(S(2), "enabled", 0);
+        engine.setValue(S(1), "enabled", 0);
+        engine.setValue(u, "enabled", 0);
+
+        const routeKey = PioneerDDJFLX4._beatFxRouteKey(u);
+        if (routeKey) {
+            try { engine.setValue(u, routeKey, 0); } catch (e) {}
+        }
+        return;
+    }
+
+    // ON: route + unit first, then slots
+    engine.setValue(u, "enabled", 1);
+    engine.setValue(S(1), "enabled", 1);
+    engine.setValue(S(2), "enabled", 1);
+    engine.setValue(S(3), "enabled", 1);
+};
+
 PioneerDDJFLX4.beatFxOnOffPressed = function(_channel, _control, value) {
-    if (value === 0) return;
+    if (value !== 0x7F) return;
 
-    PioneerDDJFLX4._beatFxTargets().forEach((u) => {
-        const enabled = engine.getValue(u, "enabled") === 1;
-        engine.setValue(u, "enabled", enabled ? 0 : 1);
-    });
+    const targets = PioneerDDJFLX4._beatFxTargets();
+    const allOn = targets.length > 0 && targets.every((u) => PioneerDDJFLX4._beatFxAllSlotsOn(u));
 
+    targets.forEach((u) => PioneerDDJFLX4._beatFxSetUnitAndSlots(u, !allOn));
     PioneerDDJFLX4._updateBeatFxOnOffLed();
 };
 
-// ON/OFF  SHIFT: hard-off
 PioneerDDJFLX4.beatFxOnOffShiftPressed = function(_channel, _control, value) {
-    if (value === 0) return;
-    PioneerDDJFLX4._beatFxTargets().forEach((u) => engine.setValue(u, "enabled", 0));
+    if (value !== 0x7F) return;
+
+    PioneerDDJFLX4._beatFxTargets().forEach((u) => PioneerDDJFLX4._beatFxSetUnitAndSlots(u, false));
     PioneerDDJFLX4._updateBeatFxOnOffLed();
 };
 // --- SMART CFX (Version A: universal) ---
@@ -745,13 +866,6 @@ PioneerDDJFLX4.jogTouch = function(channel, _control, value) {
     }
 };
 
-//
-// Shift button
-//
-
-PioneerDDJFLX4.shiftPressed = function(channel, _control, value, _status, _group) {
-    PioneerDDJFLX4.shiftButtonDown[channel] = value === 0x7F;
-};
 
 
 //

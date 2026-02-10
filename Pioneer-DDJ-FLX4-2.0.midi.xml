@@ -1063,12 +1063,50 @@
     </options>
 </control>
 
+<!-- BEAT FX LEVEL/DEPTH - rotary (14-bit) -->
+<!-- normal: preset macro (super1), SHIFT: mix (dry/wet) -->
+
+<!-- CH1 / status 0xB4 -->
 <control>
-    <description>BEAT FX LEVEL/DEPTH - rotate (MSB) - normal: preset macro (super1), SHIFT: mix (dry/wet)</description>
-    <group>[EffectRack1_EffectUnit1]</group>
+    <description>BEAT FX LEVEL/DEPTH - rotate (MSB) CH1</description>
+    <group>[Master]</group>
     <key>PioneerDDJFLX4.beatFxLevelDepthRotate</key>
     <status>0xB4</status>
     <midino>0x02</midino>
+    <options>
+        <Script-Binding/>
+    </options>
+</control>
+
+<control>
+    <description>BEAT FX LEVEL/DEPTH - rotate (LSB) CH1</description>
+    <group>[Master]</group>
+    <key>PioneerDDJFLX4.beatFxLevelDepthRotate</key>
+    <status>0xB4</status>
+    <midino>0x22</midino>
+    <options>
+        <Script-Binding/>
+    </options>
+</control>
+
+<!-- CH2 / status 0xB5 (Mirror, wird vom Controller parallel gesendet) -->
+<control>
+    <description>BEAT FX LEVEL/DEPTH - rotate (MSB) CH2</description>
+    <group>[Master]</group>
+    <key>PioneerDDJFLX4.beatFxLevelDepthRotate</key>
+    <status>0xB5</status>
+    <midino>0x02</midino>
+    <options>
+        <Script-Binding/>
+    </options>
+</control>
+
+<control>
+    <description>BEAT FX LEVEL/DEPTH - rotate (LSB) CH2</description>
+    <group>[Master]</group>
+    <key>PioneerDDJFLX4.beatFxLevelDepthRotate</key>
+    <status>0xB5</status>
+    <midino>0x22</midino>
     <options>
         <Script-Binding/>
     </options>
@@ -1084,7 +1122,6 @@
         <Script-Binding/>
     </options>
 </control>
-
 <control>
     <description>BEAT FX ON/OFF - press - toggle chain enabled for selected BeatFX target(s) + update LED</description>
     <group>[EffectRack1_EffectUnit1]</group>
