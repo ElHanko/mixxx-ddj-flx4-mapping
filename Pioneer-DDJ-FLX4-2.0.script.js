@@ -395,26 +395,9 @@ PioneerDDJFLX4.init = function() {
     engine.makeConnection("[Channel2]", "pitch_adjust", PioneerDDJFLX4.pitchAdjusted);
 
 // ------------------- DEFAULT PAD MODE -------------------
-["[Channel1]", "[Channel2]"].forEach(function(ch) {
-
-    PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.HOTCUE;
-
-    const deckLights = (ch === "[Channel1]")
-        ? PioneerDDJFLX4.lights.deck1
-        : PioneerDDJFLX4.lights.deck2;
-
-    // explizit Hotcue-LED setzen
-    PioneerDDJFLX4.toggleLight(deckLights.hotcueMode, true);
-
-    // alle anderen PadMode LEDs aus
-    PioneerDDJFLX4.toggleLight(deckLights.keyboardMode, false);
-    PioneerDDJFLX4.toggleLight(deckLights.padFX1Mode, false);
-    PioneerDDJFLX4.toggleLight(deckLights.padFX2Mode, false);
-    PioneerDDJFLX4.toggleLight(deckLights.beatJumpMode, false);
-    PioneerDDJFLX4.toggleLight(deckLights.beatLoopMode, false);
-    PioneerDDJFLX4.toggleLight(deckLights.samplerMode, false);
-    PioneerDDJFLX4.toggleLight(deckLights.keyShiftMode, false);
-});
+PioneerDDJFLX4.padMode = PioneerDDJFLX4.padMode || {};
+PioneerDDJFLX4.padMode["[Channel1]"] = PioneerDDJFLX4.PADMODE.HOTCUE;
+PioneerDDJFLX4.padMode["[Channel2]"] = PioneerDDJFLX4.PADMODE.HOTCUE;
 
     // initialize Beat FX routing + LED state
     PioneerDDJFLX4._applyBeatFxRouting();
@@ -1537,6 +1520,8 @@ PioneerDDJFLX4.samplerPlayOutputCallbackFunction = function(value, group, _contr
     }
 };
 
+//PioneerDDJFLX4.padMode = PioneerDDJFLX4.padMode || { "[Channel1]": PioneerDDJFLX4.PADMODE.HOTCUE, "[Channel2]": PioneerDDJFLX4.PADMODE.HOTCUE };
+
 PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, _group) {
     if (value !== 0x7F) return;
 
@@ -1544,72 +1529,40 @@ PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, 
     const deck = (_status === 0x90 ? PioneerDDJFLX4.lights.deck1 : PioneerDDJFLX4.lights.deck2);
 
     // Beatjump pad LED status differs from padmode buttons:
-    // Deck1 -> 0x97, Deck2 -> 0x99
     const padStatus = (_status === 0x90) ? 0x97 : 0x99;
-
-    // Beatjump pads only lit when Beatjump mode selected
     if (typeof PioneerDDJFLX4._setBeatjumpPadsLit === "function") {
         PioneerDDJFLX4._setBeatjumpPadsLit(padStatus, _control === 0x20);
     }
 
-    if (_control === 0x1B) { // HOTCUE
-        PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.HOTCUE;
-        PioneerDDJFLX4.toggleLight(deck.hotcueMode, true);
-        return;
+    // --- KEYBOARD MODE (used as STEMS) ---
+if (_control === 0x69) { // KEYBOARD MODE button (STEMS)
+    PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.KEYBOARD;
+
+    PioneerDDJFLX4.toggleLight(deck.keyboardMode, true);
+
+    if (typeof PioneerDDJFLX4._refreshKeyboardStemLeds === "function") {
+        PioneerDDJFLX4._refreshKeyboardStemLeds(ch);
     }
+    return;
+}
 
-    if (_control === 0x69) { // KEYBOARD (auf Hardware so beschriftet, bei dir logisch STEMS)
-        PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.KEYBOARD;
+    // set per-deck padMode for everything else (optional but consistent)
+    if (_control === 0x1B) PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.HOTCUE;
+    else if (_control === 0x1E) PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.PADFX1;
+    else if (_control === 0x6B) PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.PADFX2;
+    else if (_control === 0x20) PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.BEATJUMP;
+    else if (_control === 0x6D) PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.BEATLOOP;
+    else if (_control === 0x22) PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.SAMPLER;
+    else if (_control === 0x6F) PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.KEYSHIFT;
 
-        // Sofortiger LED-Refresh: zeigt Mute/FX korrekt, ohne erst auf eine Änderung zu warten
-        if (typeof PioneerDDJFLX4.stemCountChanged === "function") {
-            // nutzt deine bestehende Logik, refreshed mute + FX für alle 4
-            PioneerDDJFLX4.stemCountChanged(0, ch, null);
-        }
-        // Alternativ (falls du später eine dedizierte Funktion baust):
-        // if (typeof PioneerDDJFLX4._refreshKeyboardStemLeds === "function") {
-        //     PioneerDDJFLX4._refreshKeyboardStemLeds(ch);
-        // }
-
-        PioneerDDJFLX4.toggleLight(deck.keyboardMode, true);
-        return;
-    }
-
-    if (_control === 0x1E) { // PAD FX1
-        PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.PADFX1;
-        PioneerDDJFLX4.toggleLight(deck.padFX1Mode, true);
-        return;
-    }
-
-    if (_control === 0x6B) { // PAD FX2
-        PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.PADFX2;
-        PioneerDDJFLX4.toggleLight(deck.padFX2Mode, true);
-        return;
-    }
-
-    if (_control === 0x20) { // BEATJUMP
-        PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.BEATJUMP;
-        PioneerDDJFLX4.toggleLight(deck.beatJumpMode, true);
-        return;
-    }
-
-    if (_control === 0x6D) { // BEATLOOP
-        PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.BEATLOOP;
-        PioneerDDJFLX4.toggleLight(deck.beatLoopMode, true);
-        return;
-    }
-
-    if (_control === 0x22) { // SAMPLER
-        PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.SAMPLER;
-        PioneerDDJFLX4.toggleLight(deck.samplerMode, true);
-        return;
-    }
-
-    if (_control === 0x6F) { // KEY SHIFT
-        PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.KEYSHIFT;
-        PioneerDDJFLX4.toggleLight(deck.keyShiftMode, true);
-        return;
-    }
+    // keep your original LED toggle calls
+    if (_control === 0x1B) PioneerDDJFLX4.toggleLight(deck.hotcueMode, true);
+    else if (_control === 0x1E) PioneerDDJFLX4.toggleLight(deck.padFX1Mode, true);
+    else if (_control === 0x6B) PioneerDDJFLX4.toggleLight(deck.padFX2Mode, true);
+    else if (_control === 0x20) PioneerDDJFLX4.toggleLight(deck.beatJumpMode, true);
+    else if (_control === 0x6D) PioneerDDJFLX4.toggleLight(deck.beatLoopMode, true);
+    else if (_control === 0x22) PioneerDDJFLX4.toggleLight(deck.samplerMode, true);
+    else if (_control === 0x6F) PioneerDDJFLX4.toggleLight(deck.keyShiftMode, true);
 };
 
 PioneerDDJFLX4.samplerPadPressed = function(_channel, _control, value, _status, group) {
@@ -1682,150 +1635,231 @@ PioneerDDJFLX4.quickJumpBack = function(_channel, _control, value, _status, grou
 };
 
 ///////////////////////////////////////////////////////////////
-// Keyboard Mode (FLX4) -> STEMS Mode (Hercules-style UX)
+// STEMS on FLX4 (uses hardware "KEYBOARD" mode button)
 //
-// Mapping (du hast es im XML schon so gesetzt):
-// Deck1: status 0x97 pads, 0x98 shift-pads, notes 0x40..0x47
-// Deck2: status 0x99 pads, 0x9A shift-pads, notes 0x40..0x47
+// Pads 1–4: Stem mute toggle
+// Shift+Pads 1–4: "Only stem X active" (mute others)
 //
-// Behavior:
-// - Pads 1-4: toggle Stem mute (Stem 1..4)
-// - Shift + Pads 1-4: SOLO (nur dieser Stem unmuted, alle anderen muted)
-// - Pads 5-8: toggle QuickEffect enabled for Stem 1..4
-// - Shift + Pads 5-8: next_chain_preset for that Stem QuickEffect
+// Pads 5–8: configurable via STEMS_PAD5_8_MODE
+//   - "fx"   (default): toggle Stem QuickEffect enabled, Shift = next preset
+//   - "solo" (Hercules-style momentary):
+//        Pad held        -> SOLO (only that stem unmuted, others muted)
+//        Shift + held    -> HOLD-MUTE (only that stem muted, others unmuted)
+//        Release         -> restore previous mute state
 //
-// LEDs:
-// - Only update stem pad LEDs when Keyboard Mode is selected on that deck.
-// - LEDs reflect: Stem pad ON when stem is NOT muted (wie bisher).
-// - FX pad ON when quickeffect enabled.
-// - Pads > stem_count stay OFF.
+// LED sync:
+// - We keep your existing Mixxx connections in init():
+//     [ChannelX] stem_count -> stemCountChanged
+//     [ChannelX_StemY] mute -> stemMuteChanged
+//     [QuickEffectRack1_[ChannelX_StemY]] enabled -> stemFxChanged
+// - Additionally, when entering KEYBOARD mode, call _refreshKeyboardStemLeds(channel)
+//   from padModeKeyPressed (das hast du schon).
 ///////////////////////////////////////////////////////////////
 
-// ------------------- STATE -------------------
-// Track which pad-mode is active per deck (needed to not spam LEDs in other modes)
-PioneerDDJFLX4.padMode = PioneerDDJFLX4.padMode || {
-    "[Channel1]": null,
-    "[Channel2]": null,
-};
-PioneerDDJFLX4.PADMODE = PioneerDDJFLX4.PADMODE || {
-    HOTCUE:   "hotcue",
-    KEYBOARD: "keyboard", // = STEMS
-    PADFX1:   "padfx1",
-    PADFX2:   "padfx2",
-    BEATJUMP: "beatjump",
-    BEATLOOP: "beatloop",
-    SAMPLER:  "sampler",
-    KEYSHIFT: "keyshift",
-};
+// ------------------- CONFIG -------------------
+PioneerDDJFLX4.STEMS_PAD5_8_MODE = "solo"; // "fx" or "solo"
 
-// FLX4 constants for Keyboard/Stems pads
-PioneerDDJFLX4.stemMutePadsFirstControl = 0x40; // pads 1..4 = 0x40..0x43
-PioneerDDJFLX4.stemFxPadsFirstControl   = 0x44; // pads 5..8 = 0x44..0x47
+// ------------------- CONSTANTS -------------------
+// (Ja: behalten. Wird fürs LED-Senden benutzt.)
+PioneerDDJFLX4.stemsPadsModesStatus = PioneerDDJFLX4.stemsPadsModesStatus || {
+    "[Channel1]": [0x97, 0x98], // base + shift pad status
+    "[Channel2]": [0x99, 0x9A],
+};
+PioneerDDJFLX4.stemMutePadsFirstControl = 0x40; // pads 1–4 -> 0x40..0x43
+PioneerDDJFLX4.stemFxPadsFirstControl   = 0x44; // pads 5–8 -> 0x44..0x47
 
-PioneerDDJFLX4._keyboardPadStatus = function(channelGroup, isShift) {
-    if (channelGroup === "[Channel1]") return isShift ? 0x98 : 0x97;
-    if (channelGroup === "[Channel2]") return isShift ? 0x9A : 0x99;
-    return 0x97;
+// ------------------- HELPERS -------------------
+PioneerDDJFLX4._stemCount = function(channelGroup) {
+    return Math.max(0, Math.min(4, engine.getValue(channelGroup, "stem_count") | 0));
 };
 
-// ------------------- LED HELPERS -------------------
-PioneerDDJFLX4._setKeyboardStemPadLed = function(channelGroup, control /*0x40..0x47*/, on) {
-    // Only light pads if Keyboard mode is active on that deck
-    if (PioneerDDJFLX4.padMode[channelGroup] !== PioneerDDJFLX4.PADMODE.KEYBOARD) return;
-
-    const v = on ? 0x7F : 0x00;
-
-    // FLX4 sends separate statuses for base vs shift pad LEDs
-    const stBase  = PioneerDDJFLX4._keyboardPadStatus(channelGroup, false);
-    const stShift = PioneerDDJFLX4._keyboardPadStatus(channelGroup, true);
-
-    midi.sendShortMsg(stBase,  control, v);
-    midi.sendShortMsg(stShift, control, v);
+PioneerDDJFLX4._stemGroup = function(channelGroup, stemIdx1) {
+    return `[${channelGroup.substring(1, channelGroup.length - 1)}_Stem${stemIdx1}]`;
 };
 
-PioneerDDJFLX4._refreshKeyboardStemLeds = function(channelGroup) {
-    if (PioneerDDJFLX4.padMode[channelGroup] !== PioneerDDJFLX4.PADMODE.KEYBOARD) return;
+PioneerDDJFLX4._stemQfxGroup = function(channelGroup, stemIdx1) {
+    return `[QuickEffectRack1_[${channelGroup.substring(1, channelGroup.length - 1)}_Stem${stemIdx1}]]`;
+};
 
-    const stemCount = Math.min(engine.getValue(channelGroup, "stem_count") | 0, 4);
+// ------------------- MOMENTARY SOLO STATE -------------------
+PioneerDDJFLX4._stemMomentary = PioneerDDJFLX4._stemMomentary || {
+    "[Channel1]": { active: false, prev: [0,0,0,0] },
+    "[Channel2]": { active: false, prev: [0,0,0,0] },
+};
 
-    // Pads 1..4: mute state (LED ON when NOT muted)
-    for (let i = 1; i <= 4; i++) {
-        const ctrl = PioneerDDJFLX4.stemMutePadsFirstControl + (i - 1);
-        if (i > stemCount) {
-            PioneerDDJFLX4._setKeyboardStemPadLed(channelGroup, ctrl, false);
-            continue;
+PioneerDDJFLX4._stemMomentaryApply = function(group, stemIdx1, mode /*"solo"|"holdmute"*/) {
+    const stemCount = PioneerDDJFLX4._stemCount(group);
+    if (stemIdx1 < 1 || stemIdx1 > stemCount) return;
+
+    const st = PioneerDDJFLX4._stemMomentary[group] ||
+        (PioneerDDJFLX4._stemMomentary[group] = { active:false, prev:[0,0,0,0] });
+
+    // Snapshot current mutes (1..4, egal ob vorhanden – safe)
+    for (let s = 1; s <= 4; s++) {
+        const sg = PioneerDDJFLX4._stemGroup(group, s);
+        st.prev[s - 1] = engine.getValue(sg, "mute") > 0 ? 1 : 0;
+    }
+    st.active = true;
+
+    // Apply momentary behavior
+    for (let s = 1; s <= stemCount; s++) {
+        const sg = PioneerDDJFLX4._stemGroup(group, s);
+        if (mode === "solo") {
+            engine.setValue(sg, "mute", (s === stemIdx1) ? 0 : 1);
+        } else { // "holdmute"
+            engine.setValue(sg, "mute", (s === stemIdx1) ? 1 : 0);
         }
-        const sg = `[${channelGroup.substring(1, channelGroup.length - 1)}_Stem${i}]`;
-        const muted = engine.getValue(sg, "mute") > 0;
-        PioneerDDJFLX4._setKeyboardStemPadLed(channelGroup, ctrl, !muted);
-    }
-
-    // Pads 5..8: stem quickeffect enabled (LED ON when enabled)
-    for (let i = 1; i <= 4; i++) {
-        const ctrl = PioneerDDJFLX4.stemFxPadsFirstControl + (i - 1);
-        const qg = `[QuickEffectRack1_[${channelGroup.substring(1, channelGroup.length - 1)}_Stem${i}]]`;
-        const en = engine.getValue(qg, "enabled") > 0;
-        PioneerDDJFLX4._setKeyboardStemPadLed(channelGroup, ctrl, en);
     }
 };
 
-// ------------------- PAD HANDLERS (called from XML) -------------------
+PioneerDDJFLX4._stemMomentaryRelease = function(group) {
+    const st = PioneerDDJFLX4._stemMomentary[group];
+    if (!st || !st.active) return;
+
+    const stemCount = PioneerDDJFLX4._stemCount(group);
+    for (let s = 1; s <= stemCount; s++) {
+        const sg = PioneerDDJFLX4._stemGroup(group, s);
+        engine.setValue(sg, "mute", st.prev[s - 1] ? 1 : 0);
+    }
+    st.active = false;
+};
+
+// ------------------- LED REFRESH (pull current values once) -------------------
+PioneerDDJFLX4._refreshKeyboardStemLeds = function(channelGroup) {
+    const stemCount = PioneerDDJFLX4._stemCount(channelGroup);
+
+    // Pull current values and reuse the same LED update path as the engine callbacks
+    for (let stem = 1; stem <= 4; stem++) {
+        const sg = PioneerDDJFLX4._stemGroup(channelGroup, stem);
+        PioneerDDJFLX4.stemMuteChanged(engine.getValue(sg, "mute"), sg, null);
+
+        const qg = PioneerDDJFLX4._stemQfxGroup(channelGroup, stem);
+        PioneerDDJFLX4.stemFxChanged(engine.getValue(qg, "enabled"), qg, null);
+
+        // Optional: FX LEDs für nicht vorhandene Stems hart aus
+        if (stem > stemCount) {
+            const statuses = PioneerDDJFLX4.stemsPadsModesStatus[channelGroup] || [];
+            for (const st of statuses) {
+                midi.sendShortMsg(st, PioneerDDJFLX4.stemFxPadsFirstControl + stem - 1, 0x00);
+            }
+        }
+    }
+};
+
+// ------------------- PAD HANDLERS -------------------
+
+// Pads 1–4: Mute toggle
 PioneerDDJFLX4.stemMutePadPressed = function(_channel, control, value, _status, group) {
     if (value !== 0x7F) return;
 
-    const stemCount = Math.min(engine.getValue(group, "stem_count") | 0, 4);
-    const idx = (control - PioneerDDJFLX4.stemMutePadsFirstControl) + 1; // 1..4
+    const stemCount = PioneerDDJFLX4._stemCount(group);
+    const stemIdx1 = (control - PioneerDDJFLX4.stemMutePadsFirstControl) + 1;
+    if (stemIdx1 < 1 || stemIdx1 > stemCount) return;
 
-    if (idx < 1 || idx > stemCount) return;
-
-    const sg = `[${group.substring(1, group.length - 1)}_Stem${idx}]`;
-    const muted = engine.getValue(sg, "mute") > 0;
-    engine.setValue(sg, "mute", muted ? 0 : 1);
-
-    // Update only this pad (fast), and keep FX pads untouched
-    PioneerDDJFLX4._setKeyboardStemPadLed(group, control, muted /*was muted -> now unmuted*/);
+    const sg = PioneerDDJFLX4._stemGroup(group, stemIdx1);
+    engine.setValue(sg, "mute", engine.getValue(sg, "mute") ? 0 : 1);
 };
 
+// Shift + Pads 1–4: Only stem X active
 PioneerDDJFLX4.stemMutePadShiftPressed = function(_channel, control, value, _status, group) {
     if (value !== 0x7F) return;
 
-    const stemCount = Math.min(engine.getValue(group, "stem_count") | 0, 4);
-    const sel = (control - PioneerDDJFLX4.stemMutePadsFirstControl) + 1; // 1..4
-    if (sel < 1 || sel > stemCount) return;
+    const stemCount = PioneerDDJFLX4._stemCount(group);
+    const stemIdx1 = (control - PioneerDDJFLX4.stemMutePadsFirstControl) + 1;
+    if (stemIdx1 < 1 || stemIdx1 > stemCount) return;
 
-    // SOLO: selected stem unmuted, all others muted
-    for (let stemIdx = 1; stemIdx <= stemCount; stemIdx++) {
-        const sg = `[${group.substring(1, group.length - 1)}_Stem${stemIdx}]`;
-        engine.setValue(sg, "mute", (stemIdx === sel) ? 0 : 1);
+    for (let s = 1; s <= stemCount; s++) {
+        const sg = PioneerDDJFLX4._stemGroup(group, s);
+        engine.setValue(sg, "mute", (s === stemIdx1) ? 0 : 1);
     }
-
-    // Refresh 1..4 so LEDs match
-    PioneerDDJFLX4._refreshKeyboardStemLeds(group);
 };
 
+// Pads 5–8: FX or momentary SOLO depending on STEMS_PAD5_8_MODE
 PioneerDDJFLX4.stemFxPadPressed = function(_channel, control, value, _status, group) {
+    const stemIdx1 = (control - PioneerDDJFLX4.stemFxPadsFirstControl) + 1;
+    if (stemIdx1 < 1 || stemIdx1 > 4) return;
+
+    if (PioneerDDJFLX4.STEMS_PAD5_8_MODE === "solo") {
+        // momentary SOLO (needs Script-Binding to receive value 0x00 on release — du hast Script-Binding)
+        if (value === 0x7F) PioneerDDJFLX4._stemMomentaryApply(group, stemIdx1, "solo");
+        else if (value === 0x00) PioneerDDJFLX4._stemMomentaryRelease(group);
+        return;
+    }
+
+    // FX toggle on press
     if (value !== 0x7F) return;
+    const stemCount = PioneerDDJFLX4._stemCount(group);
+    if (stemIdx1 > stemCount) return;
 
-    const idx = (control - PioneerDDJFLX4.stemFxPadsFirstControl) + 1; // 1..4
-    if (idx < 1 || idx > 4) return;
-
-    const qg = `[QuickEffectRack1_[${group.substring(1, group.length - 1)}_Stem${idx}]]`;
-    const enabled = engine.getValue(qg, "enabled") > 0;
-    engine.setValue(qg, "enabled", enabled ? 0 : 1);
-
-    PioneerDDJFLX4._setKeyboardStemPadLed(group, control, !enabled);
+    const qg = PioneerDDJFLX4._stemQfxGroup(group, stemIdx1);
+    engine.setValue(qg, "enabled", engine.getValue(qg, "enabled") ? 0 : 1);
 };
 
 PioneerDDJFLX4.stemFxPadShiftPressed = function(_channel, control, value, _status, group) {
+    const stemIdx1 = (control - PioneerDDJFLX4.stemFxPadsFirstControl) + 1;
+    if (stemIdx1 < 1 || stemIdx1 > 4) return;
+
+    if (PioneerDDJFLX4.STEMS_PAD5_8_MODE === "solo") {
+        // momentary HOLD-MUTE
+        if (value === 0x7F) PioneerDDJFLX4._stemMomentaryApply(group, stemIdx1, "holdmute");
+        else if (value === 0x00) PioneerDDJFLX4._stemMomentaryRelease(group);
+        return;
+    }
+
+    // next preset on press
     if (value !== 0x7F) return;
+    const stemCount = PioneerDDJFLX4._stemCount(group);
+    if (stemIdx1 > stemCount) return;
 
-    const idx = (control - PioneerDDJFLX4.stemFxPadsFirstControl) + 1; // 1..4
-    if (idx < 1 || idx > 4) return;
-
-    const qg = `[QuickEffectRack1_[${group.substring(1, group.length - 1)}_Stem${idx}]]`;
+    const qg = PioneerDDJFLX4._stemQfxGroup(group, stemIdx1);
     engine.setValue(qg, "next_chain_preset", 1);
 };
 
+// ------------------- ENGINE CALLBACKS (LED sync) -------------------
+// Diese beiden müssen FUNKTIONEN sein, weil init() sie an makeConnection übergibt.
+
+PioneerDDJFLX4.stemMuteChanged = function(value, group /* [ChannelX_StemY] */, _control) {
+    const m = /\[Channel(\d+)_Stem(\d+)\]/.exec(group);
+    if (!m) return;
+    const deck = Number(m[1]);
+    const stem = Number(m[2]);
+    if (stem < 1 || stem > 4) return;
+
+    const ch = `[Channel${deck}]`;
+    const stemCount = engine.getValue(ch, "stem_count") | 0;
+
+    // LED an = Stem NICHT gemutet und Stem existiert
+    const on = (stem <= stemCount) && (value <= 0.5);
+    const code = on ? 0x7F : 0x00;
+
+    const statuses = PioneerDDJFLX4.stemsPadsModesStatus[ch] || [];
+    for (const st of statuses) {
+        midi.sendShortMsg(st, PioneerDDJFLX4.stemMutePadsFirstControl + stem - 1, code);
+    }
+};
+
+PioneerDDJFLX4.stemFxChanged = function(value, group /* [QuickEffectRack1_[ChannelX_StemY]] */, _control) {
+    const m = /\[QuickEffectRack1_\[Channel(\d+)_Stem(\d+)\]\]/.exec(group);
+    if (!m) return;
+    const deck = Number(m[1]);
+    const stem = Number(m[2]);
+    if (stem < 1 || stem > 4) return;
+
+    const ch = `[Channel${deck}]`;
+    const code = (value <= 0.5) ? 0x00 : 0x7F;
+
+    const statuses = PioneerDDJFLX4.stemsPadsModesStatus[ch] || [];
+    for (const st of statuses) {
+        midi.sendShortMsg(st, PioneerDDJFLX4.stemFxPadsFirstControl + stem - 1, code);
+    }
+};
+
+// stem_count changed -> refresh LEDs (this is what fixes “only updates after pressing pads”)
+PioneerDDJFLX4.stemCountChanged = function(_value, group /* [Channel1]/[Channel2] */, _control) {
+    if (typeof PioneerDDJFLX4._refreshKeyboardStemLeds === "function") {
+        PioneerDDJFLX4._refreshKeyboardStemLeds(group);
+    }
+};
 //
 // Pitch Shift mode
 //
