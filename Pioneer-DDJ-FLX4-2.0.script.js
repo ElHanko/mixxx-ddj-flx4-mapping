@@ -1468,40 +1468,16 @@ PioneerDDJFLX4.tempoSliderLSB = function(channel, control, value, status, group)
     );
 };
 
-//
-// Beat Jump mode
-//
-// Note that when we increase/decrease the sizes on the pad buttons, we use the
-// value of the first pad (0x21) as an upper/lower limit beyond which we don't
-// allow further increasing/decreasing of all the values.
-//
-
-PioneerDDJFLX4.beatjumpPadPressed = function(_channel, control, value, _status, group) {
-    if (value === 0) {
-        return;
+// ============================================================
+// Beatjump Mode LEDs (static) – light pads 1..8 when mode active
+// Notes: 0x20..0x27
+// Deck1 status: 0x97, Deck2 status: 0x99 (same as MIDI-IN in doc)
+// ============================================================
+PioneerDDJFLX4._setBeatjumpPadsLit = function(status, on) {
+    const v = on ? 0x7F : 0x00;
+    for (let n = 0x20; n <= 0x27; n++) {
+        midi.sendShortMsg(status, n, v);
     }
-    engine.setValue(group, "beatjump_size", Math.abs(PioneerDDJFLX4.beatjumpSizeForPad[control]));
-    engine.setValue(group, "beatjump", PioneerDDJFLX4.beatjumpSizeForPad[control]);
-};
-
-PioneerDDJFLX4.increaseBeatjumpSizes = function(_channel, control, value, _status, group) {
-    if (value === 0 || PioneerDDJFLX4.beatjumpSizeForPad[0x21] * 16 > 16) {
-        return;
-    }
-    Object.keys(PioneerDDJFLX4.beatjumpSizeForPad).forEach(function(pad) {
-        PioneerDDJFLX4.beatjumpSizeForPad[pad] = PioneerDDJFLX4.beatjumpSizeForPad[pad] * 16;
-    });
-    engine.setValue(group, "beatjump_size", PioneerDDJFLX4.beatjumpSizeForPad[0x21]);
-};
-
-PioneerDDJFLX4.decreaseBeatjumpSizes = function(_channel, control, value, _status, group) {
-    if (value === 0 || PioneerDDJFLX4.beatjumpSizeForPad[0x21] / 16 < 1/16) {
-        return;
-    }
-    Object.keys(PioneerDDJFLX4.beatjumpSizeForPad).forEach(function(pad) {
-        PioneerDDJFLX4.beatjumpSizeForPad[pad] = PioneerDDJFLX4.beatjumpSizeForPad[pad] / 16;
-    });
-    engine.setValue(group, "beatjump_size", PioneerDDJFLX4.beatjumpSizeForPad[0x21]);
 };
 
 //
@@ -1536,7 +1512,18 @@ PioneerDDJFLX4.samplerPlayOutputCallbackFunction = function(value, group, _contr
 };
 
 PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, _group) {
+    if (value !== 0x7F) return;
+
     const deck = (_status === 0x90 ? PioneerDDJFLX4.lights.deck1 : PioneerDDJFLX4.lights.deck2);
+
+    // Beatjump pad LED status differs from padmode buttons:
+    // Deck1 -> 0x97, Deck2 -> 0x99
+    const padStatus = (_status === 0x90) ? 0x97 : 0x99;
+
+    // Beatjump pads only lit when Beatjump mode selected
+    if (typeof PioneerDDJFLX4._setBeatjumpPadsLit === "function") {
+        PioneerDDJFLX4._setBeatjumpPadsLit(padStatus, _control === 0x20);
+    }
 
     if (_control === 0x1B) {
         PioneerDDJFLX4.toggleLight(deck.hotcueMode, true);
