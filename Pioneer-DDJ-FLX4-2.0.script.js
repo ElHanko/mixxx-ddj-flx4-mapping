@@ -1274,77 +1274,177 @@ PioneerDDJFLX4.cycleTempoRange = function(_channel, _control, value, _status, gr
     engine.setValue(group, "rateRange", this.tempoRanges[idx]);
 };
 
+///////////////////////////////////////////////////////////////
+// Jog wheels (FLX4) – stateful scratch/bend (Hercules-style light)
 //
-// Jog wheels
+// Goals:
+// - Loop-adjust has priority (your existing _handleJogLoopAdjust hook stays).
+// - Touch decides: scratch if (vinylMode ON) OR (deck not playing), else bend.
+// - Turn: scratchTick when scratching, else jog bend.
+// - Optional Shift-Touch: seek-scratch (good for quick searches).
 //
+// Notes:
+// - FLX4 wheel turn values are centered at 64 (0..127). We convert to signed by (v - 64).
+// - We keep it 2-deck simple (Channel1/2), because FLX4 is 2-deck.
+// - Per-deck vinylMode avoids “one side affects the other” bugs.
+///////////////////////////////////////////////////////////////
 
+// ---------- config ----------
+PioneerDDJFLX4.jogPPR = PioneerDDJFLX4.jogPPR || 720;            // typical Pioneer jog resolution
+PioneerDDJFLX4.jogRPM = PioneerDDJFLX4.jogRPM || (33 + 1/3);     // platter RPM
+PioneerDDJFLX4.scratchScale = PioneerDDJFLX4.scratchScale || 1.0; // can tune
+PioneerDDJFLX4.seekScratchMultiplier = PioneerDDJFLX4.seekScratchMultiplier || 4.0;
+
+// ---------- state ----------
+PioneerDDJFLX4.vinylMode = PioneerDDJFLX4.vinylMode || [false, false];      // per deck side
+PioneerDDJFLX4.wheelTouch = PioneerDDJFLX4.wheelTouch || [false, false];    // per deck side
+PioneerDDJFLX4._scratchEnabled = PioneerDDJFLX4._scratchEnabled || [false, false];
+PioneerDDJFLX4._scratchAction = PioneerDDJFLX4._scratchAction || ["bend", "bend"]; // "scratch"|"seek"|"bend"
+
+// Helper: enable scratch for deckNum (1/2)
+PioneerDDJFLX4._scratchEnable = function(deckNum) {
+    engine.scratchEnable(deckNum, PioneerDDJFLX4.jogPPR, PioneerDDJFLX4.jogRPM, this.alpha, this.beta);
+    PioneerDDJFLX4._scratchEnabled[deckNum - 1] = true;
+};
+
+// Helper: disable scratch for deckNum (1/2)
+PioneerDDJFLX4._scratchDisable = function(deckNum) {
+    // "ramp" true makes it feel less abrupt, but if you hate it: set false.
+    engine.scratchDisable(deckNum, true);
+    PioneerDDJFLX4._scratchEnabled[deckNum - 1] = false;
+    // After release we fall back to bend mode.
+    PioneerDDJFLX4._scratchAction[deckNum - 1] = "bend";
+};
+
+// Optional: map a VINYL button to this if you have one in XML already.
+// If you already have a vinyl toggle elsewhere, keep that and just set vinylMode[idx] there.
+PioneerDDJFLX4.vinylToggle = function(channel, _control, value) {
+    if (value !== 0x7F) return;
+    PioneerDDJFLX4.vinylMode[channel] = !PioneerDDJFLX4.vinylMode[channel];
+    // If you have a vinyl LED updater, call it here.
+};
+
+// ---------- touch handlers ----------
+PioneerDDJFLX4.jogTouch = function(channel, _control, value, _status, group) {
+    const deckNum = channel + 1;
+
+    // If we are adjusting loop points, ignore touch changes to prevent scratch toggling while editing.
+    if (PioneerDDJFLX4.loopAdjustIn[channel] || PioneerDDJFLX4.loopAdjustOut[channel]) {
+        return;
+    }
+
+    const touching = (value !== 0);
+    PioneerDDJFLX4.wheelTouch[channel] = touching;
+
+    if (touching) {
+        // Decide scratch vs bend:
+        // scratch if deck not playing OR vinylMode enabled.
+        const playing = engine.getValue(group, "play") === 1;
+        const wantScratch = (!playing) || !!PioneerDDJFLX4.vinylMode[channel];
+
+        if (wantScratch) {
+            PioneerDDJFLX4._scratchAction[channel] = "scratch";
+            PioneerDDJFLX4._scratchEnable(deckNum);
+        } else {
+            PioneerDDJFLX4._scratchAction[channel] = "bend";
+            // ensure scratch is off if it was on
+            if (PioneerDDJFLX4._scratchEnabled[channel]) {
+                PioneerDDJFLX4._scratchDisable(deckNum);
+            }
+        }
+        return;
+    }
+
+    // Touch released
+    if (PioneerDDJFLX4._scratchEnabled[channel]) {
+        PioneerDDJFLX4._scratchDisable(deckNum);
+    } else {
+        PioneerDDJFLX4._scratchAction[channel] = "bend";
+    }
+};
+
+// Optional Shift-touch (bind it in XML if you have a separate touch note/cc for shift layer)
+PioneerDDJFLX4.jogTouchShift = function(channel, _control, value, _status, group) {
+    const deckNum = channel + 1;
+
+    // same loop-adjust guard
+    if (PioneerDDJFLX4.loopAdjustIn[channel] || PioneerDDJFLX4.loopAdjustOut[channel]) {
+        return;
+    }
+
+    const touching = (value !== 0);
+    PioneerDDJFLX4.wheelTouch[channel] = touching;
+
+    if (touching) {
+        PioneerDDJFLX4._scratchAction[channel] = "seek";
+        PioneerDDJFLX4._scratchEnable(deckNum);
+        return;
+    }
+
+    if (PioneerDDJFLX4._scratchEnabled[channel]) {
+        PioneerDDJFLX4._scratchDisable(deckNum);
+    } else {
+        PioneerDDJFLX4._scratchAction[channel] = "bend";
+    }
+};
+
+// ---------- turn handlers ----------
 PioneerDDJFLX4.jogTurn = function(channel, _control, value, _status, group) {
     const deckNum = channel + 1;
-    // wheel center at 64; <64 rew >64 fwd
-    let newVal = value - 64;
+
+    // centered at 64; <64 rew >64 fwd
+    const delta = value - 64;
 
     const st = (group === "[Channel1]") ? 0x90 : 0x91;
 
-    // loop_in / out adjust
-    const loopEnabled = engine.getValue(group, "loop_enabled");
-    if (loopEnabled > 0) {
-
-        // Hercules-mode: beat-relative, clamped (wenn aktiv)
+    // Loop adjust has priority (your dual-mode block)
+    if (engine.getValue(group, "loop_enabled") > 0) {
         if (typeof PioneerDDJFLX4._handleJogLoopAdjust === "function") {
-            if (PioneerDDJFLX4._handleJogLoopAdjust(channel, group, newVal, _control, st)) {
+            if (PioneerDDJFLX4._handleJogLoopAdjust(channel, group, delta, _control, st)) {
                 return;
             }
         }
 
-        // Simple-mode: deine bisherige Sample-add-Logik
+        // Simple-mode legacy adjust (your existing multiply logic)
         if (PioneerDDJFLX4.loopAdjustIn[channel]) {
-            // jede Bewegung hält den Adjust-Mode am Leben
             if (typeof PioneerDDJFLX4._scheduleLoopAdjustTimeout === "function") {
                 PioneerDDJFLX4._scheduleLoopAdjustTimeout(channel, group, _control, st);
             }
-            newVal = newVal * PioneerDDJFLX4.loopAdjustMultiply + engine.getValue(group, "loop_start_position");
-            engine.setValue(group, "loop_start_position", newVal);
+            const newPos = delta * PioneerDDJFLX4.loopAdjustMultiply + engine.getValue(group, "loop_start_position");
+            engine.setValue(group, "loop_start_position", newPos);
             return;
         }
         if (PioneerDDJFLX4.loopAdjustOut[channel]) {
             if (typeof PioneerDDJFLX4._scheduleLoopAdjustTimeout === "function") {
                 PioneerDDJFLX4._scheduleLoopAdjustTimeout(channel, group, _control, st);
             }
-            newVal = newVal * PioneerDDJFLX4.loopAdjustMultiply + engine.getValue(group, "loop_end_position");
-            engine.setValue(group, "loop_end_position", newVal);
+            const newPos = delta * PioneerDDJFLX4.loopAdjustMultiply + engine.getValue(group, "loop_end_position");
+            engine.setValue(group, "loop_end_position", newPos);
             return;
         }
     }
 
+    // Scratch/bend behavior
     if (engine.isScratching(deckNum)) {
-        engine.scratchTick(deckNum, newVal);
-    } else { // fallback
-        engine.setValue(group, "jog", newVal * this.bendScale);
-    }
-};
+        const action = PioneerDDJFLX4._scratchAction[channel];
 
-
-PioneerDDJFLX4.jogSearch = function(_channel, _control, value, _status, group) {
-    const newVal = (value - 64) * PioneerDDJFLX4.fastSeekScale;
-    engine.setValue(group, "jog", newVal);
-};
-
-PioneerDDJFLX4.jogTouch = function(channel, _control, value) {
-    const deckNum = channel + 1;
-
-    // skip while adjusting the loop points
-    if (PioneerDDJFLX4.loopAdjustIn[channel] || PioneerDDJFLX4.loopAdjustOut[channel]) {
+        if (action === "seek") {
+            engine.scratchTick(deckNum, delta * PioneerDDJFLX4.scratchScale * PioneerDDJFLX4.seekScratchMultiplier);
+        } else {
+            engine.scratchTick(deckNum, delta * PioneerDDJFLX4.scratchScale);
+        }
         return;
     }
 
-    if (value !== 0 && this.vinylMode) {
-        engine.scratchEnable(deckNum, 720, 33+1/3, this.alpha, this.beta);
-    } else {
-        engine.scratchDisable(deckNum);
-    }
+    // Fallback: bend/jog
+    engine.setValue(group, "jog", delta * this.bendScale);
 };
 
-
+PioneerDDJFLX4.jogSearch = function(_channel, _control, value, _status, group) {
+    // keep your existing search behavior
+    const newVal = (value - 64) * PioneerDDJFLX4.fastSeekScale;
+    engine.setValue(group, "jog", newVal);
+};
 
 //
 // Tempo sliders
