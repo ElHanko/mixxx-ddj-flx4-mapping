@@ -895,113 +895,329 @@ PioneerDDJFLX4.setPadModePadFx2 = function(_ch, _ctrl, value, _st, group) {
     PioneerDDJFLX4.padMode[group] = "padfx2";
     PioneerDDJFLX4.updatePadFxUI(group);
 };
+///////////////////////////////////////////////////////////////
+// Loop Features (FLX4) – dual mode switch + auto-timeout
 //
-// Loop Features
-//
+// Goals:
+// - RELOOP/EXIT:   Loop ON  -> exit/reloop_toggle
+//                 Loop OFF -> activate fixed N-beat loop (default 4)
+// - LOOP IN / OUT buttons:
+//    Mode "simple":    wie bisher: Adjust-Modus nur wenn Loop aktiv
+//    Mode "hercules":  wenn Loop aus:
+//                        IN  -> setzt loop_in + Pending-Out (OUT fehlt noch)
+//                        OUT -> setzt loop_out (und aktiviert Loop)
+//                      wenn Loop an:
+//                        IN/OUT toggeln Adjust-Modus + Blink-LEDs
+// - LED/Blinking bleibt zentral über loop_enabled callback + Blink-Timer
+// - Auto-exit: wenn 5s kein Adjust (Jog) kommt -> Adjust-Modus aus + LEDs zurück
+///////////////////////////////////////////////////////////////
 
-// RELOOP/EXIT: Loop an -> exit (reloop_toggle), Loop aus -> 4-beat loop activate
-PioneerDDJFLX4.reloopExitPressed = function(_channel, _control, value, _status, group) {
-    if (value !== 0x7F) return; // only on press
+// ------------------- CONFIG SWITCH -------------------
+// "simple"  = dein bisheriges Verhalten (DEFAULT)
+// "hercules"= Hercules-Style loop_in/loop_out + Pending-Out + sample-based Adjust
+PioneerDDJFLX4.LOOP_ADJUST_MODE = "simple"; // <- "simple" oder "hercules"
 
-    // optional, aber sinnvoll: ohne geladenen Track keinen Loop erzwingen
-    if (engine.getValue(group, "track_loaded") !== 1) return;
+// Schrittweite fürs Hercules-style sample based adjust (Anteil eines Beats pro Jog-Tick)
+PioneerDDJFLX4.loopAdjustStepBeats = 0.02; // 2% Beat pro Tick
 
-    const loopOn = engine.getValue(group, "loop_enabled") > 0;
+// Fixe Loop-Länge für RELOOP/EXIT wenn kein Loop aktiv ist
+PioneerDDJFLX4.reloopExitBeats = 4;
 
-    if (loopOn) {
-        // entspricht "Exit" Verhalten
-        script.triggerControl(group, "reloop_toggle");
-        return;
-    }
+// Auto-timeout für Adjust-Mode (ms)
+PioneerDDJFLX4.loopAdjustTimeoutMs = 5000;
 
-    // entspricht "Loop (4 Beats) an"
-    const size = 4; // wenn du später konfigurierbar willst, machen wir das als const/setting
-    engine.setValue(group, "beatloop_size", size);
-    script.triggerControl(group, "beatloop_activate");
+// ------------------- STATE -------------------
+// pro Deck index (0/1) für Adjust-Flags (werden in beiden Modes genutzt)
+PioneerDDJFLX4.loopAdjustIn  = PioneerDDJFLX4.loopAdjustIn  || [false, false];
+PioneerDDJFLX4.loopAdjustOut = PioneerDDJFLX4.loopAdjustOut || [false, false];
+
+// Pending-Out (nur relevant in "hercules"): loop_in gesetzt, loop_out fehlt noch
+PioneerDDJFLX4._loopPendingOut = PioneerDDJFLX4._loopPendingOut || {
+  "[Channel1]": false,
+  "[Channel2]": false,
 };
 
-// Loop IN/OUT ADJUST
-PioneerDDJFLX4.toggleLoopAdjustIn = function(channel, _control, value, _status, group) {
-    if (value === 0 || engine.getValue(group, "loop_enabled") === 0) {
-        return;
-    }
-    PioneerDDJFLX4.loopAdjustIn[channel] = !PioneerDDJFLX4.loopAdjustIn[channel];
-    PioneerDDJFLX4.loopAdjustOut[channel] = false;
+// Timer storage (Blink + Timeout)
+PioneerDDJFLX4.timers = PioneerDDJFLX4.timers || {};
+PioneerDDJFLX4._loopAdjustTimeoutTimer = PioneerDDJFLX4._loopAdjustTimeoutTimer || {
+  "[Channel1]": undefined,
+  "[Channel2]": undefined,
 };
 
-PioneerDDJFLX4.toggleLoopAdjustOut = function(channel, _control, value, _status, group) {
-    if (value === 0 || engine.getValue(group, "loop_enabled") === 0) {
-        return;
-    }
-    PioneerDDJFLX4.loopAdjustOut[channel] = !PioneerDDJFLX4.loopAdjustOut[channel];
-    PioneerDDJFLX4.loopAdjustIn[channel] = false;
-};
-
-// Two signals are sent here so that the light stays lit/unlit in its shift state too
+// ------------------- LED HELPERS -------------------
+// Zwei Signale, damit die LED auch im Shift-Layer konsistent ist (wie bisher)
 PioneerDDJFLX4.setReloopLight = function(status, value) {
-    midi.sendShortMsg(status, 0x4D, value);
-    midi.sendShortMsg(status, 0x50, value);
+  midi.sendShortMsg(status, 0x4D, value);
+  midi.sendShortMsg(status, 0x50, value);
 };
-
 
 PioneerDDJFLX4.setLoopButtonLights = function(status, value) {
-    [0x10, 0x11, 0x4E, 0x4C].forEach(function(control) {
-        midi.sendShortMsg(status, control, value);
-    });
-};
-
-PioneerDDJFLX4.startLoopLightsBlink = function(channel, control, status, group) {
-    let blink = 0x7F;
-
-    PioneerDDJFLX4.stopLoopLightsBlink(group, control, status);
-
-    PioneerDDJFLX4.timers[group][control] = engine.beginTimer(500, () => {
-        blink = 0x7F - blink;
-
-        // When adjusting the loop out position, turn the loop in light off
-        if (PioneerDDJFLX4.loopAdjustOut[channel]) {
-            midi.sendShortMsg(status, 0x10, 0x00);
-            midi.sendShortMsg(status, 0x4C, 0x00);
-        } else {
-            midi.sendShortMsg(status, 0x10, blink);
-            midi.sendShortMsg(status, 0x4C, blink);
-        }
-
-        // When adjusting the loop in position, turn the loop out light off
-        if (PioneerDDJFLX4.loopAdjustIn[channel]) {
-            midi.sendShortMsg(status, 0x11, 0x00);
-            midi.sendShortMsg(status, 0x4E, 0x00);
-        } else {
-            midi.sendShortMsg(status, 0x11, blink);
-            midi.sendShortMsg(status, 0x4E, blink);
-        }
-    });
-
+  // IN, OUT, IN(SHIFT), OUT(SHIFT) – wie bisher
+  [0x10, 0x11, 0x4E, 0x4C].forEach(function(control) {
+    midi.sendShortMsg(status, control, value);
+  });
 };
 
 PioneerDDJFLX4.stopLoopLightsBlink = function(group, control, status) {
-    PioneerDDJFLX4.timers[group] = PioneerDDJFLX4.timers[group] || {};
+  PioneerDDJFLX4.timers[group] = PioneerDDJFLX4.timers[group] || {};
+  if (PioneerDDJFLX4.timers[group][control] !== undefined) {
+    engine.stopTimer(PioneerDDJFLX4.timers[group][control]);
+  }
+  PioneerDDJFLX4.timers[group][control] = undefined;
 
-    if (PioneerDDJFLX4.timers[group][control] !== undefined) {
-        engine.stopTimer(PioneerDDJFLX4.timers[group][control]);
-    }
-    PioneerDDJFLX4.timers[group][control] = undefined;
-    PioneerDDJFLX4.setLoopButtonLights(status, 0x7F);
+  // Default nach Blink: beide solid ON (Loop aktiv)
+  PioneerDDJFLX4.setLoopButtonLights(status, 0x7F);
 };
 
-PioneerDDJFLX4.loopToggle = function(value, group, control) {
-    const status = group === "[Channel1]" ? 0x90 : 0x91,
-        channel = group === "[Channel1]" ? 0 : 1;
+PioneerDDJFLX4.startLoopLightsBlink = function(channelIdx, control, status, group) {
+  let blink = 0x7F;
 
-    PioneerDDJFLX4.setReloopLight(status, value ? 0x7F : 0x00);
+  PioneerDDJFLX4.stopLoopLightsBlink(group, control, status);
 
-    if (value) {
-        PioneerDDJFLX4.startLoopLightsBlink(channel, control, status, group);
+  PioneerDDJFLX4.timers[group] = PioneerDDJFLX4.timers[group] || {};
+  PioneerDDJFLX4.timers[group][control] = engine.beginTimer(500, () => {
+    blink = 0x7F - blink;
+
+    // OUT adjust aktiv -> IN LEDs OFF, OUT LEDs blink
+    if (PioneerDDJFLX4.loopAdjustOut[channelIdx]) {
+      midi.sendShortMsg(status, 0x10, 0x00);
+      midi.sendShortMsg(status, 0x4C, 0x00);
     } else {
-        PioneerDDJFLX4.stopLoopLightsBlink(group, control, status);
-        PioneerDDJFLX4.loopAdjustIn[channel] = false;
-        PioneerDDJFLX4.loopAdjustOut[channel] = false;
+      midi.sendShortMsg(status, 0x10, blink);
+      midi.sendShortMsg(status, 0x4C, blink);
     }
+
+    // IN adjust aktiv -> OUT LEDs OFF, IN LEDs blink
+    if (PioneerDDJFLX4.loopAdjustIn[channelIdx]) {
+      midi.sendShortMsg(status, 0x11, 0x00);
+      midi.sendShortMsg(status, 0x4E, 0x00);
+    } else {
+      midi.sendShortMsg(status, 0x11, blink);
+      midi.sendShortMsg(status, 0x4E, blink);
+    }
+  });
+};
+
+// ------------------- AUTO TIMEOUT -------------------
+// Wird bei jedem Adjust-Jog neu gestartet.
+// Wenn ausgelöst: Adjust Flags aus + Blink aus + LEDs in "normalen" Loop-Status.
+PioneerDDJFLX4._scheduleLoopAdjustTimeout = function(channelIdx, group, controlForBlink, statusForLed) {
+  const ms = Number(PioneerDDJFLX4.loopAdjustTimeoutMs);
+  if (!Number.isFinite(ms) || ms <= 0) return;
+
+  // Timer pro Deck/Group
+  const oldId = PioneerDDJFLX4._loopAdjustTimeoutTimer[group];
+  if (oldId !== undefined) {
+    engine.stopTimer(oldId);
+    PioneerDDJFLX4._loopAdjustTimeoutTimer[group] = undefined;
+  }
+
+  PioneerDDJFLX4._loopAdjustTimeoutTimer[group] = engine.beginTimer(ms, () => {
+    PioneerDDJFLX4._loopAdjustTimeoutTimer[group] = undefined;
+
+    // Adjust-Flags aus
+    PioneerDDJFLX4.loopAdjustIn[channelIdx] = false;
+    PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;
+
+    // Blink aus (falls aktiv)
+    PioneerDDJFLX4.stopLoopLightsBlink(group, controlForBlink, statusForLed);
+
+    // LEDs zurück in "normal"
+    const loopOn = engine.getValue(group, "loop_enabled") > 0;
+    if (loopOn) {
+      PioneerDDJFLX4.setLoopButtonLights(statusForLed, 0x7F); // beide solid
+    } else {
+      PioneerDDJFLX4.setLoopButtonLights(statusForLed, 0x00); // beide aus
+    }
+  }, true /* one-shot, falls unterstützt */);
+};
+
+// ------------------- loop_enabled callback -------------------
+PioneerDDJFLX4.loopToggle = function(value, group, control) {
+  const status = group === "[Channel1]" ? 0x90 : 0x91;
+  const channelIdx = group === "[Channel1]" ? 0 : 1;
+
+  // RELOOP/EXIT LED folgt loop_enabled (wie bisher)
+  PioneerDDJFLX4.setReloopLight(status, value ? 0x7F : 0x00);
+
+  if (value) {
+    PioneerDDJFLX4.startLoopLightsBlink(channelIdx, control, status, group);
+  } else {
+    PioneerDDJFLX4.stopLoopLightsBlink(group, control, status);
+    PioneerDDJFLX4.loopAdjustIn[channelIdx] = false;
+    PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;
+    PioneerDDJFLX4._loopPendingOut[group] = false;
+
+    // Timeout auch killen
+    const tid = PioneerDDJFLX4._loopAdjustTimeoutTimer[group];
+    if (tid !== undefined) {
+      engine.stopTimer(tid);
+      PioneerDDJFLX4._loopAdjustTimeoutTimer[group] = undefined;
+    }
+  }
+};
+
+// ------------------- RELOOP/EXIT -------------------
+// Loop an -> reloop_toggle (Exit); Loop aus -> N-beat loop activate
+PioneerDDJFLX4.reloopExitPressed = function(_channel, _control, value, _status, group) {
+  if (value !== 0x7F) return;
+  if (engine.getValue(group, "track_loaded") !== 1) return;
+
+  const loopOn = engine.getValue(group, "loop_enabled") > 0;
+
+  if (loopOn) {
+    script.triggerControl(group, "reloop_toggle");
+    return;
+  }
+
+  const size = Number(PioneerDDJFLX4.reloopExitBeats);
+  engine.setValue(group, "beatloop_size", (Number.isFinite(size) && size > 0) ? size : 4);
+  script.triggerControl(group, "beatloop_activate");
+};
+
+// ------------------- HERCULES-STYLE HELPERS -------------------
+PioneerDDJFLX4._samplesPerBeat = function(group) {
+  const sr = engine.getValue(group, "track_samplerate");
+  let bpm = engine.getValue(group, "bpm");
+  if (!Number.isFinite(bpm) || bpm <= 0) bpm = engine.getValue(group, "local_bpm");
+  if (!Number.isFinite(sr) || sr <= 0) return NaN;
+  if (!Number.isFinite(bpm) || bpm <= 0) return NaN;
+  return (60 / bpm) * sr; // samples per beat
+};
+
+PioneerDDJFLX4._adjustLoopEdge = function(group, edge /*"in"|"out"*/, interval /*signed int*/) {
+  const spb   = PioneerDDJFLX4._samplesPerBeat(group);
+  const total = engine.getValue(group, "track_samples");
+  if (!Number.isFinite(spb) || !Number.isFinite(total) || total <= 0) return;
+
+  const delta  = Math.round(spb * PioneerDDJFLX4.loopAdjustStepBeats * interval);
+  const minLen = Math.max(1, Math.round(spb * 0.05)); // ~5% beat min length
+
+  let a = engine.getValue(group, "loop_start_position");
+  let b = engine.getValue(group, "loop_end_position");
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return;
+
+  if (edge === "in") a += delta;
+  else              b += delta;
+
+  a = Math.max(0, Math.min(total - minLen, a));
+  b = Math.max(a + minLen, Math.min(total, b));
+
+  engine.setValue(group, "loop_start_position", a);
+  engine.setValue(group, "loop_end_position",   b);
+};
+
+// Hook für jogTurn(): in hercules-mode sample-based adjust
+PioneerDDJFLX4._handleJogLoopAdjust = function(channelIdx, group, jogDelta /*signed*/, controlForBlink, statusForLed) {
+  if (PioneerDDJFLX4.LOOP_ADJUST_MODE !== "hercules") return false;
+
+  const loopOn = engine.getValue(group, "loop_enabled") > 0;
+  if (!loopOn) return false;
+
+  if (!PioneerDDJFLX4.loopAdjustIn[channelIdx] && !PioneerDDJFLX4.loopAdjustOut[channelIdx]) return false;
+
+  const dir = jogDelta > 0 ? 1 : -1;
+  if (PioneerDDJFLX4.loopAdjustIn[channelIdx])  PioneerDDJFLX4._adjustLoopEdge(group, "in",  dir);
+  if (PioneerDDJFLX4.loopAdjustOut[channelIdx]) PioneerDDJFLX4._adjustLoopEdge(group, "out", dir);
+
+  // Jede Adjust-Bewegung verlängert den Adjust-Mode
+  PioneerDDJFLX4._scheduleLoopAdjustTimeout(channelIdx, group, controlForBlink, statusForLed);
+  return true;
+};
+
+// ------------------- LOOP IN / OUT BUTTONS -------------------
+// toggleLoopAdjustIn / toggleLoopAdjustOut bleiben die XML targets.
+// Mode entscheidet, was passiert.
+PioneerDDJFLX4.toggleLoopAdjustIn = function(channelIdx, control, value, _status, group) {
+  if (value !== 0x7F) return;
+
+  const loopOn = engine.getValue(group, "loop_enabled") > 0;
+  const st = (group === "[Channel1]") ? 0x90 : 0x91;
+
+  // --- HERCULES MODE ---
+  if (PioneerDDJFLX4.LOOP_ADJUST_MODE === "hercules") {
+    if (!loopOn) {
+      // pending already? -> cancel
+      if (PioneerDDJFLX4._loopPendingOut[group]) {
+        PioneerDDJFLX4._loopPendingOut[group] = false;
+        PioneerDDJFLX4.setLoopButtonLights(st, 0x00);
+        return;
+      }
+
+      // set loop in + pending out
+      script.triggerControl(group, "loop_in");
+      PioneerDDJFLX4._loopPendingOut[group] = true;
+      return;
+    }
+
+    // loop active -> toggle IN adjust mode
+    PioneerDDJFLX4._loopPendingOut[group] = false;
+
+    PioneerDDJFLX4.loopAdjustIn[channelIdx] = !PioneerDDJFLX4.loopAdjustIn[channelIdx];
+    if (PioneerDDJFLX4.loopAdjustIn[channelIdx]) PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;
+
+    if (PioneerDDJFLX4.loopAdjustIn[channelIdx] || PioneerDDJFLX4.loopAdjustOut[channelIdx]) {
+      PioneerDDJFLX4.startLoopLightsBlink(channelIdx, control, st, group);
+      PioneerDDJFLX4._scheduleLoopAdjustTimeout(channelIdx, group, control, st);
+    } else {
+      PioneerDDJFLX4.stopLoopLightsBlink(group, control, st);
+      PioneerDDJFLX4.setLoopButtonLights(st, 0x7F);
+    }
+    return;
+  }
+
+  // --- SIMPLE MODE (DEFAULT) ---
+  if (!loopOn) return;
+
+  PioneerDDJFLX4.loopAdjustIn[channelIdx] = !PioneerDDJFLX4.loopAdjustIn[channelIdx];
+  PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;
+
+  // Timer nur wenn Adjust aktiv
+  if (PioneerDDJFLX4.loopAdjustIn[channelIdx]) {
+    PioneerDDJFLX4._scheduleLoopAdjustTimeout(channelIdx, group, control, st);
+  }
+};
+
+PioneerDDJFLX4.toggleLoopAdjustOut = function(channelIdx, control, value, _status, group) {
+  if (value !== 0x7F) return;
+
+  const loopOn = engine.getValue(group, "loop_enabled") > 0;
+  const st = (group === "[Channel1]") ? 0x90 : 0x91;
+
+  // --- HERCULES MODE ---
+  if (PioneerDDJFLX4.LOOP_ADJUST_MODE === "hercules") {
+    if (!loopOn) {
+      // set loop out (also activates loop)
+      script.triggerControl(group, "loop_out");
+      PioneerDDJFLX4._loopPendingOut[group] = false;
+      return;
+    }
+
+    // loop active -> toggle OUT adjust mode
+    PioneerDDJFLX4._loopPendingOut[group] = false;
+
+    PioneerDDJFLX4.loopAdjustOut[channelIdx] = !PioneerDDJFLX4.loopAdjustOut[channelIdx];
+    if (PioneerDDJFLX4.loopAdjustOut[channelIdx]) PioneerDDJFLX4.loopAdjustIn[channelIdx] = false;
+
+    if (PioneerDDJFLX4.loopAdjustIn[channelIdx] || PioneerDDJFLX4.loopAdjustOut[channelIdx]) {
+      PioneerDDJFLX4.startLoopLightsBlink(channelIdx, control, st, group);
+      PioneerDDJFLX4._scheduleLoopAdjustTimeout(channelIdx, group, control, st);
+    } else {
+      PioneerDDJFLX4.stopLoopLightsBlink(group, control, st);
+      PioneerDDJFLX4.setLoopButtonLights(st, 0x7F);
+    }
+    return;
+  }
+
+  // --- SIMPLE MODE (DEFAULT) ---
+  if (!loopOn) return;
+
+  PioneerDDJFLX4.loopAdjustOut[channelIdx] = !PioneerDDJFLX4.loopAdjustOut[channelIdx];
+  PioneerDDJFLX4.loopAdjustIn[channelIdx] = false;
+
+  if (PioneerDDJFLX4.loopAdjustOut[channelIdx]) {
+    PioneerDDJFLX4._scheduleLoopAdjustTimeout(channelIdx, group, control, st);
+  }
 };
 
 //
@@ -1067,15 +1283,33 @@ PioneerDDJFLX4.jogTurn = function(channel, _control, value, _status, group) {
     // wheel center at 64; <64 rew >64 fwd
     let newVal = value - 64;
 
+    const st = (group === "[Channel1]") ? 0x90 : 0x91;
+
     // loop_in / out adjust
     const loopEnabled = engine.getValue(group, "loop_enabled");
     if (loopEnabled > 0) {
+
+        // Hercules-mode: beat-relative, clamped (wenn aktiv)
+        if (typeof PioneerDDJFLX4._handleJogLoopAdjust === "function") {
+            if (PioneerDDJFLX4._handleJogLoopAdjust(channel, group, newVal, _control, st)) {
+                return;
+            }
+        }
+
+        // Simple-mode: deine bisherige Sample-add-Logik
         if (PioneerDDJFLX4.loopAdjustIn[channel]) {
+            // jede Bewegung hält den Adjust-Mode am Leben
+            if (typeof PioneerDDJFLX4._scheduleLoopAdjustTimeout === "function") {
+                PioneerDDJFLX4._scheduleLoopAdjustTimeout(channel, group, _control, st);
+            }
             newVal = newVal * PioneerDDJFLX4.loopAdjustMultiply + engine.getValue(group, "loop_start_position");
             engine.setValue(group, "loop_start_position", newVal);
             return;
         }
         if (PioneerDDJFLX4.loopAdjustOut[channel]) {
+            if (typeof PioneerDDJFLX4._scheduleLoopAdjustTimeout === "function") {
+                PioneerDDJFLX4._scheduleLoopAdjustTimeout(channel, group, _control, st);
+            }
             newVal = newVal * PioneerDDJFLX4.loopAdjustMultiply + engine.getValue(group, "loop_end_position");
             engine.setValue(group, "loop_end_position", newVal);
             return;
