@@ -435,8 +435,11 @@ PioneerDDJFLX4.padMode["[Channel2]"] = PioneerDDJFLX4.PADMODE.HOTCUE;
 
 
     // Ensure controller vinyl state is known on startup (fixes "need to press twice")
+    // _applyVinylState expects (deckIdx, on) — your old call passed only one arg and
+    // accidentally targeted only deck 1 due to JS coercion.
     if (typeof PioneerDDJFLX4._applyVinylState === "function") {
-        PioneerDDJFLX4._applyVinylState(false); // or true, if you want default vinyl-on
+        PioneerDDJFLX4._applyVinylState(0, false);
+        PioneerDDJFLX4._applyVinylState(1, false);
     }
 };
 
@@ -1228,13 +1231,12 @@ PioneerDDJFLX4.toggleLoopAdjustIn = function(channelIdx, control, value, _status
     PioneerDDJFLX4.loopAdjustIn[channelIdx] = !PioneerDDJFLX4.loopAdjustIn[channelIdx];
     if (PioneerDDJFLX4.loopAdjustIn[channelIdx]) PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;
 
+    // Your startLoopLightsBlink signature is (channelIdx, status, group).
+    // Also: don’t manually force LEDs here; use the central renderer.
     if (PioneerDDJFLX4.loopAdjustIn[channelIdx] || PioneerDDJFLX4.loopAdjustOut[channelIdx]) {
-      PioneerDDJFLX4.startLoopLightsBlink(channelIdx, control, st, group);
       PioneerDDJFLX4._scheduleLoopAdjustTimeout(channelIdx, group, control, st);
-    } else {
-      PioneerDDJFLX4.stopLoopLightsBlink(group, control, st);
-      PioneerDDJFLX4.setLoopButtonLights(st, 0x7F);
     }
+    PioneerDDJFLX4._updateLoopLeds(group, control, st);
     return;
   }
 
@@ -1271,13 +1273,11 @@ PioneerDDJFLX4.toggleLoopAdjustOut = function(channelIdx, control, value, _statu
     PioneerDDJFLX4.loopAdjustOut[channelIdx] = !PioneerDDJFLX4.loopAdjustOut[channelIdx];
     if (PioneerDDJFLX4.loopAdjustOut[channelIdx]) PioneerDDJFLX4.loopAdjustIn[channelIdx] = false;
 
+    // Fix wrong function calls + keep LED logic centralized
     if (PioneerDDJFLX4.loopAdjustIn[channelIdx] || PioneerDDJFLX4.loopAdjustOut[channelIdx]) {
-      PioneerDDJFLX4.startLoopLightsBlink(channelIdx, control, st, group);
       PioneerDDJFLX4._scheduleLoopAdjustTimeout(channelIdx, group, control, st);
-    } else {
-      PioneerDDJFLX4.stopLoopLightsBlink(group, control, st);
-      PioneerDDJFLX4.setLoopButtonLights(st, 0x7F);
     }
+    PioneerDDJFLX4._updateLoopLeds(group, control, st);
     return;
   }
 
@@ -1422,8 +1422,6 @@ PioneerDDJFLX4.seekScratchMultiplier = PioneerDDJFLX4.seekScratchMultiplier || 4
 //   platter vinyl OFF -> CC 0x23
 // We track the last seen controller state per deck here.
 PioneerDDJFLX4._jogVinylFromController = PioneerDDJFLX4._jogVinylFromController || [false, false];
-// Our own desired state (do NOT derive toggle from controller-reported state at startup)
-PioneerDDJFLX4._vinylWanted = (typeof PioneerDDJFLX4._vinylWanted === "boolean") ? PioneerDDJFLX4._vinylWanted : false;
 PioneerDDJFLX4.wheelTouch = PioneerDDJFLX4.wheelTouch || [false, false];    // per deck side
 PioneerDDJFLX4._scratchEnabled = PioneerDDJFLX4._scratchEnabled || [false, false];
 PioneerDDJFLX4._scratchAction = PioneerDDJFLX4._scratchAction || ["bend", "bend"]; // "scratch"|"seek"|"bend"
@@ -1535,7 +1533,8 @@ PioneerDDJFLX4.jogTurn = function(channel, _control, value, _status, group) {
     // Loop adjust has priority (your dual-mode block)
     if (engine.getValue(group, "loop_enabled") > 0) {
         if (typeof PioneerDDJFLX4._handleJogLoopAdjust === "function") {
-            if (PioneerDDJFLX4._handleJogLoopAdjust(channel, group, delta, _control, st)) {
+            // _handleJogLoopAdjust expects deckIdx (0/1), not MIDI channel number
+            if (PioneerDDJFLX4._handleJogLoopAdjust(deckIdx, group, delta, _control, st)) {
                 return;
             }
         }
@@ -1608,7 +1607,11 @@ PioneerDDJFLX4._setHardwareVinyl = function(deckIdx, on) {
 };
 
 // Per-deck desired state
-PioneerDDJFLX4._vinylWanted = PioneerDDJFLX4._vinylWanted || [false, false];
+// You previously initialized _vinylWanted as a boolean earlier, and later treated it as an array.
+// If it ever becomes true, `|| [false,false]` would *not* replace it -> runtime bugs.
+if (!Array.isArray(PioneerDDJFLX4._vinylWanted)) {
+    PioneerDDJFLX4._vinylWanted = [false, false];
+}
 
 PioneerDDJFLX4._applyVinylState = function(deckIdx, on) {
     const state = !!on;
