@@ -57,6 +57,14 @@ PioneerDDJFLX4.lights = {
         status: 0x94,
         data1: 0x43,
     },
+    SmartFader: {
+        status: 0x96,
+        data1: 0x01,
+    },
+    shiftSmartFader: {
+        status: 0x96,
+        data1: 0x09,
+    },
     deck1: {
         vuMeter: {
             status: 0xB0,
@@ -254,6 +262,24 @@ PioneerDDJFLX4.toggleLight = function(midiIn, active) {
     midi.sendShortMsg(midiIn.status, midiIn.data1, active ? 0x7F : 0);
 };
 
+///////////////////////////////////////////////////////////////
+// Deck index helper (robust)
+// Always derive deck index from group, not from "channel" arg.
+///////////////////////////////////////////////////////////////
+PioneerDDJFLX4._deckIndexFromGroup = PioneerDDJFLX4._deckIndexFromGroup || function(group) {
+    // group is usually "[Channel1]" / "[Channel2]"
+    if (group === "[Channel1]") return 0;
+    if (group === "[Channel2]") return 1;
+    // fallback: try to parse ChannelN
+    const m = /\[Channel(\d+)\]/.exec(group);
+    if (m) {
+        const d = (parseInt(m[1], 10) | 0) - 1;
+        if (d === 0 || d === 1) return d;
+    }
+    return 0; // safe default
+};
+
+
 //
 // Shift button
 //
@@ -406,6 +432,12 @@ PioneerDDJFLX4.padMode["[Channel2]"] = PioneerDDJFLX4.PADMODE.HOTCUE;
 
     // query the controller for current control positions on startup
     PioneerDDJFLX4.sendKeepAlive(); // the query seems to double as a keep alive message
+
+
+    // Ensure controller vinyl state is known on startup (fixes "need to press twice")
+    if (typeof PioneerDDJFLX4._applyVinylState === "function") {
+        PioneerDDJFLX4._applyVinylState(false); // or true, if you want default vinyl-on
+    }
 };
 
 //
@@ -1301,18 +1333,30 @@ PioneerDDJFLX4.cycleTempoRange = function(_channel, _control, value, _status, gr
 // ---------- config ----------
 PioneerDDJFLX4.jogPPR = PioneerDDJFLX4.jogPPR || 720;            // typical Pioneer jog resolution
 PioneerDDJFLX4.jogRPM = PioneerDDJFLX4.jogRPM || (33 + 1/3);     // platter RPM
+// Make scratch params explicit (avoid relying on "this" shape)
+// If you already define alpha/beta elsewhere, these keep your values.
+PioneerDDJFLX4.alpha = (Number.isFinite(PioneerDDJFLX4.alpha) ? PioneerDDJFLX4.alpha : 1.0);
+PioneerDDJFLX4.beta  = (Number.isFinite(PioneerDDJFLX4.beta)  ? PioneerDDJFLX4.beta  : 1.0);
+
 PioneerDDJFLX4.scratchScale = PioneerDDJFLX4.scratchScale || 1.0; // can tune
 PioneerDDJFLX4.seekScratchMultiplier = PioneerDDJFLX4.seekScratchMultiplier || 4.0;
 
 // ---------- state ----------
-PioneerDDJFLX4.vinylMode = PioneerDDJFLX4.vinylMode || [false, false];      // per deck side
+// DO NOT "invent" vinyl mode in the script.
+// FLX4 sends different CCs depending on its internal Vinyl mode:
+//   platter vinyl ON  -> CC 0x22
+//   platter vinyl OFF -> CC 0x23
+// We track the last seen controller state per deck here.
+PioneerDDJFLX4._jogVinylFromController = PioneerDDJFLX4._jogVinylFromController || [false, false];
+// Our own desired state (do NOT derive toggle from controller-reported state at startup)
+PioneerDDJFLX4._vinylWanted = (typeof PioneerDDJFLX4._vinylWanted === "boolean") ? PioneerDDJFLX4._vinylWanted : false;
 PioneerDDJFLX4.wheelTouch = PioneerDDJFLX4.wheelTouch || [false, false];    // per deck side
 PioneerDDJFLX4._scratchEnabled = PioneerDDJFLX4._scratchEnabled || [false, false];
 PioneerDDJFLX4._scratchAction = PioneerDDJFLX4._scratchAction || ["bend", "bend"]; // "scratch"|"seek"|"bend"
 
 // Helper: enable scratch for deckNum (1/2)
 PioneerDDJFLX4._scratchEnable = function(deckNum) {
-    engine.scratchEnable(deckNum, PioneerDDJFLX4.jogPPR, PioneerDDJFLX4.jogRPM, this.alpha, this.beta);
+    engine.scratchEnable(deckNum, PioneerDDJFLX4.jogPPR, PioneerDDJFLX4.jogRPM, PioneerDDJFLX4.alpha, PioneerDDJFLX4.beta);
     PioneerDDJFLX4._scratchEnabled[deckNum - 1] = true;
 };
 
@@ -1325,39 +1369,32 @@ PioneerDDJFLX4._scratchDisable = function(deckNum) {
     PioneerDDJFLX4._scratchAction[deckNum - 1] = "bend";
 };
 
-// Optional: map a VINYL button to this if you have one in XML already.
-// If you already have a vinyl toggle elsewhere, keep that and just set vinylMode[idx] there.
-PioneerDDJFLX4.vinylToggle = function(channel, _control, value) {
-    if (value !== 0x7F) return;
-    PioneerDDJFLX4.vinylMode[channel] = !PioneerDDJFLX4.vinylMode[channel];
-    // If you have a vinyl LED updater, call it here.
-};
-
 // ---------- touch handlers ----------
 PioneerDDJFLX4.jogTouch = function(channel, _control, value, _status, group) {
-    const deckNum = channel + 1;
+    const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
+    const deckNum = deckIdx + 1;
 
     // If we are adjusting loop points, ignore touch changes to prevent scratch toggling while editing.
-    if (PioneerDDJFLX4.loopAdjustIn[channel] || PioneerDDJFLX4.loopAdjustOut[channel]) {
+    if (PioneerDDJFLX4.loopAdjustIn[deckIdx] || PioneerDDJFLX4.loopAdjustOut[deckIdx]) {
         return;
     }
 
     const touching = (value !== 0);
-    PioneerDDJFLX4.wheelTouch[channel] = touching;
+    PioneerDDJFLX4.wheelTouch[deckIdx] = touching;
 
     if (touching) {
-        // Decide scratch vs bend:
-        // scratch if deck not playing OR vinylMode enabled.
+        // Decide scratch vs bend based on CONTROLLER vinyl state:
+        // scratch if deck not playing OR controller is in vinyl mode.
         const playing = engine.getValue(group, "play") === 1;
-        const wantScratch = (!playing) || !!PioneerDDJFLX4.vinylMode[channel];
+        const wantScratch = (!playing) || !!PioneerDDJFLX4._jogVinylFromController[deckIdx];
 
         if (wantScratch) {
-            PioneerDDJFLX4._scratchAction[channel] = "scratch";
+            PioneerDDJFLX4._scratchAction[deckIdx] = "scratch";
             PioneerDDJFLX4._scratchEnable(deckNum);
         } else {
-            PioneerDDJFLX4._scratchAction[channel] = "bend";
+            PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
             // ensure scratch is off if it was on
-            if (PioneerDDJFLX4._scratchEnabled[channel]) {
+            if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
                 PioneerDDJFLX4._scratchDisable(deckNum);
             }
         }
@@ -1365,46 +1402,55 @@ PioneerDDJFLX4.jogTouch = function(channel, _control, value, _status, group) {
     }
 
     // Touch released
-    if (PioneerDDJFLX4._scratchEnabled[channel]) {
+    if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
         PioneerDDJFLX4._scratchDisable(deckNum);
     } else {
-        PioneerDDJFLX4._scratchAction[channel] = "bend";
+        PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
     }
 };
 
 // Optional Shift-touch (bind it in XML if you have a separate touch note/cc for shift layer)
 PioneerDDJFLX4.jogTouchShift = function(channel, _control, value, _status, group) {
-    const deckNum = channel + 1;
+    const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
+    const deckNum = deckIdx + 1;
 
     // same loop-adjust guard
-    if (PioneerDDJFLX4.loopAdjustIn[channel] || PioneerDDJFLX4.loopAdjustOut[channel]) {
+    if (PioneerDDJFLX4.loopAdjustIn[deckIdx] || PioneerDDJFLX4.loopAdjustOut[deckIdx]) {
         return;
     }
 
     const touching = (value !== 0);
-    PioneerDDJFLX4.wheelTouch[channel] = touching;
+    PioneerDDJFLX4.wheelTouch[deckIdx] = touching;
 
     if (touching) {
-        PioneerDDJFLX4._scratchAction[channel] = "seek";
+        PioneerDDJFLX4._scratchAction[deckIdx] = "seek";
         PioneerDDJFLX4._scratchEnable(deckNum);
         return;
     }
 
-    if (PioneerDDJFLX4._scratchEnabled[channel]) {
+    if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
         PioneerDDJFLX4._scratchDisable(deckNum);
     } else {
-        PioneerDDJFLX4._scratchAction[channel] = "bend";
+        PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
     }
 };
 
 // ---------- turn handlers ----------
 PioneerDDJFLX4.jogTurn = function(channel, _control, value, _status, group) {
-    const deckNum = channel + 1;
+    const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
+    const deckNum = deckIdx + 1;
 
     // centered at 64; <64 rew >64 fwd
     const delta = value - 64;
 
     const st = (group === "[Channel1]") ? 0x90 : 0x91;
+
+    // --- learn controller vinyl mode from incoming CC ---
+    // platter vinyl ON  -> 0x22 (scratch)
+    // platter vinyl OFF -> 0x23 (pitch bend)
+    // side              -> 0x21 (pitch bend)
+    if (_control === 0x22) PioneerDDJFLX4._jogVinylFromController[deckIdx] = true;
+    else if (_control === 0x23) PioneerDDJFLX4._jogVinylFromController[deckIdx] = false;
 
     // Loop adjust has priority (your dual-mode block)
     if (engine.getValue(group, "loop_enabled") > 0) {
@@ -1415,17 +1461,17 @@ PioneerDDJFLX4.jogTurn = function(channel, _control, value, _status, group) {
         }
 
         // Simple-mode legacy adjust (your existing multiply logic)
-        if (PioneerDDJFLX4.loopAdjustIn[channel]) {
+        if (PioneerDDJFLX4.loopAdjustIn[deckIdx]) {
             if (typeof PioneerDDJFLX4._scheduleLoopAdjustTimeout === "function") {
-                PioneerDDJFLX4._scheduleLoopAdjustTimeout(channel, group, _control, st);
+                PioneerDDJFLX4._scheduleLoopAdjustTimeout(deckIdx, group, _control, st);
             }
             const newPos = delta * PioneerDDJFLX4.loopAdjustMultiply + engine.getValue(group, "loop_start_position");
             engine.setValue(group, "loop_start_position", newPos);
             return;
         }
-        if (PioneerDDJFLX4.loopAdjustOut[channel]) {
+        if (PioneerDDJFLX4.loopAdjustOut[deckIdx]) {
             if (typeof PioneerDDJFLX4._scheduleLoopAdjustTimeout === "function") {
-                PioneerDDJFLX4._scheduleLoopAdjustTimeout(channel, group, _control, st);
+                PioneerDDJFLX4._scheduleLoopAdjustTimeout(deckIdx, group, _control, st);
             }
             const newPos = delta * PioneerDDJFLX4.loopAdjustMultiply + engine.getValue(group, "loop_end_position");
             engine.setValue(group, "loop_end_position", newPos);
@@ -1434,8 +1480,10 @@ PioneerDDJFLX4.jogTurn = function(channel, _control, value, _status, group) {
     }
 
     // Scratch/bend behavior
-    if (engine.isScratching(deckNum)) {
-        const action = PioneerDDJFLX4._scratchAction[channel];
+    // Only scratch when controller is actually in vinyl ON mode (0x22) OR we explicitly put Mixxx into scratching.
+    // (Side jog 0x21 and vinyl-off platter 0x23 must stay bend.)
+    if (_control === 0x22 && engine.isScratching(deckNum)) {
+        const action = PioneerDDJFLX4._scratchAction[deckIdx];
 
         if (action === "seek") {
             engine.scratchTick(deckNum, delta * PioneerDDJFLX4.scratchScale * PioneerDDJFLX4.seekScratchMultiplier);
@@ -1453,6 +1501,56 @@ PioneerDDJFLX4.jogSearch = function(_channel, _control, value, _status, group) {
     // keep your existing search behavior
     const newVal = (value - 64) * PioneerDDJFLX4.fastSeekScale;
     engine.setValue(group, "jog", newVal);
+};
+
+///////////////////////////////////////////////////////////////
+// VINYL MODE (GLOBAL) via SmartFader buttons
+//
+// FLX4 has an internal Vinyl Mode that changes which CC the jog sends.
+// To switch it, Mixxx must SEND the command to the controller:
+//   Deck1: 0x90 0x17 <val>
+//   Deck2: 0x91 0x17 <val>
+///////////////////////////////////////////////////////////////
+
+PioneerDDJFLX4.updateVinylLed = function(on) {
+    PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.SmartFader, !!on);
+    PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.shiftSmartFader, !!on);
+};
+
+// Single source of truth: this is the documented command that switches the controller's jog mode.
+PioneerDDJFLX4._setHardwareVinyl = function(deckIdx, on) {
+    const st = (deckIdx === 0) ? 0x90 : 0x91;
+    midi.sendShortMsg(st, 0x17, on ? 0x7F : 0x00);
+};
+
+PioneerDDJFLX4._applyVinylState = function(on) {
+    const state = !!on;
+    PioneerDDJFLX4._vinylWanted = state;
+
+    // optimistic local state so FIRST press already changes behavior
+    PioneerDDJFLX4._jogVinylFromController[0] = state;
+    PioneerDDJFLX4._jogVinylFromController[1] = state;
+
+    // switch controller jog MIDI mode
+    PioneerDDJFLX4._setHardwareVinyl(0, state);
+    PioneerDDJFLX4._setHardwareVinyl(1, state);
+
+    // if turning OFF, ensure we don't stay in scratching
+    if (!state) {
+        for (let i = 0; i < 2; i++) {
+            if (PioneerDDJFLX4._scratchEnabled[i]) PioneerDDJFLX4._scratchDisable(i + 1);
+            PioneerDDJFLX4._scratchAction[i] = "bend";
+        }
+    }
+
+    PioneerDDJFLX4.updateVinylLed(state);
+};
+
+PioneerDDJFLX4.vinylTogglePressed = function(_channel, _control, value, _status, _group) {
+    if (value !== 0x7F) return;
+
+    // Toggle based on OUR desired state, not on last incoming CC (which can be unknown at startup)
+    PioneerDDJFLX4._applyVinylState(!PioneerDDJFLX4._vinylWanted);
 };
 
 //

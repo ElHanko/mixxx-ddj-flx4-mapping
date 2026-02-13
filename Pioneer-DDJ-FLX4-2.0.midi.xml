@@ -1159,6 +1159,29 @@
 
 <!-- BEAT FX SECTION END -->
             <!-- EFFECT Section END -->
+<!-- VINYL Toggle (DECK1) -->
+<control>
+  <description>VINYL (GLOBAL) - press - toggle vinylMode[0] and vinylMode[1]</description>
+  <group>[Master]</group>
+  <key>PioneerDDJFLX4.vinylTogglePressed</key>
+  <status>0x96</status>
+  <midino>0x01</midino>
+  <options>
+    <Script-Binding/>
+  </options>
+</control>
+
+<!-- VINYL Toggle (DECK2) -->
+<control>
+  <description>VINYL (GLOBAL) - press - toggle vinylMode[0] and vinylMode[1]</description>
+  <group>[Master]</group>
+  <key>PioneerDDJFLX4.vinylTogglePressed</key>
+  <status>0x96</status>
+  <midino>0x09</midino>
+  <options>
+    <Script-Binding/>
+  </options>
+</control>
 
             <!-- PAD MODE SECTION START -->
             <control>
