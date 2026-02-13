@@ -385,11 +385,11 @@ PioneerDDJFLX4.init = function() {
     midi.sendShortMsg(0x9F, 0x00, 0x7F);
     midi.sendShortMsg(0x9F, 0x01, 0x7F);
 
-    PioneerDDJFLX4.setLoopButtonLights(0x90, 0x7F);
-    PioneerDDJFLX4.setLoopButtonLights(0x91, 0x7F);
-
     engine.makeConnection("[Channel1]", "loop_enabled", PioneerDDJFLX4.loopToggle);
     engine.makeConnection("[Channel2]", "loop_enabled", PioneerDDJFLX4.loopToggle);
+
+    engine.makeConnection("[Channel1]", "track_loaded", PioneerDDJFLX4.loopTrackLoaded);
+    engine.makeConnection("[Channel2]", "track_loaded", PioneerDDJFLX4.loopTrackLoaded);
 
     // Beat FX: update LED when the chain enable state changes
     engine.makeConnection("[EffectRack1_EffectUnit1]", "enabled", PioneerDDJFLX4._updateBeatFxOnOffLed);
@@ -1005,10 +1005,41 @@ PioneerDDJFLX4.stopLoopLightsBlink = function(group, control, status) {
     engine.stopTimer(PioneerDDJFLX4.timers[group][control]);
   }
   PioneerDDJFLX4.timers[group][control] = undefined;
-
-  // Default nach Blink: beide solid ON (Loop aktiv)
-  PioneerDDJFLX4.setLoopButtonLights(status, 0x7F);
 };
+
+// ------------------- CENTRAL LED STATE -------------------
+// Desired states:
+// - no track: IN/OUT off
+// - track loaded, loop off: IN/OUT solid on
+// - loop on, no adjust: IN/OUT blink
+// - loop on + adjust in: IN blinks, OUT off
+// - loop on + adjust out: OUT blinks, IN off
+PioneerDDJFLX4._updateLoopLeds = function(group, controlForBlink, statusForLed) {
+  const channelIdx = (group === "[Channel1]") ? 0 : 1;
+  const trackLoaded = engine.getValue(group, "track_loaded") === 1;
+  const loopOn = engine.getValue(group, "loop_enabled") > 0;
+
+  // kill blink timer first (we may restart it)
+  PioneerDDJFLX4.stopLoopLightsBlink(group, controlForBlink, statusForLed);
+
+  if (!trackLoaded) {
+    PioneerDDJFLX4.setLoopButtonLights(statusForLed, 0x00);
+    PioneerDDJFLX4.setReloopLight(statusForLed, 0x00);
+    return;
+  }
+
+  // track loaded
+  if (!loopOn) {
+    PioneerDDJFLX4.setReloopLight(statusForLed, 0x00);
+    PioneerDDJFLX4.setLoopButtonLights(statusForLed, 0x7F); // solid
+    return;
+  }
+
+  // loop on -> reloop light on, and blinking behaviour
+  PioneerDDJFLX4.setReloopLight(statusForLed, 0x7F);
+  PioneerDDJFLX4.startLoopLightsBlink(channelIdx, controlForBlink, statusForLed, group);
+};
+
 
 PioneerDDJFLX4.startLoopLightsBlink = function(channelIdx, control, status, group) {
   let blink = 0x7F;
@@ -1060,16 +1091,8 @@ PioneerDDJFLX4._scheduleLoopAdjustTimeout = function(channelIdx, group, controlF
     PioneerDDJFLX4.loopAdjustIn[channelIdx] = false;
     PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;
 
-    // Blink aus (falls aktiv)
-    PioneerDDJFLX4.stopLoopLightsBlink(group, controlForBlink, statusForLed);
-
-    // LEDs zurück in "normal"
-    const loopOn = engine.getValue(group, "loop_enabled") > 0;
-    if (loopOn) {
-      PioneerDDJFLX4.setLoopButtonLights(statusForLed, 0x7F); // beide solid
-    } else {
-      PioneerDDJFLX4.setLoopButtonLights(statusForLed, 0x00); // beide aus
-    }
+    // LEDs zentral neu setzen
+    PioneerDDJFLX4._updateLoopLeds(group, controlForBlink, statusForLed);
   }, true /* one-shot, falls unterstützt */);
 };
 
@@ -1078,25 +1101,32 @@ PioneerDDJFLX4.loopToggle = function(value, group, control) {
   const status = group === "[Channel1]" ? 0x90 : 0x91;
   const channelIdx = group === "[Channel1]" ? 0 : 1;
 
-  // RELOOP/EXIT LED folgt loop_enabled (wie bisher)
-  PioneerDDJFLX4.setReloopLight(status, value ? 0x7F : 0x00);
-
-  if (value) {
-    PioneerDDJFLX4.startLoopLightsBlink(channelIdx, control, status, group);
-  } else {
-    PioneerDDJFLX4.stopLoopLightsBlink(group, control, status);
+  if (!value) {
+    // Loop off: reset adjust + pending
     PioneerDDJFLX4.loopAdjustIn[channelIdx] = false;
     PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;
     PioneerDDJFLX4._loopPendingOut[group] = false;
 
-    // Timeout auch killen
+    // Timeout kill
     const tid = PioneerDDJFLX4._loopAdjustTimeoutTimer[group];
     if (tid !== undefined) {
       engine.stopTimer(tid);
       PioneerDDJFLX4._loopAdjustTimeoutTimer[group] = undefined;
     }
   }
+
+  // Always update LEDs based on track_loaded + loop_enabled + adjust flags
+  PioneerDDJFLX4._updateLoopLeds(group, control, status);
 };
+
+// track_loaded callback: keep Loop LEDs correct even when no loop state changes
+PioneerDDJFLX4.loopTrackLoaded = function(_value, group, _control) {
+  const status = (group === "[Channel1]") ? 0x90 : 0x91;
+  // any of the loop buttons is fine as "control key" for our blink timer bucket
+  // use IN (0x10) as stable id
+  PioneerDDJFLX4._updateLoopLeds(group, 0x10, status);
+};
+
 
 // ------------------- RELOOP/EXIT -------------------
 // Loop an -> reloop_toggle (Exit); Loop aus -> N-beat loop activate
