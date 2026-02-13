@@ -491,23 +491,23 @@
 </control>
 
             <control>
-                <description>RELOOP/EXIT +SHIFT (DECK1) - press - Reloop and stop</description>
+                <description>RELOOP/EXIT +SHIFT (DECK1) - press - Vinyl Mode</description>
                 <group>[Channel1]</group>
-                <key>reloop_andstop</key>
+                <key>PioneerDDJFLX4.vinylTogglePressed</key>
                 <status>0x90</status>
                 <midino>0x50</midino>
                 <options>
-                    <Normal/>
+                    <Script-Binding/>
                 </options>
             </control>
             <control>
-                <description>RELOOP/EXIT +SHIFT (DECK2) - press - Reloop and stop</description>
+                <description>RELOOP/EXIT +SHIFT (DECK2) - press - Vinyl Mode</description>
                 <group>[Channel2]</group>
-                <key>reloop_andstop</key>
+                <key>PioneerDDJFLX4.vinylTogglePressed</key>
                 <status>0x91</status>
                 <midino>0x50</midino>
                 <options>
-                    <Normal/>
+                    <Script-Binding/>
                 </options>
             </control>
 
@@ -1159,29 +1159,6 @@
 
 <!-- BEAT FX SECTION END -->
             <!-- EFFECT Section END -->
-<!-- VINYL Toggle (DECK1) -->
-<control>
-  <description>VINYL (GLOBAL) - press - toggle vinylMode[0] and vinylMode[1]</description>
-  <group>[Master]</group>
-  <key>PioneerDDJFLX4.vinylTogglePressed</key>
-  <status>0x96</status>
-  <midino>0x01</midino>
-  <options>
-    <Script-Binding/>
-  </options>
-</control>
-
-<!-- VINYL Toggle (DECK2) -->
-<control>
-  <description>VINYL (GLOBAL) - press - toggle vinylMode[0] and vinylMode[1]</description>
-  <group>[Master]</group>
-  <key>PioneerDDJFLX4.vinylTogglePressed</key>
-  <status>0x96</status>
-  <midino>0x09</midino>
-  <options>
-    <Script-Binding/>
-  </options>
-</control>
 
             <!-- PAD MODE SECTION START -->
             <control>

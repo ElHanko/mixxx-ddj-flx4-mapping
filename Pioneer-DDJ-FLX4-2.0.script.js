@@ -1526,6 +1526,12 @@ PioneerDDJFLX4.jogTurn = function(channel, _control, value, _status, group) {
     if (_control === 0x22) PioneerDDJFLX4._jogVinylFromController[deckIdx] = true;
     else if (_control === 0x23) PioneerDDJFLX4._jogVinylFromController[deckIdx] = false;
 
+    // If platter-vinyl CC arrives after touch release (common jitter),
+    // ignore it to prevent a tiny jog "nudge".
+    if (_control === 0x22 && !PioneerDDJFLX4.wheelTouch[deckIdx]) {
+        return;
+    }
+
     // Loop adjust has priority (your dual-mode block)
     if (engine.getValue(group, "loop_enabled") > 0) {
         if (typeof PioneerDDJFLX4._handleJogLoopAdjust === "function") {
@@ -1578,7 +1584,7 @@ PioneerDDJFLX4.jogSearch = function(_channel, _control, value, _status, group) {
 };
 
 ///////////////////////////////////////////////////////////////
-// VINYL MODE (GLOBAL) via SmartFader buttons
+// VINYL MODE (PER-DECK) via a mapped butto
 //
 // FLX4 has an internal Vinyl Mode that changes which CC the jog sends.
 // To switch it, Mixxx must SEND the command to the controller:
@@ -1586,10 +1592,14 @@ PioneerDDJFLX4.jogSearch = function(_channel, _control, value, _status, group) {
 //   Deck2: 0x91 0x17 <val>
 ///////////////////////////////////////////////////////////////
 
-PioneerDDJFLX4.updateVinylLed = function(on) {
-    PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.SmartFader, !!on);
-    PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.shiftSmartFader, !!on);
-};
+// NOTE: Currently no free LED for Vinyl. Keep code but DISABLED.
+// PioneerDDJFLX4.updateVinylLed = function(deckIdx, on) {
+//     // Example (was SmartFader LEDs) - intentionally disabled:
+//     // const light = (deckIdx === 0)
+//     //     ? PioneerDDJFLX4.lights.SmartFader
+//     //     : PioneerDDJFLX4.lights.shiftSmartFader;
+//     // PioneerDDJFLX4.toggleLight(light, !!on);
+// };
 
 // Single source of truth: this is the documented command that switches the controller's jog mode.
 PioneerDDJFLX4._setHardwareVinyl = function(deckIdx, on) {
@@ -1597,34 +1607,35 @@ PioneerDDJFLX4._setHardwareVinyl = function(deckIdx, on) {
     midi.sendShortMsg(st, 0x17, on ? 0x7F : 0x00);
 };
 
-PioneerDDJFLX4._applyVinylState = function(on) {
+// Per-deck desired state
+PioneerDDJFLX4._vinylWanted = PioneerDDJFLX4._vinylWanted || [false, false];
+
+PioneerDDJFLX4._applyVinylState = function(deckIdx, on) {
     const state = !!on;
-    PioneerDDJFLX4._vinylWanted = state;
+    PioneerDDJFLX4._vinylWanted[deckIdx] = state;
 
     // optimistic local state so FIRST press already changes behavior
-    PioneerDDJFLX4._jogVinylFromController[0] = state;
-    PioneerDDJFLX4._jogVinylFromController[1] = state;
+    PioneerDDJFLX4._jogVinylFromController[deckIdx] = state;
 
     // switch controller jog MIDI mode
-    PioneerDDJFLX4._setHardwareVinyl(0, state);
-    PioneerDDJFLX4._setHardwareVinyl(1, state);
+    PioneerDDJFLX4._setHardwareVinyl(deckIdx, state);
 
     // if turning OFF, ensure we don't stay in scratching
     if (!state) {
-        for (let i = 0; i < 2; i++) {
-            if (PioneerDDJFLX4._scratchEnabled[i]) PioneerDDJFLX4._scratchDisable(i + 1);
-            PioneerDDJFLX4._scratchAction[i] = "bend";
-        }
+        if (PioneerDDJFLX4._scratchEnabled[deckIdx]) PioneerDDJFLX4._scratchDisable(deckIdx + 1);
+        PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
     }
 
-    PioneerDDJFLX4.updateVinylLed(state);
+    // LED currently disabled / unassigned:
+    // PioneerDDJFLX4.updateVinylLed?.(deckIdx, state);
 };
 
-PioneerDDJFLX4.vinylTogglePressed = function(_channel, _control, value, _status, _group) {
+PioneerDDJFLX4.vinylTogglePressed = function(_channel, _control, value, _status, group) {
     if (value !== 0x7F) return;
 
-    // Toggle based on OUR desired state, not on last incoming CC (which can be unknown at startup)
-    PioneerDDJFLX4._applyVinylState(!PioneerDDJFLX4._vinylWanted);
+    // per-deck via group ([Channel1]/[Channel2])
+    const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
+    PioneerDDJFLX4._applyVinylState(deckIdx, !PioneerDDJFLX4._vinylWanted[deckIdx]);
 };
 
 //
