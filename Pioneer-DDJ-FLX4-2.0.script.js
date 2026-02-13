@@ -999,12 +999,13 @@ PioneerDDJFLX4.setLoopButtonLights = function(status, value) {
   });
 };
 
-PioneerDDJFLX4.stopLoopLightsBlink = function(group, control, status) {
+PioneerDDJFLX4.stopLoopLightsBlink = function(group) {
   PioneerDDJFLX4.timers[group] = PioneerDDJFLX4.timers[group] || {};
-  if (PioneerDDJFLX4.timers[group][control] !== undefined) {
-    engine.stopTimer(PioneerDDJFLX4.timers[group][control]);
+  const id = PioneerDDJFLX4.timers[group].loopBlink;
+  if (id !== undefined) {
+    engine.stopTimer(id);
   }
-  PioneerDDJFLX4.timers[group][control] = undefined;
+  PioneerDDJFLX4.timers[group].loopBlink = undefined;
 };
 
 // ------------------- CENTRAL LED STATE -------------------
@@ -1014,13 +1015,13 @@ PioneerDDJFLX4.stopLoopLightsBlink = function(group, control, status) {
 // - loop on, no adjust: IN/OUT blink
 // - loop on + adjust in: IN blinks, OUT off
 // - loop on + adjust out: OUT blinks, IN off
-PioneerDDJFLX4._updateLoopLeds = function(group, controlForBlink, statusForLed) {
+PioneerDDJFLX4._updateLoopLeds = function(group, _controlForBlink, statusForLed) {
   const channelIdx = (group === "[Channel1]") ? 0 : 1;
   const trackLoaded = engine.getValue(group, "track_loaded") === 1;
   const loopOn = engine.getValue(group, "loop_enabled") > 0;
 
   // kill blink timer first (we may restart it)
-  PioneerDDJFLX4.stopLoopLightsBlink(group, controlForBlink, statusForLed);
+  PioneerDDJFLX4.stopLoopLightsBlink(group);
 
   if (!trackLoaded) {
     PioneerDDJFLX4.setLoopButtonLights(statusForLed, 0x00);
@@ -1037,17 +1038,17 @@ PioneerDDJFLX4._updateLoopLeds = function(group, controlForBlink, statusForLed) 
 
   // loop on -> reloop light on, and blinking behaviour
   PioneerDDJFLX4.setReloopLight(statusForLed, 0x7F);
-  PioneerDDJFLX4.startLoopLightsBlink(channelIdx, controlForBlink, statusForLed, group);
+  PioneerDDJFLX4.startLoopLightsBlink(channelIdx, statusForLed, group);
 };
 
 
-PioneerDDJFLX4.startLoopLightsBlink = function(channelIdx, control, status, group) {
+PioneerDDJFLX4.startLoopLightsBlink = function(channelIdx, status, group) {
   let blink = 0x7F;
 
-  PioneerDDJFLX4.stopLoopLightsBlink(group, control, status);
+  PioneerDDJFLX4.stopLoopLightsBlink(group);
 
   PioneerDDJFLX4.timers[group] = PioneerDDJFLX4.timers[group] || {};
-  PioneerDDJFLX4.timers[group][control] = engine.beginTimer(500, () => {
+  PioneerDDJFLX4.timers[group].loopBlink = engine.beginTimer(500, () => {
     blink = 0x7F - blink;
 
     // OUT adjust aktiv -> IN LEDs OFF, OUT LEDs blink
@@ -1116,7 +1117,7 @@ PioneerDDJFLX4.loopToggle = function(value, group, control) {
   }
 
   // Always update LEDs based on track_loaded + loop_enabled + adjust flags
-  PioneerDDJFLX4._updateLoopLeds(group, control, status);
+  PioneerDDJFLX4._updateLoopLeds(group, 0x10, status);
 };
 
 // track_loaded callback: keep Loop LEDs correct even when no loop state changes
@@ -1289,6 +1290,49 @@ PioneerDDJFLX4.toggleLoopAdjustOut = function(channelIdx, control, value, _statu
   if (PioneerDDJFLX4.loopAdjustOut[channelIdx]) {
     PioneerDDJFLX4._scheduleLoopAdjustTimeout(channelIdx, group, control, st);
   }
+};
+
+
+///////////////////////////////////////////////////////////////
+// Classic XML loop_in / loop_out wrappers (LED feedback)
+//
+// Goal:
+// - When pressing LOOP IN (classic), immediately blink IN LED to show "pending out".
+// - When pressing LOOP OUT, stop pending blink and let loop_enabled callback handle LEDs.
+///////////////////////////////////////////////////////////////
+
+PioneerDDJFLX4.loopInPressed = function(_channel, control, value, _status, group) {
+  if (value !== 0x7F) return;
+  if (engine.getValue(group, "track_loaded") !== 1) return;
+
+  const channelIdx = (group === "[Channel1]") ? 0 : 1;
+  const st = (group === "[Channel1]") ? 0x90 : 0x91;
+
+  // Trigger Mixxx loop-in
+  script.triggerControl(group, "loop_in");
+
+  // Pending-Out visual: IN blinks, OUT off
+  PioneerDDJFLX4._loopPendingOut[group] = true;
+  PioneerDDJFLX4.loopAdjustIn[channelIdx] = true;     // makes OUT off in your blink routine
+  PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;   // keeps IN blinking
+  PioneerDDJFLX4.startLoopLightsBlink(channelIdx, st, group);
+};
+
+PioneerDDJFLX4.loopOutPressed = function(_channel, control, value, _status, group) {
+  if (value !== 0x7F) return;
+  if (engine.getValue(group, "track_loaded") !== 1) return;
+
+  const channelIdx = (group === "[Channel1]") ? 0 : 1;
+  const st = (group === "[Channel1]") ? 0x90 : 0x91;
+
+  // Trigger Mixxx loop-out
+  script.triggerControl(group, "loop_out");
+
+  // Clear pending + stop special blink; loopToggle(loop_enabled) will render final state
+  PioneerDDJFLX4._loopPendingOut[group] = false;
+  PioneerDDJFLX4.loopAdjustIn[channelIdx] = false;
+  PioneerDDJFLX4.loopAdjustOut[channelIdx] = false;
+  PioneerDDJFLX4.stopLoopLightsBlink(group);
 };
 
 //
