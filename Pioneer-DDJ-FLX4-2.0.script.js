@@ -1554,9 +1554,9 @@ PioneerDDJFLX4.jogTurn = function(channel, _control, value, _status, group) {
     }
 
     // Scratch/bend behavior
-    // Only scratch when controller is actually in vinyl ON mode (0x22) OR we explicitly put Mixxx into scratching.
-    // (Side jog 0x21 and vinyl-off platter 0x23 must stay bend.)
-    if (_control === 0x22 && engine.isScratching(deckNum)) {
+    // If Mixxx is currently scratching, always send scratchTick for PLATTER turns (0x22 AND 0x23).
+    // Side jog (0x21) must always remain bend.
+    if (_control !== 0x21 && engine.isScratching(deckNum)) {
         const action = PioneerDDJFLX4._scratchAction[deckIdx];
 
         if (action === "seek") {
