@@ -378,13 +378,21 @@ engine.makeConnection("[Channel2]", "vu_meter", PioneerDDJFLX4.vuMeterUpdate);
 //    engine.softTakeover("[EffectRack1_EffectUnit2]", "mix", true);
 //    engine.softTakeover("[EffectRack1_EffectUnit2]", "super1", true);
 
-    const samplerCount = 16;
-    if (engine.getValue("[App]", "num_samplers") < samplerCount) {
-        engine.setValue("[App]", "num_samplers", samplerCount);
-    }
-    for (let i = 1; i <= samplerCount; ++i) {
-        engine.makeConnection("[Sampler" + i + "]", "play", PioneerDDJFLX4.samplerPlayOutputCallbackFunction);
-    }
+const samplerCount = 16;
+if (engine.getValue("[App]", "num_samplers") < samplerCount) {
+    engine.setValue("[App]", "num_samplers", samplerCount);
+}
+
+for (let i = 1; i <= samplerCount; ++i) {
+    const sg = `[Sampler${i}]`;
+
+    // LED State Machine: off / solid / blink
+    engine.makeConnection(sg, "track_loaded", PioneerDDJFLX4.samplerLedUpdate);
+    engine.makeConnection(sg, "play",        PioneerDDJFLX4.samplerLedUpdate);
+
+    // initialer LED-Refresh beim Start (sonst sind LEDs u.U. “alt” bis zum ersten Event)
+    PioneerDDJFLX4.samplerLedUpdate(0, sg, 0);
+}
 
     engine.makeConnection("[Channel1]", "track_loaded", PioneerDDJFLX4.trackLoadedLED);
     engine.makeConnection("[Channel2]", "track_loaded", PioneerDDJFLX4.trackLoadedLED);
@@ -1769,31 +1777,51 @@ PioneerDDJFLX4._setBeatjumpPadsLit = function(status, on) {
 // Sampler mode
 //
 
-PioneerDDJFLX4.samplerPlayOutputCallbackFunction = function(value, group, _control) {
-    if (value === 1) {
-        const curPad = group.match(script.samplerRegEx)[1];
-        let deckIndex = 0;
-        let padIndex = 0;
+// --- Sampler LED state machine ---
+// LED off if not loaded, solid if loaded+stopped, blink if playing
+PioneerDDJFLX4.samplerLedUpdate = function(_value, group, _control) {
+    const m = group.match(script.samplerRegEx);
+    if (!m) return;
 
-        if (curPad >=1 && curPad <= 4) {
-            deckIndex = 0;
-            padIndex = curPad - 1;
-        } else if (curPad >=5 && curPad <= 8) {
-            deckIndex = 2;
-            padIndex = curPad - 5;
-        } else if (curPad >=9 && curPad <= 12) {
-            deckIndex = 0;
-            padIndex = curPad - 5;
-        } else if (curPad >=13 && curPad <= 16) {
-            deckIndex = 2;
-            padIndex = curPad - 9;
-        }
+    const curPad = parseInt(m[1], 10);
+    let deckIndex = 0;
+    let padIndex = 0;
 
-        PioneerDDJFLX4.startSamplerBlink(
-            0x97 + deckIndex,
-            0x30 + padIndex,
-            group);
+    // gleiche Mapping-Logik wie bei dir
+    if (curPad >= 1 && curPad <= 4) {
+        deckIndex = 0; padIndex = curPad - 1;
+    } else if (curPad >= 5 && curPad <= 8) {
+        deckIndex = 2; padIndex = curPad - 5;
+    } else if (curPad >= 9 && curPad <= 12) {
+        deckIndex = 0; padIndex = curPad - 5;
+    } else if (curPad >= 13 && curPad <= 16) {
+        deckIndex = 2; padIndex = curPad - 9;
     }
+
+    const midichan = 0x97 + deckIndex;
+    const midictrl = 0x30 + padIndex;
+
+    const loaded = engine.getValue(group, "track_loaded") === 1;
+    const playing = engine.getValue(group, "play") === 1;
+
+    if (!loaded) {
+        // AUS + Blink stoppen
+        PioneerDDJFLX4.stopSamplerBlink(midichan, midictrl);
+        midi.sendShortMsg(midichan, midictrl, 0x00);
+        midi.sendShortMsg(midichan + 1, midictrl, 0x00); // SHIFT layer
+        return;
+    }
+
+    if (playing) {
+        // BLINK
+        PioneerDDJFLX4.startSamplerBlink(midichan, midictrl, group);
+        return;
+    }
+
+    // loaded aber nicht playing -> SOLID ON
+    PioneerDDJFLX4.stopSamplerBlink(midichan, midictrl);
+    midi.sendShortMsg(midichan, midictrl, 0x7F);
+    midi.sendShortMsg(midichan + 1, midictrl, 0x7F); // SHIFT layer
 };
 
 //PioneerDDJFLX4.padMode = PioneerDDJFLX4.padMode || { "[Channel1]": PioneerDDJFLX4.PADMODE.HOTCUE, "[Channel2]": PioneerDDJFLX4.PADMODE.HOTCUE };
@@ -1858,6 +1886,7 @@ PioneerDDJFLX4.samplerPadShiftPressed = function(_channel, _control, value, _sta
 };
 
 PioneerDDJFLX4.startSamplerBlink = function(channel, control, group) {
+    PioneerDDJFLX4.timers[channel] = PioneerDDJFLX4.timers[channel] || {};
     let val = 0x7f;
 
     PioneerDDJFLX4.stopSamplerBlink(channel, control);
