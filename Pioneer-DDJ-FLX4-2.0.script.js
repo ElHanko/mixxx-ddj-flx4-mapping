@@ -354,8 +354,16 @@ PioneerDDJFLX4.browsePress = function(_channel, control, value, _status, _group)
 PioneerDDJFLX4.init = function() {
     engine.setValue("[EffectRack1_EffectUnit1]", "show_focus", 1);
 
-    engine.makeConnection("[Channel1]", "vu_meter", PioneerDDJFLX4.vuMeterUpdate);
-    engine.makeConnection("[Channel2]", "vu_meter", PioneerDDJFLX4.vuMeterUpdate);
+// --- Connections (WICHTIG: ChannelN, nicht Main) ---
+engine.makeConnection("[Channel1]", "peak_indicator_left",  function(v){ PioneerDDJFLX4._latchPeak(1, v); });
+engine.makeConnection("[Channel1]", "peak_indicator_right", function(v){ PioneerDDJFLX4._latchPeak(1, v); });
+
+engine.makeConnection("[Channel2]", "peak_indicator_left",  function(v){ PioneerDDJFLX4._latchPeak(2, v); });
+engine.makeConnection("[Channel2]", "peak_indicator_right", function(v){ PioneerDDJFLX4._latchPeak(2, v); });
+
+// VU bleibt wie gehabt:
+engine.makeConnection("[Channel1]", "vu_meter", PioneerDDJFLX4.vuMeterUpdate);
+engine.makeConnection("[Channel2]", "vu_meter", PioneerDDJFLX4.vuMeterUpdate);
 
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.deck1.vuMeter, false);
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.deck2.vuMeter, false);
@@ -455,20 +463,86 @@ PioneerDDJFLX4.waveformZoom = function(midichan, control, value, status, group) 
     }
 };
 
+// -------------------
+// VU Meter mapping (Mixxx -> FLX4)
+// FLX4 expects bottom-lit bargraph from 0x26..0x7F with color zones:
+//   Green1:  0x26..0x40
+//   Green2:  0x41..0x56
+//   Orange1: 0x57..0x64
+//   Orange2: 0x65..0x76
+//   Red:     0x77..0x7F
 //
-// Channel level lights
-//
+// Mixxx vu_meter is 0..1 (not necessarily matching GUI colors 1:1),
+// so we apply a curve to avoid "too early red" on hardware.
+PioneerDDJFLX4.VU = PioneerDDJFLX4.VU || {
+    MIN: 0x26,
+    MAX: 0x7F,
 
+    // vu_meter hat in Mixxx "default" Range und kann > 1.0 sein.
+    // INPUT_MAX bestimmt, ab welchem Wert du "voll" anzeigen willst.
+    INPUT_MAX: 1.2,      // Try 1.2..1.8 je nach Setup
+
+    CURVE_EXP: 1,
+    GAIN: 1.0,
+
+    // Rotzone-Start (deine Zonen: Red 0x77..0x7F)
+    RED_START: 0x77
+};
+
+// --- Peak latch (damit rot sichtbar wird) ---
+PioneerDDJFLX4._peakHoldMs = 250;
+PioneerDDJFLX4._peakTimerL = 0;
+PioneerDDJFLX4._peakTimerR = 0;
+
+PioneerDDJFLX4._latchPeak = function(deck, value) {
+    if (!value) return; // nur bei "1" latchen
+
+    if (deck === 1) {
+        PioneerDDJFLX4._peakL = 1;
+        if (PioneerDDJFLX4._peakTimerL) engine.stopTimer(PioneerDDJFLX4._peakTimerL);
+        PioneerDDJFLX4._peakTimerL = engine.beginTimer(PioneerDDJFLX4._peakHoldMs, function() {
+            PioneerDDJFLX4._peakL = 0;
+            PioneerDDJFLX4._peakTimerL = 0;
+        }, true);
+    } else if (deck === 2) {
+        PioneerDDJFLX4._peakR = 1;
+        if (PioneerDDJFLX4._peakTimerR) engine.stopTimer(PioneerDDJFLX4._peakTimerR);
+        PioneerDDJFLX4._peakTimerR = engine.beginTimer(PioneerDDJFLX4._peakHoldMs, function() {
+            PioneerDDJFLX4._peakR = 0;
+            PioneerDDJFLX4._peakTimerR = 0;
+        }, true);
+    }
+};
+
+// Bargraph update (per-channel LED send)
 PioneerDDJFLX4.vuMeterUpdate = function(value, group) {
-    const newVal = value * 127;
+    let v = Number(value);
+    if (!Number.isFinite(v)) v = 0;
+    v = Math.max(0, v);
+
+    // apply gain
+    v *= PioneerDDJFLX4.VU.GAIN;
+
+    // normalize to 0..1 using INPUT_MAX (statt hart bei 1.0 abzuschneiden)
+    const inMax = PioneerDDJFLX4.VU.INPUT_MAX;
+    v = Math.max(0, Math.min(inMax, v)) / inMax;
+
+    // curve
+    v = Math.pow(v, PioneerDDJFLX4.VU.CURVE_EXP);
+
+    const min = PioneerDDJFLX4.VU.MIN;
+    const max = PioneerDDJFLX4.VU.MAX;
+    let newVal = min + Math.round(v * (max - min));
+
+    if (group === "[Channel1]" && PioneerDDJFLX4._peakL) newVal = Math.max(newVal, PioneerDDJFLX4.VU.RED_START);
+    else if (group === "[Channel2]" && PioneerDDJFLX4._peakR) newVal = Math.max(newVal, PioneerDDJFLX4.VU.RED_START);
 
     switch (group) {
     case "[Channel1]":
-        midi.sendShortMsg(0xB0, 0x02, newVal);
+        midi.sendShortMsg(0xB0, 0x02, newVal & 0x7F);
         break;
-
     case "[Channel2]":
-        midi.sendShortMsg(0xB1, 0x02, newVal);
+        midi.sendShortMsg(0xB1, 0x02, newVal & 0x7F);
         break;
     }
 };
