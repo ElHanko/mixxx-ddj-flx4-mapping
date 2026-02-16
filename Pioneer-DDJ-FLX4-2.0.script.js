@@ -121,7 +121,7 @@ PioneerDDJFLX4.lights = {
     },
     deck2: {
         vuMeter: {
-            status: 0xB0,
+            status: 0xB1,
             data1: 0x02,
         },
         playPause: {
@@ -179,8 +179,9 @@ PioneerDDJFLX4.setLed = function(status, note, on) {
     midi.sendShortMsg(status, note, on ? 0x7F : 0x00);
 };
 
-// Store timer IDs
-PioneerDDJFLX4.timers = {};
+// Timer buckets (NICHT mischen: Sampler/Loop/etc. sonst killst du dir Timer gegenseitig)
+PioneerDDJFLX4.timersSampler = PioneerDDJFLX4.timersSampler || {}; // keyed by midi status (0x97..)
+PioneerDDJFLX4.timersLoop    = PioneerDDJFLX4.timersLoop    || {}; // keyed by group string "[Channel1]" / "[Channel2]"
 
 // Keep alive timer
 PioneerDDJFLX4.sendKeepAlive = function() {
@@ -195,8 +196,6 @@ PioneerDDJFLX4.beta = PioneerDDJFLX4.alpha/32;
 // Multiplier for fast seek through track using SHIFT+JOGWHEEL
 PioneerDDJFLX4.fastSeekScale = 150;
 PioneerDDJFLX4.bendScale = 0.8;
-
-PioneerDDJFLX4.tempoRanges = [0.06, 0.10, 0.16, 0.25];
 
 PioneerDDJFLX4.shiftButtonDown = [false, false];
 
@@ -819,11 +818,6 @@ PioneerDDJFLX4.smartCfxPress = function(_ch, control, value, _status, _group) {
 //  7   : unused
 ///////////////////////////////////////////////////////////////
 
-PioneerDDJFLX4.padMode = PioneerDDJFLX4.padMode || {
-    "[Channel1]": "hotcue",
-    "[Channel2]": "hotcue",
-};
-
 PioneerDDJFLX4._padLedStatusesForGroup = function(group) {
     // deck1: 0x97 normal, 0x98 shift
     // deck2: 0x99 normal, 0x9A shift
@@ -1091,12 +1085,12 @@ PioneerDDJFLX4.setLoopButtonLights = function(status, value) {
 };
 
 PioneerDDJFLX4.stopLoopLightsBlink = function(group) {
-  PioneerDDJFLX4.timers[group] = PioneerDDJFLX4.timers[group] || {};
-  const id = PioneerDDJFLX4.timers[group].loopBlink;
+  PioneerDDJFLX4.timersLoop[group] = PioneerDDJFLX4.timersLoop[group] || {};
+  const id = PioneerDDJFLX4.timersLoop[group].loopBlink;
   if (id !== undefined) {
     engine.stopTimer(id);
   }
-  PioneerDDJFLX4.timers[group].loopBlink = undefined;
+  PioneerDDJFLX4.timersLoop[group].loopBlink = undefined;
 };
 
 // ------------------- CENTRAL LED STATE -------------------
@@ -1138,8 +1132,8 @@ PioneerDDJFLX4.startLoopLightsBlink = function(channelIdx, status, group) {
 
   PioneerDDJFLX4.stopLoopLightsBlink(group);
 
-  PioneerDDJFLX4.timers[group] = PioneerDDJFLX4.timers[group] || {};
-  PioneerDDJFLX4.timers[group].loopBlink = engine.beginTimer(500, () => {
+  PioneerDDJFLX4.timersLoop[group] = PioneerDDJFLX4.timersLoop[group] || {};
+  PioneerDDJFLX4.timersLoop[group].loopBlink = engine.beginTimer(500, () => {
     blink = 0x7F - blink;
 
     // OUT adjust aktiv -> IN LEDs OFF, OUT LEDs blink
@@ -1886,7 +1880,7 @@ PioneerDDJFLX4.samplerPadShiftPressed = function(_channel, _control, value, _sta
 };
 
 PioneerDDJFLX4.startSamplerBlink = function(channel, control, group) {
-    PioneerDDJFLX4.timers[channel] = PioneerDDJFLX4.timers[channel] || {};
+    PioneerDDJFLX4.timersSampler[channel] = PioneerDDJFLX4.timersSampler[channel] || {};
     let val = 0x7f;
 
     PioneerDDJFLX4.stopSamplerBlink(channel, control);
@@ -1912,11 +1906,11 @@ PioneerDDJFLX4.startSamplerBlink = function(channel, control, group) {
 };
 
 PioneerDDJFLX4.stopSamplerBlink = function(channel, control) {
-    PioneerDDJFLX4.timers[channel] = PioneerDDJFLX4.timers[channel] || {};
+    PioneerDDJFLX4.timersSampler[channel] = PioneerDDJFLX4.timersSampler[channel] || {};
 
-    if (PioneerDDJFLX4.timers[channel][control] !== undefined) {
-        engine.stopTimer(PioneerDDJFLX4.timers[channel][control]);
-        PioneerDDJFLX4.timers[channel][control] = undefined;
+    if (PioneerDDJFLX4.timersSampler[channel][control] !== undefined) {
+        engine.stopTimer(PioneerDDJFLX4.timersSampler[channel][control]);
+        PioneerDDJFLX4.timersSampler[channel][control] = undefined;
     }
 };
 
@@ -2227,10 +2221,10 @@ PioneerDDJFLX4.shutdown = function() {
     PioneerDDJFLX4._peakR = 0;
 
     // --- Stop ALL sampler blink timers (wichtig) ---
-    if (PioneerDDJFLX4.timers) {
-        for (const chanStr in PioneerDDJFLX4.timers) {
+    if (PioneerDDJFLX4.timersSampler) {
+        for (const chanStr in PioneerDDJFLX4.timersSampler) {
             const chan = Number(chanStr);
-            const controls = PioneerDDJFLX4.timers[chan];
+            const controls = PioneerDDJFLX4.timersSampler[chan];
             if (!controls) continue;
 
             for (const ctrlStr in controls) {
@@ -2243,6 +2237,14 @@ PioneerDDJFLX4.shutdown = function() {
         }
     }
 
+    // loop blink timer (pro Deckgruppe) defensiv stoppen
+    if (PioneerDDJFLX4.timersLoop) {
+        for (const g in PioneerDDJFLX4.timersLoop) {
+            const t = PioneerDDJFLX4.timersLoop[g]?.loopBlink;
+            if (t) engine.stopTimer(t);
+            if (PioneerDDJFLX4.timersLoop[g]) PioneerDDJFLX4.timersLoop[g].loopBlink = undefined;
+        }
+    }
     // --- Reset VU meter bargraph (CC 0x02) ---
     // Deck 1: 0xB0, Deck 2: 0xB1
     midi.sendShortMsg(0xB0, 0x02, 0x00);
