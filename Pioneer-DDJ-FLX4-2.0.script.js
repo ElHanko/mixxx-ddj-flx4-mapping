@@ -2218,45 +2218,68 @@ PioneerDDJFLX4.pitchPadShiftPressed = function(_channel, _control, _value, _stat
 //
 
 PioneerDDJFLX4.shutdown = function() {
+    // --- Peak latch timers ---
     if (PioneerDDJFLX4._peakTimerL) engine.stopTimer(PioneerDDJFLX4._peakTimerL);
     if (PioneerDDJFLX4._peakTimerR) engine.stopTimer(PioneerDDJFLX4._peakTimerR);
     PioneerDDJFLX4._peakTimerL = 0;
     PioneerDDJFLX4._peakTimerR = 0;
     PioneerDDJFLX4._peakL = 0;
     PioneerDDJFLX4._peakR = 0;
-    
-    // reset vumeter
+
+    // --- Stop ALL sampler blink timers (wichtig) ---
+    if (PioneerDDJFLX4.timers) {
+        for (const chanStr in PioneerDDJFLX4.timers) {
+            const chan = Number(chanStr);
+            const controls = PioneerDDJFLX4.timers[chan];
+            if (!controls) continue;
+
+            for (const ctrlStr in controls) {
+                const t = controls[ctrlStr];
+                if (t !== undefined && t !== 0) {
+                    engine.stopTimer(t);
+                }
+                controls[ctrlStr] = undefined;
+            }
+        }
+    }
+
+    // --- Reset VU meter bargraph (CC 0x02) ---
+    // Deck 1: 0xB0, Deck 2: 0xB1
+    midi.sendShortMsg(0xB0, 0x02, 0x00);
+    midi.sendShortMsg(0xB1, 0x02, 0x00);
+
+    // Optional: zusätzlich dein "VU Meter Light" aus (falls das eine separate LED ist)
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.deck1.vuMeter, false);
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.deck2.vuMeter, false);
 
-    // housekeeping
-    // turn off all Sampler LEDs
-    for (var i = 0; i <= 7; ++i) {
-        midi.sendShortMsg(0x97, 0x30 + i, 0x00);    // Deck 1 pads
-        midi.sendShortMsg(0x98, 0x30 + i, 0x00);    // Deck 1 pads with SHIFT
-        midi.sendShortMsg(0x99, 0x30 + i, 0x00);    // Deck 2 pads
-        midi.sendShortMsg(0x9A, 0x30 + i, 0x00);    // Deck 2 pads with SHIFT
-    }
-    // turn off all Hotcue LEDs
-    for (i = 0; i <= 7; ++i) {
-        midi.sendShortMsg(0x97, 0x00 + i, 0x00);    // Deck 1 pads
-        midi.sendShortMsg(0x98, 0x00 + i, 0x00);    // Deck 1 pads with SHIFT
-        midi.sendShortMsg(0x99, 0x00 + i, 0x00);    // Deck 2 pads
-        midi.sendShortMsg(0x9A, 0x00 + i, 0x00);    // Deck 2 pads with SHIFT
+    // --- housekeeping: Pads aus ---
+    for (let i = 0; i <= 7; ++i) {
+        // Sampler LEDs
+        midi.sendShortMsg(0x97, 0x30 + i, 0x00);
+        midi.sendShortMsg(0x98, 0x30 + i, 0x00);
+        midi.sendShortMsg(0x99, 0x30 + i, 0x00);
+        midi.sendShortMsg(0x9A, 0x30 + i, 0x00);
+
+        // Hotcue LEDs
+        midi.sendShortMsg(0x97, 0x00 + i, 0x00);
+        midi.sendShortMsg(0x98, 0x00 + i, 0x00);
+        midi.sendShortMsg(0x99, 0x00 + i, 0x00);
+        midi.sendShortMsg(0x9A, 0x00 + i, 0x00);
     }
 
-    // turn off loop in and out lights
+    // loop/reloop aus
     PioneerDDJFLX4.setLoopButtonLights(0x90, 0x00);
     PioneerDDJFLX4.setLoopButtonLights(0x91, 0x00);
-
-    // turn off reloop lights
     PioneerDDJFLX4.setReloopLight(0x90, 0x00);
     PioneerDDJFLX4.setReloopLight(0x91, 0x00);
 
-    // stop any flashing lights
+    // flashing lights aus
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.beatFx, false);
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.shiftBeatFx, false);
 
-    // stop the keepalive timer
-    engine.stopTimer(PioneerDDJFLX4.keepAliveTimer);
+    // keepalive timer stoppen (defensiv)
+    if (PioneerDDJFLX4.keepAliveTimer) {
+        engine.stopTimer(PioneerDDJFLX4.keepAliveTimer);
+        PioneerDDJFLX4.keepAliveTimer = 0;
+    }
 };
