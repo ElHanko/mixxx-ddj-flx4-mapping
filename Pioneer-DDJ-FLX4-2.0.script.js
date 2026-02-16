@@ -1422,16 +1422,25 @@ PioneerDDJFLX4.loopOutPressed = function(_channel, control, value, _status, grou
 //
 
 PioneerDDJFLX4.cueLoopCallLeft = function(_ch, _ctrl, value, _status, group) {
-    if (!value) return; // nur Press
-    if (engine.getValue(group, "loop_enabled")) {
+    if (value !== 0x7F) return; // nur Press
+    if (engine.getValue(group, "track_loaded") !== 1) return;
+
+    if (engine.getValue(group, "loop_enabled") > 0) {
         script.triggerControl(group, "loop_halve", 50);
+    } else {
+        // kein Loop aktiv -> gespeicherten Loop reaktivieren (wenn vorhanden)
+        script.triggerControl(group, "reloop_toggle", 50);
     }
 };
 
 PioneerDDJFLX4.cueLoopCallRight = function(_ch, _ctrl, value, _status, group) {
-    if (!value) return; // nur Press
-    if (engine.getValue(group, "loop_enabled")) {
+    if (value !== 0x7F) return; // nur Press
+    if (engine.getValue(group, "track_loaded") !== 1) return;
+
+    if (engine.getValue(group, "loop_enabled") > 0) {
         script.triggerControl(group, "loop_double", 50);
+    } else {
+        script.triggerControl(group, "reloop_toggle", 50);
     }
 };
 
@@ -1914,13 +1923,6 @@ PioneerDDJFLX4.stopSamplerBlink = function(channel, control) {
     }
 };
 
-
-PioneerDDJFLX4.toggleQuantize = function(_channel, _control, value, _status, group) {
-    if (value) {
-        script.toggleControl(group, "quantize");
-    }
-};
-
 PioneerDDJFLX4.quickJumpForward = function(_channel, _control, value, _status, group) {
     if (value) {
         engine.setValue(group, "beatjump", PioneerDDJFLX4.quickJumpSize);
@@ -1930,6 +1932,55 @@ PioneerDDJFLX4.quickJumpForward = function(_channel, _control, value, _status, g
 PioneerDDJFLX4.quickJumpBack = function(_channel, _control, value, _status, group) {
     if (value) {
         engine.setValue(group, "beatjump", -PioneerDDJFLX4.quickJumpSize);
+    }
+};
+
+// --- Quantize / Keylock (Short / Long Press) ---
+
+PioneerDDJFLX4._quantizeLP = PioneerDDJFLX4._quantizeLP || {
+    timer: {},
+    fired: {}
+};
+
+PioneerDDJFLX4.QUANTIZE_LONGPRESS_MS = 350;
+
+PioneerDDJFLX4.toggleQuantize = function (_channel, _control, value, _status, group) {
+    const key = group; // pro Deck getrennt
+
+    if (value === 0x7F) { // Button DOWN
+        // Reset State
+        PioneerDDJFLX4._quantizeLP.fired[key] = false;
+
+        // alten Timer sicher stoppen
+        if (PioneerDDJFLX4._quantizeLP.timer[key]) {
+            engine.stopTimer(PioneerDDJFLX4._quantizeLP.timer[key]);
+        }
+
+        // Long-Press Timer
+        PioneerDDJFLX4._quantizeLP.timer[key] = engine.beginTimer(
+            PioneerDDJFLX4.QUANTIZE_LONGPRESS_MS,
+            function () {
+                PioneerDDJFLX4._quantizeLP.fired[key] = true;
+                script.toggleControl(group, "keylock");
+                PioneerDDJFLX4._quantizeLP.timer[key] = null;
+            },
+            true
+        );
+        return;
+    }
+
+    if (value !== 0x00) return; // alles andere ignorieren
+
+    // Button UP
+    const t = PioneerDDJFLX4._quantizeLP.timer[key];
+    if (t) {
+        engine.stopTimer(t);
+        PioneerDDJFLX4._quantizeLP.timer[key] = null;
+    }
+
+    // nur Short-Press ausführen
+    if (!PioneerDDJFLX4._quantizeLP.fired[key]) {
+        script.toggleControl(group, "quantize");
     }
 };
 
