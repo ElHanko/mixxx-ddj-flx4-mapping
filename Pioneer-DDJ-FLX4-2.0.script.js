@@ -1419,15 +1419,17 @@ PioneerDDJFLX4.loopOutPressed = function(_channel, control, value, _status, grou
 // CUE/LOOP CALL
 //
 
-PioneerDDJFLX4.cueLoopCallLeft = function(_channel, _control, value, _status, group) {
-    if (value) {
-        engine.setValue(group, "loop_scale", 0.5);
+PioneerDDJFLX4.cueLoopCallLeft = function(_ch, _ctrl, value, _status, group) {
+    if (!value) return; // nur Press
+    if (engine.getValue(group, "loop_enabled")) {
+        script.triggerControl(group, "loop_halve", 50);
     }
 };
 
-PioneerDDJFLX4.cueLoopCallRight = function(_channel, _control, value, _status, group) {
-    if (value) {
-        engine.setValue(group, "loop_scale", 2.0);
+PioneerDDJFLX4.cueLoopCallRight = function(_ch, _ctrl, value, _status, group) {
+    if (!value) return; // nur Press
+    if (engine.getValue(group, "loop_enabled")) {
+        script.triggerControl(group, "loop_double", 50);
     }
 };
 
