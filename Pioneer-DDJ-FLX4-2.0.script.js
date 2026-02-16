@@ -452,15 +452,19 @@ PioneerDDJFLX4.padMode["[Channel2]"] = PioneerDDJFLX4.PADMODE.HOTCUE;
 };
 
 //
-// Waveform zoom
+// Waveform zoom (fix: ignore release/unknown values)
 //
 
-PioneerDDJFLX4.waveformZoom = function(midichan, control, value, status, group) {
-    if (value === 0x7f) {
-        script.triggerControl(group, "waveform_zoom_up", 100);
-    } else {
-        script.triggerControl(group, "waveform_zoom_down", 100);
-    }
+PioneerDDJFLX4.waveformZoom = function (_ch, _ctrl, value /* 0x01 / 0x7F */, _status, _group) {
+    // FLX4 sends typically 0x7F (one dir) and 0x01 (other dir). Ignore 0x00 release etc.
+    let dir = null;
+    if (value === 0x7F) dir = "up";
+    else if (value === 0x01) dir = "down";
+    else return;
+
+    // "global" feel: apply to both decks (wie Hercules)
+    script.triggerControl("[Channel1]", "waveform_zoom_" + dir, 50);
+    script.triggerControl("[Channel2]", "waveform_zoom_" + dir, 50);
 };
 
 // -------------------
