@@ -2166,134 +2166,52 @@ PioneerDDJFLX4.stemCountChanged = function(_value, group /* [Channel1]/[Channel2
     }
 };
 //
-// Pitch Shift mode
+// Key Shift (Pitch Shift) – FLX4 Standard-Belegung laut Handbuch
+// Pads: 1:+4, 2:+5, 3:+6, 4:+7, 5:0, 6:+1, 7:+2, 8:+3
 //
 
+PioneerDDJFLX4._keyShiftPadToSemitone = function(padIndex0to7) {
+    // padIndex: 0..7 entspricht Pads 1..8
+    const map = [4, 5, 6, 7, 0, 1, 2, 3];
+    return map[padIndex0to7] ?? 0;
+};
+
 PioneerDDJFLX4.pitchAdjusted = function(_value, group, _control) {
-    const pitchAdjust = Math.round(engine.getValue(group, "pitch_adjust"));
-    let lights = 0b00000000;
+    const cur = Math.round(engine.getValue(group, "pitch_adjust"));
 
-    if (pitchAdjust === 0) {
-        lights = 0b10000001;
-    } else if (pitchAdjust === 1) {
-        lights = 0b01000000;
-    } else if (pitchAdjust === 2) {
-        lights = 0b00100000;
-    } else if (pitchAdjust === 3) {
-        lights = 0b00010000;
-    } else if (pitchAdjust === 4) {
-        lights = 0b10010000;
-    } else if (pitchAdjust === 5) {
-        lights = 0b01010000;
-    } else if (pitchAdjust === 6) {
-        lights = 0b00110000;
-    } else if (pitchAdjust === 7) {
-        lights = 0b10110000;
-    } else if (pitchAdjust === 8) {
-        lights = 0b01110000;
-    } else if (pitchAdjust > 8) {
-        lights = 0b11110000;
-    } else if (pitchAdjust === -1) {
-        lights = 0b00000010;
-    } else if (pitchAdjust === -2) {
-        lights = 0b00000100;
-    } else if (pitchAdjust === -3) {
-        lights = 0b00001000;
-    } else if (pitchAdjust === -4) {
-        lights = 0b00001001;
-    } else if (pitchAdjust === -5) {
-        lights = 0b00001010;
-    } else if (pitchAdjust === -6) {
-        lights = 0b00001100;
-    } else if (pitchAdjust === -7) {
-        lights = 0b00001101;
-    } else if (pitchAdjust === -8) {
-        lights = 0b00001110;
-    } else if (pitchAdjust < -8) {
-        lights = 0b00001111;
-    } else {
-        lights = 0b11111111;
-    }
+    // Finde, welches Pad dazu passt
+    const map = [4, 5, 6, 7, 0, 1, 2, 3];
+    const idx = map.indexOf(cur); // 0..7 oder -1
 
-    for (let i=0; i<8; i++) {
-        let code = 0x00;
-        const pad = 0b10000000 >>> i;
+    for (let i = 0; i < 8; i++) {
+        const on = (i === idx);
+        const code = on ? 0x7F : 0x00;
 
-        if (lights & pad) {
-            code = 0x7f;
-        } else {
-            code = 0x00;
-        }
-
-        PioneerDDJFLX4.pitchPadsModesStatus[group].forEach(
-            (padMode) => midi.sendShortMsg(
+        PioneerDDJFLX4.pitchPadsModesStatus[group].forEach((padMode) => {
+            midi.sendShortMsg(
                 padMode,
                 PioneerDDJFLX4.pitchPadsFirstControl + i,
-                code,
-            )
-        );
+                code
+            );
+        });
     }
 };
 
 PioneerDDJFLX4.pitchPadPressed = function(_channel, control, value, _status, group) {
-    if (value !== 0x7f) {
-        return;
-    }
+    if (value !== 0x7F) return;
 
-    const pad = control - this.pitchPadsFirstControl;
-    let pitch = 0;
+    const padIndex = control - PioneerDDJFLX4.pitchPadsFirstControl; // 0..7
+    const semitone = PioneerDDJFLX4._keyShiftPadToSemitone(padIndex);
 
-    if (pad === 0) {
-        pitch = 0;
-    } else if (pad === 1) {
-        pitch = 1;
-    } else if (pad === 2) {
-        pitch = 2;
-    } else if (pad === 3) {
-        pitch = 3;
-    } else if (pad === 4) {
-        pitch = -3;
-    } else if (pad === 5) {
-        pitch = -2;
-    } else if (pad === 6) {
-        pitch = -1;
-    } else if (pad === 7) {
-        pitch = 0;
-    }
-
-    engine.setValue(group, "pitch_adjust", pitch);
+    engine.setValue(group, "pitch_adjust", semitone);
 };
 
-PioneerDDJFLX4.pitchPadShiftPressed = function(_channel, control, value, _status, group) {
-    if (value !== 0x7f) {
-        return;
-    }
-
-    const pad = control - this.pitchPadsFirstControl;
-
-    let currentPitch = engine.getValue(group, "pitch_adjust");
-
-    if (pad === 0) {
-        currentPitch += 1;
-    } else if (pad === 1) {
-        currentPitch += 2;
-    } else if (pad === 2) {
-        currentPitch += 3;
-    } else if (pad === 3) {
-        currentPitch += 4;
-    } else if (pad === 4) {
-        currentPitch += -4;
-    } else if (pad === 5) {
-        currentPitch += -3;
-    } else if (pad === 6) {
-        currentPitch += -2;
-    } else if (pad === 7) {
-        currentPitch += -1;
-    }
-
-    engine.setValue(group, "pitch_adjust", currentPitch);
+// SHIFT-Funktion: wenn du (wie im Handbuch) später „Anzeige/Pitch-Range ändern“ willst,
+// MUSS man das als eigenen Offset/Bank implementieren.
+// Solange du das nicht sauber nachbaust: lieber gar nichts tun, statt „irgendwie“.
+PioneerDDJFLX4.pitchPadShiftPressed = function(_channel, _control, _value, _status, _group) {
+    // absichtlich leer
 };
-
 
 //
 // Shutdown
