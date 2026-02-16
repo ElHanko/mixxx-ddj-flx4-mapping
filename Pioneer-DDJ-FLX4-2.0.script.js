@@ -1434,35 +1434,43 @@ PioneerDDJFLX4.cueLoopCallRight = function(_channel, _control, value, _status, g
 // press of the same button.
 //
 
-PioneerDDJFLX4.syncPressed = function(channel, control, value, status, group) {
-    if (engine.getValue(group, "sync_enabled") && value > 0) {
+PioneerDDJFLX4.syncPressed = function(_channel, _control, value, _status, group) {
+    if (value !== 0x7F) return;
+
+    const hold = engine.getValue(group, "sync_enabled") === 1;
+
+    if (hold) {
+        // Short press while HOLD → disable sync
         engine.setValue(group, "sync_enabled", 0);
     } else {
-        engine.setValue(group, "beatsync", value);
+        // One-shot beat sync
+        engine.setValue(group, "beatsync", 1);
     }
 };
 
-PioneerDDJFLX4.syncLongPressed = function(channel, control, value, status, group) {
-    if (value) {
-        engine.setValue(group, "sync_enabled", 1);
-    }
+PioneerDDJFLX4.syncLongPressed = function(_channel, _control, value, _status, group) {
+    if (value !== 0x7F) return;
+
+    const hold = engine.getValue(group, "sync_enabled") === 1;
+    engine.setValue(group, "sync_enabled", hold ? 0 : 1);
 };
 
-PioneerDDJFLX4.cycleTempoRange = function(_channel, _control, value, _status, group) {
-    if (value === 0) { return; } // ignore release
+PioneerDDJFLX4.tempoRanges = [0.08, 0.16, 0.32, 0.64, 1.0];
 
-    const currRange = engine.getValue(group, "rateRange");
-    let idx = 0;
+PioneerDDJFLX4.cycleTempoRange = function(_ch, _ctrl, value, _status, group) {
+    if (!value) return;
 
+    const cur = engine.getValue(group, "rateRange");
+
+    // Float-sicher: nicht auf exakte Gleichheit verlassen
+    const eps = 1e-6;
+    let idx = -1;
     for (let i = 0; i < this.tempoRanges.length; i++) {
-        if (currRange === this.tempoRanges[i]) {
-            // idx get the index of the value in tempoRanges following the currently configured one
-            // or cycle back to 0 if the current is the last value of the list.
-            idx = (i + 1) % this.tempoRanges.length;
-            break;
-        }
+        if (Math.abs(cur - this.tempoRanges[i]) < eps) { idx = i; break; }
     }
-    engine.setValue(group, "rateRange", this.tempoRanges[idx]);
+
+    const nextIdx = (idx === -1) ? 0 : (idx + 1) % this.tempoRanges.length;
+    engine.setValue(group, "rateRange", this.tempoRanges[nextIdx]);
 };
 
 ///////////////////////////////////////////////////////////////
