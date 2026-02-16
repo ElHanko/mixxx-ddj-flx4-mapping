@@ -537,6 +537,8 @@ PioneerDDJFLX4.vuMeterUpdate = function(value, group) {
     if (group === "[Channel1]" && PioneerDDJFLX4._peakL) newVal = Math.max(newVal, PioneerDDJFLX4.VU.RED_START);
     else if (group === "[Channel2]" && PioneerDDJFLX4._peakR) newVal = Math.max(newVal, PioneerDDJFLX4.VU.RED_START);
 
+    if (v < 0.02) newVal = 0x00;
+
     switch (group) {
     case "[Channel1]":
         midi.sendShortMsg(0xB0, 0x02, newVal & 0x7F);
@@ -2255,6 +2257,13 @@ PioneerDDJFLX4.pitchPadShiftPressed = function(_channel, control, value, _status
 //
 
 PioneerDDJFLX4.shutdown = function() {
+    if (PioneerDDJFLX4._peakTimerL) engine.stopTimer(PioneerDDJFLX4._peakTimerL);
+    if (PioneerDDJFLX4._peakTimerR) engine.stopTimer(PioneerDDJFLX4._peakTimerR);
+    PioneerDDJFLX4._peakTimerL = 0;
+    PioneerDDJFLX4._peakTimerR = 0;
+    PioneerDDJFLX4._peakL = 0;
+    PioneerDDJFLX4._peakR = 0;
+    
     // reset vumeter
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.deck1.vuMeter, false);
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.deck2.vuMeter, false);
