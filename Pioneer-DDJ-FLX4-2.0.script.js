@@ -1781,6 +1781,13 @@ PioneerDDJFLX4._setBeatjumpPadsLit = function(status, on) {
 //
 
 // --- Sampler LED state machine ---
+
+// --- Sampler long-press ---
+PioneerDDJFLX4.SAMPLER_LONGPRESS_MS = 350;
+PioneerDDJFLX4._samplerHold = PioneerDDJFLX4._samplerHold || {
+    timer: {},   // group -> timerId
+    fired: {},   // group -> bool
+};
 // LED off if not loaded, solid if loaded+stopped, blink if playing
 PioneerDDJFLX4.samplerLedUpdate = function(_value, group, _control) {
     const m = group.match(script.samplerRegEx);
@@ -1873,10 +1880,55 @@ if (_control === 0x69) { // KEYBOARD MODE button (STEMS)
 };
 
 PioneerDDJFLX4.samplerPadPressed = function(_channel, _control, value, _status, group) {
-    if (engine.getValue(group, "track_loaded")) {
-        engine.setValue(group, "cue_gotoandplay", value);
-    } else {
-        engine.setValue(group, "LoadSelectedTrack", value);
+    // Press
+    if (value === 0x7F) {
+        // long-press nur sinnvoll, wenn überhaupt was geladen ist
+        if (engine.getValue(group, "track_loaded")) {
+            // alten Timer weg
+            const old = PioneerDDJFLX4._samplerHold.timer[group];
+            if (old) {
+                engine.stopTimer(old);
+                PioneerDDJFLX4._samplerHold.timer[group] = 0;
+            }
+            PioneerDDJFLX4._samplerHold.fired[group] = false;
+
+            // Long-press timer: wenn playing -> stop
+            PioneerDDJFLX4._samplerHold.timer[group] = engine.beginTimer(
+                PioneerDDJFLX4.SAMPLER_LONGPRESS_MS,
+                function() {
+                    PioneerDDJFLX4._samplerHold.timer[group] = 0;
+
+                    if (engine.getValue(group, "play") === 1) {
+                        PioneerDDJFLX4._samplerHold.fired[group] = true;
+                        engine.setValue(group, "cue_gotoandstop", 1);
+                    }
+                },
+                true
+            );
+        }
+        return;
+    }
+
+    // Release
+    if (value === 0x00) {
+        const t = PioneerDDJFLX4._samplerHold.timer[group];
+        if (t) {
+            engine.stopTimer(t);
+            PioneerDDJFLX4._samplerHold.timer[group] = 0;
+        }
+
+        // wenn long-press bereits ausgelöst hat: nichts mehr tun
+        if (PioneerDDJFLX4._samplerHold.fired[group]) {
+            PioneerDDJFLX4._samplerHold.fired[group] = false;
+            return;
+        }
+
+        // short press Verhalten wie gehabt
+        if (engine.getValue(group, "track_loaded")) {
+            engine.setValue(group, "cue_gotoandplay", 1);
+        } else {
+            engine.setValue(group, "LoadSelectedTrack", 1);
+        }
     }
 };
 
@@ -1889,11 +1941,12 @@ PioneerDDJFLX4.samplerPadShiftPressed = function(_channel, _control, value, _sta
 };
 
 PioneerDDJFLX4.startSamplerBlink = function(channel, control, group) {
+    PioneerDDJFLX4.timersSampler = PioneerDDJFLX4.timersSampler || {};
     PioneerDDJFLX4.timersSampler[channel] = PioneerDDJFLX4.timersSampler[channel] || {};
     let val = 0x7f;
 
     PioneerDDJFLX4.stopSamplerBlink(channel, control);
-    PioneerDDJFLX4.timers[channel][control] = engine.beginTimer(250, () => {
+    PioneerDDJFLX4.timersSampler[channel][control] = engine.beginTimer(250, () => {
         val = 0x7f - val;
 
         // blink the appropriate pad
@@ -1915,6 +1968,7 @@ PioneerDDJFLX4.startSamplerBlink = function(channel, control, group) {
 };
 
 PioneerDDJFLX4.stopSamplerBlink = function(channel, control) {
+    PioneerDDJFLX4.timersSampler = PioneerDDJFLX4.timersSampler || {};
     PioneerDDJFLX4.timersSampler[channel] = PioneerDDJFLX4.timersSampler[channel] || {};
 
     if (PioneerDDJFLX4.timersSampler[channel][control] !== undefined) {
