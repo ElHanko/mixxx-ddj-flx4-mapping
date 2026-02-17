@@ -406,9 +406,21 @@ for (let i = 1; i <= samplerCount; ++i) {
     engine.makeConnection("[Channel1]", "track_loaded", PioneerDDJFLX4.loopTrackLoaded);
     engine.makeConnection("[Channel2]", "track_loaded", PioneerDDJFLX4.loopTrackLoaded);
 
-    // Beat FX: update LED when the chain enable state changes
-    engine.makeConnection("[EffectRack1_EffectUnit1]", "enabled", PioneerDDJFLX4._updateBeatFxOnOffLed);
-    engine.makeConnection("[EffectRack1_EffectUnit2]", "enabled", PioneerDDJFLX4._updateBeatFxOnOffLed);
+// Beat FX: update LED when chain/unit OR any slot enable state changes
+engine.makeConnection("[EffectRack1_EffectUnit1]", "enabled", PioneerDDJFLX4._updateBeatFxOnOffLed);
+engine.makeConnection("[EffectRack1_EffectUnit2]", "enabled", PioneerDDJFLX4._updateBeatFxOnOffLed);
+
+for (let unit = 1; unit <= 2; unit++) {
+    for (let slot = 1; slot <= 3; slot++) {
+        engine.makeConnection(
+            `[EffectRack1_EffectUnit${unit}_Effect${slot}]`,
+            "enabled",
+            PioneerDDJFLX4._updateBeatFxOnOffLed
+        );
+    }
+}
+
+
 
     // Smart CFX LED sync
     engine.makeConnection(PioneerDDJFLX4._qfxGroup(1), "enabled", PioneerDDJFLX4.smartCfxLedFromEngine);
@@ -435,6 +447,37 @@ for (let i = 1; i <= samplerCount; ++i) {
     engine.makeConnection("[Channel1]", "pitch_adjust", PioneerDDJFLX4.pitchAdjusted);
     engine.makeConnection("[Channel2]", "pitch_adjust", PioneerDDJFLX4.pitchAdjusted);
 
+    // --- PAD FX LED SYNC (Engine -> Controller) ---
+    [1,2,3,4].forEach((unitIdx) => {
+        const U = `[EffectRack1_EffectUnit${unitIdx}]`;
+
+        // Unit enable
+        engine.makeConnection(U, "enabled", () => {
+            PioneerDDJFLX4.updatePadFxUI("[Channel1]");
+            PioneerDDJFLX4.updatePadFxUI("[Channel2]");
+        });
+
+        // Slots 1–3
+        [1,2,3].forEach((slotIdx) => {
+            engine.makeConnection(
+                `[EffectRack1_EffectUnit${unitIdx}_Effect${slotIdx}]`,
+                "enabled",
+                () => {
+                    PioneerDDJFLX4.updatePadFxUI("[Channel1]");
+                    PioneerDDJFLX4.updatePadFxUI("[Channel2]");
+                }
+            );
+        });
+
+        // Routing Deck 1 / Deck 2
+        engine.makeConnection(U, "group_[Channel1]_enable", () => {
+            PioneerDDJFLX4.updatePadFxUI("[Channel1]");
+        });
+        engine.makeConnection(U, "group_[Channel2]_enable", () => {
+            PioneerDDJFLX4.updatePadFxUI("[Channel2]");
+        });
+    });
+
 // ------------------- DEFAULT PAD MODE -------------------
 PioneerDDJFLX4.padMode = PioneerDDJFLX4.padMode || {};
 PioneerDDJFLX4.padMode["[Channel1]"] = PioneerDDJFLX4.PADMODE.HOTCUE;
@@ -442,6 +485,9 @@ PioneerDDJFLX4.padMode["[Channel2]"] = PioneerDDJFLX4.PADMODE.HOTCUE;
 
     // initialize Beat FX routing + LED state
     PioneerDDJFLX4._applyBeatFxRouting();
+
+// … nachdem Routing gesetzt ist / am Ende von init():
+PioneerDDJFLX4._updateBeatFxOnOffLed();
 
     PioneerDDJFLX4.keepAliveTimer = engine.beginTimer(200, PioneerDDJFLX4.sendKeepAlive);
 
@@ -753,9 +799,17 @@ PioneerDDJFLX4.beatFxOnOffPressed = function(_channel, _control, value) {
     if (value !== 0x7F) return;
 
     const targets = PioneerDDJFLX4._beatFxTargets();
-    const allOn = targets.length > 0 && targets.every((u) => PioneerDDJFLX4._beatFxAllSlotsOn(u));
+    if (!targets.length) return;
 
-    targets.forEach((u) => PioneerDDJFLX4._beatFxSetUnitAndSlots(u, !allOn));
+    const anyOn = targets.some((u) => PioneerDDJFLX4._beatFxAnySlotOn(u));
+
+    // Hercules-/Pioneer-Logik:
+    // irgendwas an -> alles aus
+    // alles aus     -> alles an
+    targets.forEach((u) => {
+        PioneerDDJFLX4._beatFxSetUnitAndSlots(u, !anyOn);
+    });
+
     PioneerDDJFLX4._updateBeatFxOnOffLed();
 };
 
