@@ -1,50 +1,91 @@
-// Pioneer-DDJ-FLX4-script.js
-// ****************************************************************************
-// * Mixxx mapping script file for the Pioneer DDJ-FLX4.
-// * Mostly adapted from the DDJ-400 mapping script
-// * Authors: Warker, nschloe, dj3730, jusko, Robert904
-// ****************************************************************************
+// Pioneer-DDJ-FLX4-2.0.script.js
+// =============================================================================
+// Mixxx MIDI Mapping for Pioneer DDJ-FLX4
+// =============================================================================
 //
-//  Implemented (as per manufacturer's manual):
-//      * Mixer Section (Faders, EQ, Filter, Gain, Cue)
-//      * Browsing and loading + Waveform zoom (shift)
-//      * Jogwheels, Scratching, Bending, Loop adjust
-//      * Cycle Temporange
-//      * Beat Sync
-//      * Hot Cue Mode
-//      * Beat Loop Mode
-//      * Beat Jump Mode
-//      * Sampler Mode
-//      * Keyshift mode
+// Design goals:
+// - Native FLX4 feel with deterministic behavior
+// - Engine-driven LED state (no controller-side guessing)
+// - Consistent short/long press semantics
+// - Hercules-style logic where Pioneer defaults are weak
 //
-//  Custom (Mixxx specific mappings):
-//      * BeatFX: Assigned Effect Unit 1
-//                v FX_SELECT Load next effect.
-//                SHIFT + v FX_SELECT Load previous effect.
-//                < LEFT Cycle effect focus leftward
-//                > RIGHT Cycle effect focus rightward
-//                ON/OFF toggles focused effect slot
-//                SHIFT + ON/OFF disables all three effect slots.
+// This mapping is NOT a simple DDJ-400 port.
+// Large parts were redesigned from scratch.
 //
-//      * 32 beat jump forward & back (Shift + </> CUE/LOOP CALL arrows)
-//      * Toggle quantize (Shift + channel cue)
-//      * Stems selection using PADs (using controller's Keyboard mode)
+// -----------------------------------------------------------------------------
+// Implemented Features
+// -----------------------------------------------------------------------------
 //
-//  Not implemented (after discussion and trial attempts):
-//      * Loop Section:
-//        * -4BEAT auto loop (hacky---prefer a clean way to set a 4 beat loop
-//                            from a previous position on long press)
+// Decks / Transport
+// - Play / Cue with proper LED sync
+// - Beat Sync (short = momentary, long = hold)
+// - Vinyl mode with real hardware state control
+// - Jog wheels with:
+//     * Scratch / bend decision on touch
+//     * Controller-reported vinyl mode awareness
+//     * Loop-adjust priority
 //
-//        * CUE/LOOP CALL - memory & delete (complex and not useful. Hot cues are sufficient)
+// Pads & Pad Modes
+// - Hotcue
+// - Beat Jump (static pad LEDs)
+// - Beat Loop (static pad LEDs, separate from Beatjump)
+// - Sampler mode:
+//     * LED state machine (off / solid / blink)
+//     * Short press: play / load
+//     * Long press: stop
+//     * Shift: stop / eject
+// - Pad FX (Hercules-style):
+//     * PAD FX1 → EffectUnit 1/2
+//     * PAD FX2 → EffectUnit 3/4
+//     * Slot, Unit, Routing and All-On logic
+//     * Full engine → controller LED sync
+// - Keyboard mode used as STEMS:
+//     * Pads 1–4: stem mute
+//     * Pads 5–8: momentary solo / hold-mute (configurable)
 //
-//      * Secondary pad modes (trial attempts complex and too experimental)
-//        * Keyboard mode
-//        * Pad FX1
-//        * Pad FX2
+// Effects
+// - Beat FX completely reworked:
+//     * Proper slot-aware ON/OFF logic
+//     * Any-slot-on → LED on
+//     * Press while partially enabled → all off
+//     * Deterministic routing per deck
+//     * Engine-driven LED sync (no first-press desync)
 //
-//  Not implemented yet (but might be in the future):
-//      * Smart CFX
-//      * Smart fader
+// Looping
+// - Dual loop behavior:
+//     * SIMPLE mode (default Mixxx-style)
+//     * HERCULES mode:
+//         - loop_in / loop_out workflow
+//         - sample-based jog adjust
+//         - auto-timeout for adjust mode
+// - RELOOP/EXIT with sensible fallback when no loop exists
+//
+// Quantize / Keylock
+// - Short press: Quantize toggle
+// - Long press: Keylock toggle
+//
+// Visual Feedback
+// - Accurate VU meters with peak latch
+// - Static pad LEDs for mode indication
+// - Blink timers isolated per subsystem (Sampler / Loop / FX)
+//
+// -----------------------------------------------------------------------------
+// Explicitly NOT implemented
+// -----------------------------------------------------------------------------
+// - Smart Fader
+// - Smart CFX presets beyond basic toggle
+// - Secondary experimental pad layers
+//
+// These are intentionally omitted to avoid half-working features.
+//
+// -----------------------------------------------------------------------------
+// Notes
+// -----------------------------------------------------------------------------
+// - This mapping assumes Script-Binding for pads.
+// - Complexity is intentional. Read the code before modifying.
+// - Mixing timer buckets WILL break things.
+//
+// =============================================================================
 
 var PioneerDDJFLX4 = {};
 
