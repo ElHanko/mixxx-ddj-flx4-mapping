@@ -1829,7 +1829,17 @@ PioneerDDJFLX4._setBeatjumpPadsLit = function(status, on) {
         midi.sendShortMsg(status, n, v);
     }
 };
-
+// ============================================================
+// Beatloop Mode LEDs (static) – light pads 1..8 when mode active
+// Notes: 0x60..0x67
+// Deck1 status: 0x97, Deck2 status: 0x99
+// ============================================================
+PioneerDDJFLX4._setBeatloopPadsLit = function(status, on) {
+    const v = on ? 0x7F : 0x00;
+    for (let n = 0x60; n <= 0x67; n++) {
+        midi.sendShortMsg(status, n, v);
+    }
+};
 //
 // Sampler mode
 //
@@ -1896,10 +1906,21 @@ PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, 
     const ch = (_status === 0x90) ? "[Channel1]" : "[Channel2]";
     const deck = (_status === 0x90 ? PioneerDDJFLX4.lights.deck1 : PioneerDDJFLX4.lights.deck2);
 
-    // Beatjump pad LED status differs from padmode buttons:
     const padStatus = (_status === 0x90) ? 0x97 : 0x99;
+    // Beatjump pads
     if (typeof PioneerDDJFLX4._setBeatjumpPadsLit === "function") {
-        PioneerDDJFLX4._setBeatjumpPadsLit(padStatus, _control === 0x20);
+        PioneerDDJFLX4._setBeatjumpPadsLit(
+            padStatus,
+            _control === 0x20 // BEATJUMP
+        );
+    }
+
+    // Beatloop pads
+    if (typeof PioneerDDJFLX4._setBeatloopPadsLit === "function") {
+        PioneerDDJFLX4._setBeatloopPadsLit(
+            padStatus,
+            _control === 0x6D // BEATLOOP
+        );
     }
 
     // --- KEYBOARD MODE (used as STEMS) ---
