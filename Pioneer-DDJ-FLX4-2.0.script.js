@@ -341,49 +341,57 @@ PioneerDDJFLX4.shiftPressed = function(_channel, _control, value, status, _group
     PioneerDDJFLX4.shiftDown = !!PioneerDDJFLX4._shiftDeck1 || !!PioneerDDJFLX4._shiftDeck2;
 };
 
-//
-// Library / Browser: BROWSE short/long press
-// - long press: expand folder/tree (MoveRight)
-// - short press: move focus between tree/tracklist (Forward/Backward depending on which MIDI note)
-//
+// Library / Browser
+// 0x41 (BROWSE): short = focus forward, long = expand tree (MoveRight)
+// 0x42 (SHIFT+BROWSE): toggle maximize/minimize library ([Master]maximize_library)
 
 PioneerDDJFLX4._browseLP = {
-    timer: { 0x41: -1, 0x42: -1 },
-    fired: { 0x41: false, 0x42: false },
+    timer: { 0x41: -1 },
+    fired: { 0x41: false },
 };
 PioneerDDJFLX4.BROWSE_LONGPRESS_MS = 300;
 
 PioneerDDJFLX4.browsePress = function(_channel, control, value, _status, _group) {
     const THRESH = PioneerDDJFLX4.BROWSE_LONGPRESS_MS;
 
-    if (control !== 0x41 && control !== 0x42) return;
+    // SHIFT+BROWSE: just toggle maximize on press
+    if (control === 0x42) {
+        if (value === 0x7F) {
+            script.triggerControl("[Master]", "maximize_library");
+        }
+        return;
+    }
+
+    // BROWSE: short/long press logic
+    if (control !== 0x41) return;
 
     if (value === 0x7F) { // down
-        const t = PioneerDDJFLX4._browseLP.timer[control];
+        const t = PioneerDDJFLX4._browseLP.timer[0x41];
         if (t !== -1) {
             try { engine.stopTimer(t); } catch (e) {}
         }
-        PioneerDDJFLX4._browseLP.fired[control] = false;
+        PioneerDDJFLX4._browseLP.fired[0x41] = false;
 
-        PioneerDDJFLX4._browseLP.timer[control] = engine.beginTimer(THRESH, function() {
-            PioneerDDJFLX4._browseLP.fired[control] = true;
-            PioneerDDJFLX4._browseLP.timer[control] = -1;
-            script.triggerControl("[Library]", "MoveRight");
+        PioneerDDJFLX4._browseLP.timer[0x41] = engine.beginTimer(THRESH, function() {
+            PioneerDDJFLX4._browseLP.fired[0x41] = true;
+            PioneerDDJFLX4._browseLP.timer[0x41] = -1;
+            script.triggerControl("[Library]", "MoveRight"); // expand tree
         }, true);
 
         return;
     }
-    if (value !== 0x00) return; // ignore any weird intermediate values
+
+    if (value !== 0x00) return;
 
     // up
-    const t = PioneerDDJFLX4._browseLP.timer[control];
+    const t = PioneerDDJFLX4._browseLP.timer[0x41];
     if (t !== -1) {
         try { engine.stopTimer(t); } catch (e) {}
-        PioneerDDJFLX4._browseLP.timer[control] = -1;
+        PioneerDDJFLX4._browseLP.timer[0x41] = -1;
     }
 
-    if (!PioneerDDJFLX4._browseLP.fired[control]) {
-        script.triggerControl("[Library]", control === 0x42 ? "MoveFocusBackward" : "MoveFocusForward");
+    if (!PioneerDDJFLX4._browseLP.fired[0x41]) {
+        script.triggerControl("[Library]", "MoveFocusForward");
     }
 };
 
