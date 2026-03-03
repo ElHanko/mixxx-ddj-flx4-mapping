@@ -446,9 +446,9 @@
           <Script-Binding />
         </options>
       </control>
-      <!-- RELOOP/EXIT -> Script (Loop off: 4-beat loop, Loop on: exit/reloop_toggle) -->
+      <!-- 4BEAT/EXIT -> Script (Loop off: 4-beat loop, Loop on: exit/reloop_toggle) -->
       <control>
-        <description>RELOOP/EXIT (DECK1) - press - (loop off) 4-beat loop, (loop on) Loop exit</description>
+        <description>4BEAT/EXIT (DECK1) - press - (loop off) 4-beat loop, (loop on) Loop exit</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.reloopExitPressed</key>
         <status>0x90</status>
@@ -458,7 +458,7 @@
         </options>
       </control>
       <control>
-        <description>RELOOP/EXIT (DECK2) - press - (loop off) 4-beat loop, (loop on) Loop exit</description>
+        <description>4BEAT/EXIT (DECK2) - press - (loop off) 4-beat loop, (loop on) Loop exit</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.reloopExitPressed</key>
         <status>0x91</status>
@@ -468,7 +468,7 @@
         </options>
       </control>
       <control>
-        <description>RELOOP/EXIT +SHIFT (DECK1) - press - Vinyl Mode</description>
+        <description>4BEAT/EXIT +SHIFT (DECK1) - press - Vinyl Mode</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.vinylTogglePressed</key>
         <status>0x90</status>
@@ -478,7 +478,7 @@
         </options>
       </control>
       <control>
-        <description>RELOOP/EXIT +SHIFT (DECK2) - press - Vinyl Mode</description>
+        <description>4BEAT/EXIT +SHIFT (DECK2) - press - Vinyl Mode</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.vinylTogglePressed</key>
         <status>0x91</status>
