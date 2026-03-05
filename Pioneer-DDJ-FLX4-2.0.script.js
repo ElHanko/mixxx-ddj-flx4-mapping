@@ -1350,19 +1350,35 @@ PioneerDDJFLX4.loopTrackLoaded = function(_value, group, _control) {
 };
 
 
-// ------------------- RELOOP/EXIT -------------------
-// Loop an -> reloop_toggle (Exit); Loop aus -> N-beat loop activate
+// ------------------- 4BEAT/EXIT -------------------
+// Loop on  -> reloop_toggle (Exit)
+// Loop off -> if a previous loop exists: reloop_toggle (Reloop), else create N-beat loop
 PioneerDDJFLX4.reloopExitPressed = function(_channel, _control, value, _status, group) {
   if (value !== 0x7F) return;
   if (engine.getValue(group, "track_loaded") !== 1) return;
 
   const loopOn = engine.getValue(group, "loop_enabled") > 0;
-
   if (loopOn) {
     script.triggerControl(group, "reloop_toggle");
     return;
   }
 
+  const loopStart = engine.getValue(group, "loop_start_position");
+  const loopEnd   = engine.getValue(group, "loop_end_position");
+
+  // Mixxx uses -1 for unset positions in many cases; also guard against garbage.
+  const haveStoredLoop =
+      Number.isFinite(loopStart) && Number.isFinite(loopEnd) &&
+      loopStart >= 0 && loopEnd >= 0 &&
+      loopEnd > loopStart;
+
+  if (haveStoredLoop) {
+    // Reloop previously set IN/OUT
+    script.triggerControl(group, "reloop_toggle");
+    return;
+  }
+
+  // No stored loop -> create default loop (e.g. 4 beats)
   const size = Number(PioneerDDJFLX4.reloopExitBeats);
   engine.setValue(group, "beatloop_size", (Number.isFinite(size) && size > 0) ? size : 4);
   script.triggerControl(group, "beatloop_activate");
