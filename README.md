@@ -28,3 +28,6 @@ I will continue improving the mapping as I discover issues or new ideas.
 ## Author
 
 ElHanko
+
+## License
+MIT
