@@ -497,90 +497,26 @@ PioneerDDJFLX4._updateBeatFxOnOffLed();
     }
 };
 
-//
+///
 // Library / Browser: BROWSE press handling
 // 0x41 = BROWSE (normal)
-// 0x42 = SHIFT + BROWSE
+// 0x42 = SHIFT + BROWSE (currently unused)
 //
 // behavior:
 // - 0x41 short: MoveFocusForward
-// - 0x41 long : MoveRight (expand tree)
-// - 0x42 press: toggle [Master] maximize_library
 //
-// debouncing:
-// - if 0x42 is active, ignore 0x41 completely (prevents double toggle)
-//
-
-PioneerDDJFLX4._browseLP = {
-    timer: { 0x41: -1 },
-    fired: { 0x41: false },
-    down:  { 0x41: false, 0x42: false },
-    shiftActive: false,
-};
-
-PioneerDDJFLX4.BROWSE_LONGPRESS_MS = 300;
-
-PioneerDDJFLX4._stopBrowseTimer = function() {
-    const t = PioneerDDJFLX4._browseLP.timer[0x41];
-    if (t !== -1) {
-        try { engine.stopTimer(t); } catch (e) {}
-        PioneerDDJFLX4._browseLP.timer[0x41] = -1;
-    }
-};
 
 PioneerDDJFLX4.browsePress = function(_channel, control, value, _status, _group) {
-    const THRESH = PioneerDDJFLX4.BROWSE_LONGPRESS_MS;
+    if (value !== 0x7F) return;
 
-    if (control !== 0x41 && control !== 0x42) return;
-
-    // ---- SHIFT+BROWSE (0x42): toggle maximize_library ----
-    if (control === 0x42) {
-        if (value === 0x7F) { // down
-            if (PioneerDDJFLX4._browseLP.down[0x42]) return; // ignore repeats
-            PioneerDDJFLX4._browseLP.down[0x42] = true;
-            PioneerDDJFLX4._browseLP.shiftActive = true;
-
-            // hard-cancel normal browse so it can't fire on release
-            PioneerDDJFLX4._stopBrowseTimer();
-            PioneerDDJFLX4._browseLP.fired[0x41] = true;
-            PioneerDDJFLX4._browseLP.down[0x41] = false;
-
-            script.toggleControl("[Master]", "maximize_library");
-        } else if (value === 0x00) { // up
-            PioneerDDJFLX4._browseLP.down[0x42] = false;
-            PioneerDDJFLX4._browseLP.shiftActive = false;
-        }
-        return;
-    }
-
-    // ---- Normal BROWSE (0x41) ----
-    // If SHIFT+BROWSE is active, ignore 0x41 entirely
-    if (PioneerDDJFLX4._browseLP.shiftActive) return;
-
-    if (value === 0x7F) { // down
-        if (PioneerDDJFLX4._browseLP.down[0x41]) return; // ignore repeats
-        PioneerDDJFLX4._browseLP.down[0x41] = true;
-
-        PioneerDDJFLX4._stopBrowseTimer();
-        PioneerDDJFLX4._browseLP.fired[0x41] = false;
-
-        PioneerDDJFLX4._browseLP.timer[0x41] = engine.beginTimer(THRESH, function() {
-            PioneerDDJFLX4._browseLP.fired[0x41] = true;
-            PioneerDDJFLX4._browseLP.timer[0x41] = -1;
-            script.triggerControl("[Library]", "MoveRight");
-        }, true);
-
-        return;
-    }
-
-    if (value !== 0x00) return;
-
-    // up
-    PioneerDDJFLX4._browseLP.down[0x41] = false;
-    PioneerDDJFLX4._stopBrowseTimer();
-
-    if (!PioneerDDJFLX4._browseLP.fired[0x41]) {
+    if (control === 0x41) {
         script.triggerControl("[Library]", "MoveFocusForward");
+        return;
+    }
+
+    // SHIFT+BROWSE currently unused
+    if (control === 0x42) {
+        return;
     }
 };
 
@@ -759,6 +695,33 @@ PioneerDDJFLX4.loadPressed = function(_channel, _control, value, _status, group)
         state.waiting[group] = false;
         PioneerDDJFLX4._doNormalLoad(group);
     }, true);
+};
+
+// ------------------- SHIFT + LOAD -------------------
+//
+// FLX4 SHIFT + LOAD functions
+//
+// Deck 1 (0x68):
+//   Toggle Mixxx library maximize/minimize.
+//   Useful to quickly switch between full library view and normal layout.
+//
+// Deck 2 (0x7A):
+//   Open folder / expand tree in library (MoveRight).
+//
+
+PioneerDDJFLX4.loadShiftPressed = function(_channel, control, value, _status, _group) {
+    if (value !== 0x7F) return;
+
+    // SHIFT + LOAD left → toggle library maximize
+    if (control === 0x68) {
+        script.toggleControl("[Master]", "maximize_library");
+        return;
+    }
+
+    // SHIFT + LOAD right → open folder in library tree
+    if (control === 0x7A) {
+        script.triggerControl("[Library]", "MoveRight");
+    }
 };
 
 //
