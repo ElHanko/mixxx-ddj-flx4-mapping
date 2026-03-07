@@ -58,26 +58,29 @@
           <Script-Binding />
         </options>
       </control>
-      <control>
-        <description>LOAD (DECK1) - press - Load a Track into Deck 1</description>
-        <group>[Channel1]</group>
-        <key>LoadSelectedTrack</key>
-        <status>0x96</status>
-        <midino>0x46</midino>
-        <options>
-          <Normal />
-        </options>
-      </control>
-      <control>
-        <description>LOAD (DECK2) - press - Load a Track into Deck 2</description>
-        <group>[Channel2]</group>
-        <key>LoadSelectedTrack</key>
-        <status>0x96</status>
-        <midino>0x47</midino>
-        <options>
-          <Normal />
-        </options>
-      </control>
+<!-- LOAD START -->
+<control>
+  <description>LOAD (DECK1) - press - load selected track / double press instant doubles</description>
+  <group>[Channel1]</group>
+  <key>PioneerDDJFLX4.loadPressed</key>
+  <status>0x96</status>
+  <midino>0x46</midino>
+  <options>
+    <Script-Binding />
+  </options>
+</control>
+
+<control>
+  <description>LOAD (DECK2) - press - load selected track / double press instant doubles</description>
+  <group>[Channel2]</group>
+  <key>PioneerDDJFLX4.loadPressed</key>
+  <status>0x96</status>
+  <midino>0x47</midino>
+  <options>
+    <Script-Binding />
+  </options>
+</control>
+<!-- LOAD END -->
       <!-- BROWSER Section END -->
       <!--
             DECK Section START

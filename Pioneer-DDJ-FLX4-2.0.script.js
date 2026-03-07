@@ -342,6 +342,162 @@ PioneerDDJFLX4.shiftPressed = function(_channel, _control, value, status, _group
 };
 
 //
+// Init
+//
+
+PioneerDDJFLX4.init = function() {
+    engine.setValue("[EffectRack1_EffectUnit1]", "show_focus", 1);
+
+// --- Connections (WICHTIG: ChannelN, nicht Main) ---
+engine.makeConnection("[Channel1]", "peak_indicator_left",  function(v){ PioneerDDJFLX4._latchPeak(1, v); });
+engine.makeConnection("[Channel1]", "peak_indicator_right", function(v){ PioneerDDJFLX4._latchPeak(1, v); });
+
+engine.makeConnection("[Channel2]", "peak_indicator_left",  function(v){ PioneerDDJFLX4._latchPeak(2, v); });
+engine.makeConnection("[Channel2]", "peak_indicator_right", function(v){ PioneerDDJFLX4._latchPeak(2, v); });
+
+// VU bleibt wie gehabt:
+engine.makeConnection("[Channel1]", "vu_meter", PioneerDDJFLX4.vuMeterUpdate);
+engine.makeConnection("[Channel2]", "vu_meter", PioneerDDJFLX4.vuMeterUpdate);
+
+    PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.deck1.vuMeter, false);
+    PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.deck2.vuMeter, false);
+
+    engine.softTakeover("[Channel1]", "rate", true);
+    engine.softTakeover("[Channel2]", "rate", true);
+    engine.softTakeover("[EffectRack1_EffectUnit1_Effect1]", "meta", true);
+    engine.softTakeover("[EffectRack1_EffectUnit1_Effect2]", "meta", true);
+    engine.softTakeover("[EffectRack1_EffectUnit1_Effect3]", "meta", true);
+//  engine.softTakeover("[EffectRack1_EffectUnit1]", "mix", true);
+//  engine.softTakeover("[EffectRack1_EffectUnit1]", "super1", true);
+//    engine.softTakeover("[EffectRack1_EffectUnit2]", "mix", true);
+//    engine.softTakeover("[EffectRack1_EffectUnit2]", "super1", true);
+
+const samplerCount = 16;
+if (engine.getValue("[App]", "num_samplers") < samplerCount) {
+    engine.setValue("[App]", "num_samplers", samplerCount);
+}
+
+for (let i = 1; i <= samplerCount; ++i) {
+    const sg = `[Sampler${i}]`;
+
+    // LED State Machine: off / solid / blink
+    engine.makeConnection(sg, "track_loaded", PioneerDDJFLX4.samplerLedUpdate);
+    engine.makeConnection(sg, "play",        PioneerDDJFLX4.samplerLedUpdate);
+
+    // initialer LED-Refresh beim Start (sonst sind LEDs u.U. “alt” bis zum ersten Event)
+    PioneerDDJFLX4.samplerLedUpdate(0, sg, 0);
+}
+
+    engine.makeConnection("[Channel1]", "track_loaded", PioneerDDJFLX4.trackLoadedLED);
+    engine.makeConnection("[Channel2]", "track_loaded", PioneerDDJFLX4.trackLoadedLED);
+
+    // play the "track loaded" animation on both decks at startup
+    midi.sendShortMsg(0x9F, 0x00, 0x7F);
+    midi.sendShortMsg(0x9F, 0x01, 0x7F);
+
+    engine.makeConnection("[Channel1]", "loop_enabled", PioneerDDJFLX4.loopToggle);
+    engine.makeConnection("[Channel2]", "loop_enabled", PioneerDDJFLX4.loopToggle);
+
+    engine.makeConnection("[Channel1]", "track_loaded", PioneerDDJFLX4.loopTrackLoaded);
+    engine.makeConnection("[Channel2]", "track_loaded", PioneerDDJFLX4.loopTrackLoaded);
+
+// Beat FX: update LED when chain/unit OR any slot enable state changes
+engine.makeConnection("[EffectRack1_EffectUnit1]", "enabled", PioneerDDJFLX4._updateBeatFxOnOffLed);
+engine.makeConnection("[EffectRack1_EffectUnit2]", "enabled", PioneerDDJFLX4._updateBeatFxOnOffLed);
+
+for (let unit = 1; unit <= 2; unit++) {
+    for (let slot = 1; slot <= 3; slot++) {
+        engine.makeConnection(
+            `[EffectRack1_EffectUnit${unit}_Effect${slot}]`,
+            "enabled",
+            PioneerDDJFLX4._updateBeatFxOnOffLed
+        );
+    }
+}
+
+    // Smart CFX LED sync
+    engine.makeConnection(PioneerDDJFLX4._qfxGroup(1), "enabled", PioneerDDJFLX4.smartCfxLedFromEngine);
+    engine.makeConnection(PioneerDDJFLX4._qfxGroup(2), "enabled", PioneerDDJFLX4.smartCfxLedFromEngine);
+    PioneerDDJFLX4.smartCfxLedFromEngine(0, "", "");
+
+    // Register callbacks for each deck, when a file is loaded and the number of stems is available
+    engine.makeConnection("[Channel1]", "stem_count", PioneerDDJFLX4.stemCountChanged);
+    engine.makeConnection("[Channel2]", "stem_count", PioneerDDJFLX4.stemCountChanged);
+
+    // Register callbacks for each stems of each decks, to change pad lights when muted/unmuted/FX
+    for (let stem=1; stem<=4; stem++) {
+        for (let deck=1; deck<=2; deck++) {
+            engine.makeConnection(`[Channel${deck}_Stem${stem}]`, "mute", PioneerDDJFLX4.stemMuteChanged);
+            engine.makeConnection(`[QuickEffectRack1_[Channel${deck}_Stem${stem}]]`, "enabled", PioneerDDJFLX4.stemFxChanged);
+        }
+    }
+
+    // Register callbacks for each deck, when a file is loaded to reset pitch shift
+    engine.makeConnection("[Channel1]", "track_loaded", PioneerDDJFLX4.pitchAdjusted);
+    engine.makeConnection("[Channel2]", "track_loaded", PioneerDDJFLX4.pitchAdjusted);
+
+    // Register callbacks for each deck, when the pitch shift is modified
+    engine.makeConnection("[Channel1]", "pitch_adjust", PioneerDDJFLX4.pitchAdjusted);
+    engine.makeConnection("[Channel2]", "pitch_adjust", PioneerDDJFLX4.pitchAdjusted);
+
+    // --- PAD FX LED SYNC (Engine -> Controller) ---
+    [1,2,3,4].forEach((unitIdx) => {
+        const U = `[EffectRack1_EffectUnit${unitIdx}]`;
+
+        // Unit enable
+        engine.makeConnection(U, "enabled", () => {
+            PioneerDDJFLX4.updatePadFxUI("[Channel1]");
+            PioneerDDJFLX4.updatePadFxUI("[Channel2]");
+        });
+
+        // Slots 1–3
+        [1,2,3].forEach((slotIdx) => {
+            engine.makeConnection(
+                `[EffectRack1_EffectUnit${unitIdx}_Effect${slotIdx}]`,
+                "enabled",
+                () => {
+                    PioneerDDJFLX4.updatePadFxUI("[Channel1]");
+                    PioneerDDJFLX4.updatePadFxUI("[Channel2]");
+                }
+            );
+        });
+
+        // Routing Deck 1 / Deck 2
+        engine.makeConnection(U, "group_[Channel1]_enable", () => {
+            PioneerDDJFLX4.updatePadFxUI("[Channel1]");
+        });
+        engine.makeConnection(U, "group_[Channel2]_enable", () => {
+            PioneerDDJFLX4.updatePadFxUI("[Channel2]");
+        });
+    });
+
+// ------------------- DEFAULT PAD MODE -------------------
+PioneerDDJFLX4.padMode = PioneerDDJFLX4.padMode || {};
+PioneerDDJFLX4.padMode["[Channel1]"] = PioneerDDJFLX4.PADMODE.HOTCUE;
+PioneerDDJFLX4.padMode["[Channel2]"] = PioneerDDJFLX4.PADMODE.HOTCUE;
+
+    // initialize Beat FX routing + LED state
+    PioneerDDJFLX4._applyBeatFxRouting();
+
+// … nachdem Routing gesetzt ist / am Ende von init():
+PioneerDDJFLX4._updateBeatFxOnOffLed();
+
+    PioneerDDJFLX4.keepAliveTimer = engine.beginTimer(200, PioneerDDJFLX4.sendKeepAlive);
+
+    // query the controller for current control positions on startup
+    PioneerDDJFLX4.sendKeepAlive(); // the query seems to double as a keep alive message
+
+
+    // Ensure controller vinyl state is known on startup (fixes "need to press twice")
+    // _applyVinylState expects (deckIdx, on) — your old call passed only one arg and
+    // accidentally targeted only deck 1 due to JS coercion.
+    if (typeof PioneerDDJFLX4._applyVinylState === "function") {
+        PioneerDDJFLX4._applyVinylState(0, false);
+        PioneerDDJFLX4._applyVinylState(1, false);
+    }
+};
+
+//
 // Library / Browser: BROWSE press handling
 // 0x41 = BROWSE (normal)
 // 0x42 = SHIFT + BROWSE
@@ -425,164 +581,6 @@ PioneerDDJFLX4.browsePress = function(_channel, control, value, _status, _group)
 
     if (!PioneerDDJFLX4._browseLP.fired[0x41]) {
         script.triggerControl("[Library]", "MoveFocusForward");
-    }
-};
-
-//
-// Init
-//
-
-PioneerDDJFLX4.init = function() {
-    engine.setValue("[EffectRack1_EffectUnit1]", "show_focus", 1);
-
-// --- Connections (WICHTIG: ChannelN, nicht Main) ---
-engine.makeConnection("[Channel1]", "peak_indicator_left",  function(v){ PioneerDDJFLX4._latchPeak(1, v); });
-engine.makeConnection("[Channel1]", "peak_indicator_right", function(v){ PioneerDDJFLX4._latchPeak(1, v); });
-
-engine.makeConnection("[Channel2]", "peak_indicator_left",  function(v){ PioneerDDJFLX4._latchPeak(2, v); });
-engine.makeConnection("[Channel2]", "peak_indicator_right", function(v){ PioneerDDJFLX4._latchPeak(2, v); });
-
-// VU bleibt wie gehabt:
-engine.makeConnection("[Channel1]", "vu_meter", PioneerDDJFLX4.vuMeterUpdate);
-engine.makeConnection("[Channel2]", "vu_meter", PioneerDDJFLX4.vuMeterUpdate);
-
-    PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.deck1.vuMeter, false);
-    PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.deck2.vuMeter, false);
-
-    engine.softTakeover("[Channel1]", "rate", true);
-    engine.softTakeover("[Channel2]", "rate", true);
-    engine.softTakeover("[EffectRack1_EffectUnit1_Effect1]", "meta", true);
-    engine.softTakeover("[EffectRack1_EffectUnit1_Effect2]", "meta", true);
-    engine.softTakeover("[EffectRack1_EffectUnit1_Effect3]", "meta", true);
-//  engine.softTakeover("[EffectRack1_EffectUnit1]", "mix", true);
-//  engine.softTakeover("[EffectRack1_EffectUnit1]", "super1", true);
-//    engine.softTakeover("[EffectRack1_EffectUnit2]", "mix", true);
-//    engine.softTakeover("[EffectRack1_EffectUnit2]", "super1", true);
-
-const samplerCount = 16;
-if (engine.getValue("[App]", "num_samplers") < samplerCount) {
-    engine.setValue("[App]", "num_samplers", samplerCount);
-}
-
-for (let i = 1; i <= samplerCount; ++i) {
-    const sg = `[Sampler${i}]`;
-
-    // LED State Machine: off / solid / blink
-    engine.makeConnection(sg, "track_loaded", PioneerDDJFLX4.samplerLedUpdate);
-    engine.makeConnection(sg, "play",        PioneerDDJFLX4.samplerLedUpdate);
-
-    // initialer LED-Refresh beim Start (sonst sind LEDs u.U. “alt” bis zum ersten Event)
-    PioneerDDJFLX4.samplerLedUpdate(0, sg, 0);
-}
-
-    engine.makeConnection("[Channel1]", "track_loaded", PioneerDDJFLX4.trackLoadedLED);
-    engine.makeConnection("[Channel2]", "track_loaded", PioneerDDJFLX4.trackLoadedLED);
-
-    // play the "track loaded" animation on both decks at startup
-    midi.sendShortMsg(0x9F, 0x00, 0x7F);
-    midi.sendShortMsg(0x9F, 0x01, 0x7F);
-
-    engine.makeConnection("[Channel1]", "loop_enabled", PioneerDDJFLX4.loopToggle);
-    engine.makeConnection("[Channel2]", "loop_enabled", PioneerDDJFLX4.loopToggle);
-
-    engine.makeConnection("[Channel1]", "track_loaded", PioneerDDJFLX4.loopTrackLoaded);
-    engine.makeConnection("[Channel2]", "track_loaded", PioneerDDJFLX4.loopTrackLoaded);
-
-// Beat FX: update LED when chain/unit OR any slot enable state changes
-engine.makeConnection("[EffectRack1_EffectUnit1]", "enabled", PioneerDDJFLX4._updateBeatFxOnOffLed);
-engine.makeConnection("[EffectRack1_EffectUnit2]", "enabled", PioneerDDJFLX4._updateBeatFxOnOffLed);
-
-for (let unit = 1; unit <= 2; unit++) {
-    for (let slot = 1; slot <= 3; slot++) {
-        engine.makeConnection(
-            `[EffectRack1_EffectUnit${unit}_Effect${slot}]`,
-            "enabled",
-            PioneerDDJFLX4._updateBeatFxOnOffLed
-        );
-    }
-}
-
-
-
-    // Smart CFX LED sync
-    engine.makeConnection(PioneerDDJFLX4._qfxGroup(1), "enabled", PioneerDDJFLX4.smartCfxLedFromEngine);
-    engine.makeConnection(PioneerDDJFLX4._qfxGroup(2), "enabled", PioneerDDJFLX4.smartCfxLedFromEngine);
-    PioneerDDJFLX4.smartCfxLedFromEngine(0, "", "");
-
-    // Register callbacks for each deck, when a file is loaded and the number of stems is available
-    engine.makeConnection("[Channel1]", "stem_count", PioneerDDJFLX4.stemCountChanged);
-    engine.makeConnection("[Channel2]", "stem_count", PioneerDDJFLX4.stemCountChanged);
-
-    // Register callbacks for each stems of each decks, to change pad lights when muted/unmuted/FX
-    for (let stem=1; stem<=4; stem++) {
-        for (let deck=1; deck<=2; deck++) {
-            engine.makeConnection(`[Channel${deck}_Stem${stem}]`, "mute", PioneerDDJFLX4.stemMuteChanged);
-            engine.makeConnection(`[QuickEffectRack1_[Channel${deck}_Stem${stem}]]`, "enabled", PioneerDDJFLX4.stemFxChanged);
-        }
-    }
-
-    // Register callbacks for each deck, when a file is loaded to reset pitch shift
-    engine.makeConnection("[Channel1]", "track_loaded", PioneerDDJFLX4.pitchAdjusted);
-    engine.makeConnection("[Channel2]", "track_loaded", PioneerDDJFLX4.pitchAdjusted);
-
-    // Register callbacks for each deck, when the pitch shift is modified
-    engine.makeConnection("[Channel1]", "pitch_adjust", PioneerDDJFLX4.pitchAdjusted);
-    engine.makeConnection("[Channel2]", "pitch_adjust", PioneerDDJFLX4.pitchAdjusted);
-
-    // --- PAD FX LED SYNC (Engine -> Controller) ---
-    [1,2,3,4].forEach((unitIdx) => {
-        const U = `[EffectRack1_EffectUnit${unitIdx}]`;
-
-        // Unit enable
-        engine.makeConnection(U, "enabled", () => {
-            PioneerDDJFLX4.updatePadFxUI("[Channel1]");
-            PioneerDDJFLX4.updatePadFxUI("[Channel2]");
-        });
-
-        // Slots 1–3
-        [1,2,3].forEach((slotIdx) => {
-            engine.makeConnection(
-                `[EffectRack1_EffectUnit${unitIdx}_Effect${slotIdx}]`,
-                "enabled",
-                () => {
-                    PioneerDDJFLX4.updatePadFxUI("[Channel1]");
-                    PioneerDDJFLX4.updatePadFxUI("[Channel2]");
-                }
-            );
-        });
-
-        // Routing Deck 1 / Deck 2
-        engine.makeConnection(U, "group_[Channel1]_enable", () => {
-            PioneerDDJFLX4.updatePadFxUI("[Channel1]");
-        });
-        engine.makeConnection(U, "group_[Channel2]_enable", () => {
-            PioneerDDJFLX4.updatePadFxUI("[Channel2]");
-        });
-    });
-
-// ------------------- DEFAULT PAD MODE -------------------
-PioneerDDJFLX4.padMode = PioneerDDJFLX4.padMode || {};
-PioneerDDJFLX4.padMode["[Channel1]"] = PioneerDDJFLX4.PADMODE.HOTCUE;
-PioneerDDJFLX4.padMode["[Channel2]"] = PioneerDDJFLX4.PADMODE.HOTCUE;
-
-    // initialize Beat FX routing + LED state
-    PioneerDDJFLX4._applyBeatFxRouting();
-
-// … nachdem Routing gesetzt ist / am Ende von init():
-PioneerDDJFLX4._updateBeatFxOnOffLed();
-
-    PioneerDDJFLX4.keepAliveTimer = engine.beginTimer(200, PioneerDDJFLX4.sendKeepAlive);
-
-    // query the controller for current control positions on startup
-    PioneerDDJFLX4.sendKeepAlive(); // the query seems to double as a keep alive message
-
-
-    // Ensure controller vinyl state is known on startup (fixes "need to press twice")
-    // _applyVinylState expects (deckIdx, on) — your old call passed only one arg and
-    // accidentally targeted only deck 1 due to JS coercion.
-    if (typeof PioneerDDJFLX4._applyVinylState === "function") {
-        PioneerDDJFLX4._applyVinylState(0, false);
-        PioneerDDJFLX4._applyVinylState(1, false);
     }
 };
 
@@ -686,6 +684,81 @@ PioneerDDJFLX4.vuMeterUpdate = function(value, group) {
         midi.sendShortMsg(0xB1, 0x02, newVal & 0x7F);
         break;
     }
+};
+
+// ------------------- LOAD / Instant Doubles -------------------
+
+PioneerDDJFLX4.LOAD_DOUBLEPRESS_MS = 400;
+
+PioneerDDJFLX4._loadPress = PioneerDDJFLX4._loadPress || {
+    timer: {
+        "[Channel1]": 0,
+        "[Channel2]": 0,
+    },
+    waiting: {
+        "[Channel1]": false,
+        "[Channel2]": false,
+    },
+};
+
+PioneerDDJFLX4._otherDeck = function(group) {
+    return group === "[Channel1]" ? "[Channel2]" : "[Channel1]";
+};
+
+PioneerDDJFLX4._doNormalLoad = function(group) {
+    engine.setValue(group, "LoadSelectedTrack", 1);
+};
+
+PioneerDDJFLX4._doInstantDouble = function(targetGroup) {
+    const sourceGroup = PioneerDDJFLX4._otherDeck(targetGroup);
+
+    // Quelle muss geladen sein
+    if (engine.getValue(sourceGroup, "track_loaded") !== 1) {
+        return false;
+    }
+
+    // Track von Source nach Target klonen
+    engine.setValue(targetGroup, "CloneFromDeck", sourceGroup === "[Channel1]" ? 1 : 2);
+
+    // Wiedergabeposition übernehmen
+    const playpos = engine.getValue(sourceGroup, "playposition");
+    if (Number.isFinite(playpos)) {
+        engine.setValue(targetGroup, "playposition", playpos);
+    }
+
+    // Wenn Source läuft, Target auch starten
+    if (engine.getValue(sourceGroup, "play") === 1) {
+        engine.setValue(targetGroup, "play", 1);
+    }
+
+    return true;
+};
+
+PioneerDDJFLX4.loadPressed = function(_channel, _control, value, _status, group) {
+    if (value !== 0x7F) return;
+
+    const state = PioneerDDJFLX4._loadPress;
+
+    // Zweiter Druck innerhalb des Fensters => Instant Double
+    if (state.waiting[group]) {
+        if (state.timer[group]) {
+            engine.stopTimer(state.timer[group]);
+            state.timer[group] = 0;
+        }
+        state.waiting[group] = false;
+
+        // Wenn Instant Double nicht geht, lieber gar keinen Unsinn machen
+        PioneerDDJFLX4._doInstantDouble(group);
+        return;
+    }
+
+    // Erster Druck => kurz warten, ob zweiter Druck kommt
+    state.waiting[group] = true;
+    state.timer[group] = engine.beginTimer(PioneerDDJFLX4.LOAD_DOUBLEPRESS_MS, function() {
+        state.timer[group] = 0;
+        state.waiting[group] = false;
+        PioneerDDJFLX4._doNormalLoad(group);
+    }, true);
 };
 
 //
