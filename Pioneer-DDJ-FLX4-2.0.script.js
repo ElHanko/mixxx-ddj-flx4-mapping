@@ -229,6 +229,11 @@ PioneerDDJFLX4.sendKeepAlive = function() {
     midi.sendSysexMsg([0xF0, 0x00, 0x40, 0x05, 0x00, 0x00, 0x04, 0x05, 0x00, 0x50, 0x02, 0xf7], 12); // This was reverse engineered with Wireshark
 };
 
+// Library focus behaviour for BROWSE button
+// false = simple MoveFocusForward (default Mixxx behaviour)
+// true  = toggle only between Sidebar and Tracklist
+PioneerDDJFLX4.BROWSE_FOCUS_TOGGLE_ONLY = true;
+
 // Jog wheel constants
 PioneerDDJFLX4.vinylMode = true;
 PioneerDDJFLX4.alpha = 1.0/8;
@@ -497,27 +502,41 @@ PioneerDDJFLX4._updateBeatFxOnOffLed();
     }
 };
 
-///
+//
 // Library / Browser: BROWSE press handling
-// 0x41 = BROWSE (normal)
+// 0x41 = BROWSE
 // 0x42 = SHIFT + BROWSE (currently unused)
 //
-// behavior:
-// - 0x41 short: MoveFocusForward
+// behaviour:
+// simple mode  -> MoveFocusForward
+// toggle mode  -> Sidebar <-> Tracklist only
 //
 
 PioneerDDJFLX4.browsePress = function(_channel, control, value, _status, _group) {
     if (value !== 0x7F) return;
 
-    if (control === 0x41) {
+    // SHIFT+BROWSE currently unused
+    if (control === 0x42) return;
+
+    if (control !== 0x41) return;
+
+    // Toggle mode: only Sidebar <-> Tracklist
+    if (PioneerDDJFLX4.BROWSE_FOCUS_TOGGLE_ONLY) {
+        const focus = engine.getValue("[Library]", "focused_widget");
+
+        // Tracklist -> Sidebar
+        if (focus === "TrackTable") {
+            script.triggerControl("[Library]", "MoveFocusBackward");
+            return;
+        }
+
+        // Everything else -> Tracklist
         script.triggerControl("[Library]", "MoveFocusForward");
         return;
     }
 
-    // SHIFT+BROWSE currently unused
-    if (control === 0x42) {
-        return;
-    }
+    // Default behaviour
+    script.triggerControl("[Library]", "MoveFocusForward");
 };
 
 //
