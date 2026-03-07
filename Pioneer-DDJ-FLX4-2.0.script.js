@@ -508,8 +508,8 @@ PioneerDDJFLX4._updateBeatFxOnOffLed();
 // 0x42 = SHIFT + BROWSE (currently unused)
 //
 // behaviour:
-// simple mode  -> MoveFocusForward
-// toggle mode  -> Sidebar <-> Tracklist only
+// - simple mode: MoveFocusForward
+// - toggle mode: only switch between Tree view and Tracks table
 //
 
 PioneerDDJFLX4.browsePress = function(_channel, control, value, _status, _group) {
@@ -517,21 +517,25 @@ PioneerDDJFLX4.browsePress = function(_channel, control, value, _status, _group)
 
     // SHIFT+BROWSE currently unused
     if (control === 0x42) return;
-
     if (control !== 0x41) return;
 
-    // Toggle mode: only Sidebar <-> Tracklist
     if (PioneerDDJFLX4.BROWSE_FOCUS_TOGGLE_ONLY) {
         const focus = engine.getValue("[Library]", "focused_widget");
 
-        // Tracklist -> Sidebar
-        if (focus === "TrackTable") {
-            script.triggerControl("[Library]", "MoveFocusBackward");
+        // 3 = Tracks table -> go to Tree view
+        if (focus === 3) {
+            engine.setValue("[Library]", "focused_widget", 2);
             return;
         }
 
-        // Everything else -> Tracklist
-        script.triggerControl("[Library]", "MoveFocusForward");
+        // 2 = Tree view -> go to Tracks table
+        if (focus === 2) {
+            engine.setValue("[Library]", "focused_widget", 3);
+            return;
+        }
+
+        // Search bar / none / anything else -> force Tracks table
+        engine.setValue("[Library]", "focused_widget", 3);
         return;
     }
 
