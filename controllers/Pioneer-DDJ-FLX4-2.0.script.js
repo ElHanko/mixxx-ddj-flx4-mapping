@@ -143,24 +143,120 @@ PioneerDDJFLX4.lights = {
 };
 
 //
-// User-configurable behaviour
+// -----------------------------------------------------------------------------
+// USER CONFIGURATION
+// These values control optional behaviour of the mapping.
+// Allowed values and their effects are documented inline.
+// -----------------------------------------------------------------------------
 //
 
+// Library focus behaviour for the BROWSE button.
+//
+// false → default Mixxx behaviour (cycles through all library widgets)
+// true  → toggle only between sidebar (tree view) and tracklist
+//
 PioneerDDJFLX4.BROWSE_FOCUS_TOGGLE_ONLY = true;
+
+
+// Time threshold (milliseconds) before a BROWSE press is treated as a long press.
+// Long press expands the selected folder in the library tree.
+//
 PioneerDDJFLX4.BROWSE_LONGPRESS_MS = 300;
+
+
+// Time threshold (milliseconds) to detect long press on sampler pads.
+//
+// Short press → play sample / load track
+// Long press  → stop currently playing sample
+//
 PioneerDDJFLX4.SAMPLER_LONGPRESS_MS = 350;
+
+
+// Time threshold (milliseconds) for Quantize button long press.
+//
+// Short press → toggle quantize
+// Long press  → toggle keylock
+//
 PioneerDDJFLX4.QUANTIZE_LONGPRESS_MS = 350;
 
+
+
+// -----------------------------------------------------------------------------
+// LOOP BEHAVIOUR
+// -----------------------------------------------------------------------------
+
+// Loop adjustment mode.
+//
+// "simple"
+//     Classic Mixxx loop adjust behaviour.
+//
+// "hercules"
+//     Hercules-style workflow with pending loop-out and jog-based loop
+//     adjustment while a loop is active.
+//
 PioneerDDJFLX4.LOOP_ADJUST_MODE = "simple";
+
+
+// Step size (in beats) used when adjusting loop points in "hercules" mode.
+//
 PioneerDDJFLX4.loopAdjustStepBeats = 0.02;
+
+
+// Default loop size used by the 4BEAT/EXIT button
+// if no previous loop exists to re-activate.
+//
 PioneerDDJFLX4.reloopExitBeats = 4;
+
+
+// Time (milliseconds) before loop-adjust mode automatically exits.
+//
 PioneerDDJFLX4.loopAdjustTimeoutMs = 5000;
 
+
+
+// -----------------------------------------------------------------------------
+// NAVIGATION / TRANSPORT
+// -----------------------------------------------------------------------------
+
+// Beat jump size used for quick jumps (SHIFT + CUE/LOOP CALL).
+//
 PioneerDDJFLX4.quickJumpSize = 32;
+
+
+// Multiplier for fast track seeking when turning the jog wheel with SHIFT held.
+//
 PioneerDDJFLX4.fastSeekScale = 150;
+
+
+
+// -----------------------------------------------------------------------------
+// JOG WHEEL BEHAVIOUR
+// -----------------------------------------------------------------------------
+
+// Pitch bend sensitivity when nudging the jog wheel
+// while not in scratch (vinyl) mode.
+//
 PioneerDDJFLX4.bendScale = 0.8;
+
+
+// Multiplier used when adjusting loop points via jog wheel.
+//
 PioneerDDJFLX4.loopAdjustMultiply = 50;
 
+
+
+// -----------------------------------------------------------------------------
+// STEMS BEHAVIOUR
+// -----------------------------------------------------------------------------
+
+// Pads 5–8 behaviour in STEMS mode.
+//
+// "solo"
+//     Pads isolate the selected stem while muting the others.
+//
+// "fx"
+//     Pads control stem quick effects.
+//
 PioneerDDJFLX4.STEMS_PAD5_8_MODE = "solo";
 
 //
