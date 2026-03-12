@@ -89,6 +89,10 @@
 
 var PioneerDDJFLX4 = {};
 
+//
+// LED definitions
+//
+
 PioneerDDJFLX4.lights = {
     beatFx: {
         status: 0x94,
@@ -107,150 +111,134 @@ PioneerDDJFLX4.lights = {
         data1: 0x09,
     },
     deck1: {
-        vuMeter: {
-            status: 0xB0,
-            data1: 0x02,
-        },
-        playPause: {
-            status: 0x90,
-            data1: 0x0B,
-        },
-        shiftPlayPause: {
-            status: 0x90,
-            data1: 0x47,
-        },
-        cue: {
-            status: 0x90,
-            data1: 0x0C,
-        },
-        shiftCue: {
-            status: 0x90,
-            data1: 0x48,
-        },
-        hotcueMode: {
-            status: 0x90,
-            data1: 0x1B,
-        },
-        keyboardMode: {
-            status: 0x90,
-            data1: 0x69,
-        },
-        padFX1Mode: {
-            status: 0x90,
-            data1: 0x1E,
-        },
-        padFX2Mode: {
-            status: 0x90,
-            data1: 0x6B,
-        },
-        beatJumpMode: {
-            status: 0x90,
-            data1: 0x20,
-        },
-        beatLoopMode: {
-            status: 0x90,
-            data1: 0x6D,
-        },
-        samplerMode: {
-            status: 0x90,
-            data1: 0x22,
-        },
-        keyShiftMode: {
-            status: 0x90,
-            data1: 0x6F,
-        },
+        vuMeter: { status: 0xB0, data1: 0x02 },
+        playPause: { status: 0x90, data1: 0x0B },
+        shiftPlayPause: { status: 0x90, data1: 0x47 },
+        cue: { status: 0x90, data1: 0x0C },
+        shiftCue: { status: 0x90, data1: 0x48 },
+        hotcueMode: { status: 0x90, data1: 0x1B },
+        keyboardMode: { status: 0x90, data1: 0x69 },
+        padFX1Mode: { status: 0x90, data1: 0x1E },
+        padFX2Mode: { status: 0x90, data1: 0x6B },
+        beatJumpMode: { status: 0x90, data1: 0x20 },
+        beatLoopMode: { status: 0x90, data1: 0x6D },
+        samplerMode: { status: 0x90, data1: 0x22 },
+        keyShiftMode: { status: 0x90, data1: 0x6F },
     },
     deck2: {
-        vuMeter: {
-            status: 0xB1,
-            data1: 0x02,
-        },
-        playPause: {
-            status: 0x91,
-            data1: 0x0B,
-        },
-        shiftPlayPause: {
-            status: 0x91,
-            data1: 0x47,
-        },
-        cue: {
-            status: 0x91,
-            data1: 0x0C,
-        },
-        shiftCue: {
-            status: 0x91,
-            data1: 0x48,
-        },
-        hotcueMode: {
-            status: 0x91,
-            data1: 0x1B,
-        },
-        keyboardMode: {
-            status: 0x91,
-            data1: 0x69,
-        },
-        padFX1Mode: {
-            status: 0x91,
-            data1: 0x1E,
-        },
-        padFX2Mode: {
-            status: 0x91,
-            data1: 0x6B,
-        },
-        beatJumpMode: {
-            status: 0x91,
-            data1: 0x20,
-        },
-        beatLoopMode: {
-            status: 0x91,
-            data1: 0x6D,
-        },
-        samplerMode: {
-            status: 0x91,
-            data1: 0x22,
-        },
-        keyShiftMode: {
-            status: 0x91,
-            data1: 0x6F,
-        },
+        vuMeter: { status: 0xB1, data1: 0x02 },
+        playPause: { status: 0x91, data1: 0x0B },
+        shiftPlayPause: { status: 0x91, data1: 0x47 },
+        cue: { status: 0x91, data1: 0x0C },
+        shiftCue: { status: 0x91, data1: 0x48 },
+        hotcueMode: { status: 0x91, data1: 0x1B },
+        keyboardMode: { status: 0x91, data1: 0x69 },
+        padFX1Mode: { status: 0x91, data1: 0x1E },
+        padFX2Mode: { status: 0x91, data1: 0x6B },
+        beatJumpMode: { status: 0x91, data1: 0x20 },
+        beatLoopMode: { status: 0x91, data1: 0x6D },
+        samplerMode: { status: 0x91, data1: 0x22 },
+        keyShiftMode: { status: 0x91, data1: 0x6F },
     },
 };
-// LED Helper
-PioneerDDJFLX4.setLed = function(status, note, on) {
-    midi.sendShortMsg(status, note, on ? 0x7F : 0x00);
-};
 
-// Timer buckets (NICHT mischen: Sampler/Loop/etc. sonst killst du dir Timer gegenseitig)
-PioneerDDJFLX4.timersSampler = PioneerDDJFLX4.timersSampler || {}; // keyed by midi status (0x97..)
-PioneerDDJFLX4.timersLoop    = PioneerDDJFLX4.timersLoop    || {}; // keyed by group string "[Channel1]" / "[Channel2]"
+//
+// User-configurable behaviour
+//
 
-// Keep alive timer
-PioneerDDJFLX4.sendKeepAlive = function() {
-    midi.sendSysexMsg([0xF0, 0x00, 0x40, 0x05, 0x00, 0x00, 0x04, 0x05, 0x00, 0x50, 0x02, 0xf7], 12); // This was reverse engineered with Wireshark
-};
-
-// Library focus behaviour for BROWSE button
-// false = simple MoveFocusForward (default Mixxx behaviour)
-// true  = toggle only between Sidebar and Tracklist
 PioneerDDJFLX4.BROWSE_FOCUS_TOGGLE_ONLY = true;
+PioneerDDJFLX4.BROWSE_LONGPRESS_MS = 300;
+PioneerDDJFLX4.SAMPLER_LONGPRESS_MS = 350;
+PioneerDDJFLX4.QUANTIZE_LONGPRESS_MS = 350;
 
-// Jog wheel constants
-PioneerDDJFLX4.alpha = 1.0/8;
-PioneerDDJFLX4.beta = PioneerDDJFLX4.alpha/32;
+PioneerDDJFLX4.LOOP_ADJUST_MODE = "simple";
+PioneerDDJFLX4.loopAdjustStepBeats = 0.02;
+PioneerDDJFLX4.reloopExitBeats = 4;
+PioneerDDJFLX4.loopAdjustTimeoutMs = 5000;
 
-// Multiplier for fast seek through track using SHIFT+JOGWHEEL
+PioneerDDJFLX4.quickJumpSize = 32;
 PioneerDDJFLX4.fastSeekScale = 150;
 PioneerDDJFLX4.bendScale = 0.8;
-
-// Jog wheel loop adjust
-PioneerDDJFLX4.loopAdjustIn = [false, false];
-PioneerDDJFLX4.loopAdjustOut = [false, false];
 PioneerDDJFLX4.loopAdjustMultiply = 50;
 
-//PadMode
+PioneerDDJFLX4.STEMS_PAD5_8_MODE = "solo";
+
+//
+// Runtime state
+//
+
+PioneerDDJFLX4.shiftDown = false;
+PioneerDDJFLX4._shiftDeck1 = false;
+PioneerDDJFLX4._shiftDeck2 = false;
+
+PioneerDDJFLX4.highResMSB = {
+    "[Channel1]": {},
+    "[Channel2]": {}
+};
+
+PioneerDDJFLX4.loopAdjustIn = [false, false];
+PioneerDDJFLX4.loopAdjustOut = [false, false];
+
+PioneerDDJFLX4._loopPendingOut = {
+    "[Channel1]": false,
+    "[Channel2]": false,
+};
+
+PioneerDDJFLX4._browseLP = {
+    timer: { 0x41: -1 },
+    fired: { 0x41: false },
+};
+
+PioneerDDJFLX4._samplerHold = {
+    timer: {},
+    fired: {},
+};
+
+PioneerDDJFLX4._quantizeLP = {
+    timer: {},
+    fired: {},
+};
+
+PioneerDDJFLX4._beatFxKnob = { msb: 0, lsb: 0 };
+PioneerDDJFLX4._beatFxKnobLast = { msb: -1, lsb: -1 };
+
+PioneerDDJFLX4._smartCfx = { enabled: false };
+
+PioneerDDJFLX4._jogVinylFromController = [false, false];
+PioneerDDJFLX4.wheelTouch = [false, false];
+PioneerDDJFLX4._scratchEnabled = [false, false];
+PioneerDDJFLX4._scratchAction = ["bend", "bend"];
+
+if (!Array.isArray(PioneerDDJFLX4._vinylWanted)) {
+    PioneerDDJFLX4._vinylWanted = [false, false];
+}
+
+//
+// Timer buckets
+//
+
+PioneerDDJFLX4.timersSampler = PioneerDDJFLX4.timersSampler || {};
+PioneerDDJFLX4.timersLoop = PioneerDDJFLX4.timersLoop || {};
+
+PioneerDDJFLX4._loopAdjustTimeoutTimer = PioneerDDJFLX4._loopAdjustTimeoutTimer || {
+    "[Channel1]": undefined,
+    "[Channel2]": undefined,
+};
+
+//
+// Mode / constants
+//
+
+PioneerDDJFLX4.alpha = 1.0 / 8;
+PioneerDDJFLX4.beta = PioneerDDJFLX4.alpha / 32;
+PioneerDDJFLX4.jogPPR = PioneerDDJFLX4.jogPPR || 720;
+PioneerDDJFLX4.jogRPM = PioneerDDJFLX4.jogRPM || (33 + 1 / 3);
+PioneerDDJFLX4.scratchScale = PioneerDDJFLX4.scratchScale || 1.0;
+PioneerDDJFLX4.seekScratchMultiplier = PioneerDDJFLX4.seekScratchMultiplier || 4.0;
+
 PioneerDDJFLX4.PADMODE = {
     HOTCUE:   "hotcue",
-    KEYBOARD: "keyboard",   // = STEMS
+    KEYBOARD: "keyboard",
     PADFX1:   "padfx1",
     PADFX2:   "padfx2",
     BEATJUMP: "beatjump",
@@ -263,45 +251,38 @@ PioneerDDJFLX4.padMode = {
     "[Channel1]": PioneerDDJFLX4.PADMODE.HOTCUE,
     "[Channel2]": PioneerDDJFLX4.PADMODE.HOTCUE,
 };
-// Stems (KEYBOARD) pads mode status for deck 1 and 2, without or with SHIFT pressed
+
 PioneerDDJFLX4.stemsPadsModesStatus = {
     "[Channel1]": [0x97, 0x98],
-    "[Channel2]": [0x99, 0x9a],
+    "[Channel2]": [0x99, 0x9A],
 };
 
-// Stems (KEYBOARD) pad 1 control (pad control = [this value] + [pad  number] - 1)
 PioneerDDJFLX4.stemMutePadsFirstControl = 0x40;
-
-// Stems (KEYBOARD) pad 5 control (pad control = [this value] + [pad  number] - 1)
 PioneerDDJFLX4.stemFxPadsFirstControl = 0x44;
 
-// Pitch shift (KEY SHIFT) pads mode status for deck 1 and 2, without or with SHIFT pressed
 PioneerDDJFLX4.pitchPadsModesStatus = {
     "[Channel1]": [0x97, 0x98],
-    "[Channel2]": [0x99, 0x9a],
+    "[Channel2]": [0x99, 0x9A],
 };
 
-// Pitch shift (KEY SHIFT) pad 1 control (pad control = [this value] + [pad  number] - 1)
 PioneerDDJFLX4.pitchPadsFirstControl = 0x70;
 
-PioneerDDJFLX4.quickJumpSize = 32;
+PioneerDDJFLX4.tempoRanges = [0.08, 0.16, 0.32, 0.64, 1.0];
 
-// Used for tempo slider
-PioneerDDJFLX4.highResMSB = {
-    "[Channel1]": {},
-    "[Channel2]": {}
-};
+//
+// Generic helpers
+//
 
-PioneerDDJFLX4.trackLoadedLED = function(value, group, _control) {
-    midi.sendShortMsg(
-        0x9F,
-        group.match(script.channelRegEx)[1] - 1,
-        value > 0 ? 0x7F : 0x00
-    );
+PioneerDDJFLX4.setLed = function(status, note, on) {
+    midi.sendShortMsg(status, note, on ? 0x7F : 0x00);
 };
 
 PioneerDDJFLX4.toggleLight = function(midiIn, active) {
     midi.sendShortMsg(midiIn.status, midiIn.data1, active ? 0x7F : 0);
+};
+
+PioneerDDJFLX4.sendKeepAlive = function() {
+    midi.sendSysexMsg([0xF0, 0x00, 0x40, 0x05, 0x00, 0x00, 0x04, 0x05, 0x00, 0x50, 0x02, 0xF7], 12);
 };
 
 ///////////////////////////////////////////////////////////////
