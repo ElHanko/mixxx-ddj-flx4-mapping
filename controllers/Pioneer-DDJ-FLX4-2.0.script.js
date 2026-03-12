@@ -235,15 +235,12 @@ PioneerDDJFLX4.sendKeepAlive = function() {
 PioneerDDJFLX4.BROWSE_FOCUS_TOGGLE_ONLY = true;
 
 // Jog wheel constants
-PioneerDDJFLX4.vinylMode = true;
 PioneerDDJFLX4.alpha = 1.0/8;
 PioneerDDJFLX4.beta = PioneerDDJFLX4.alpha/32;
 
 // Multiplier for fast seek through track using SHIFT+JOGWHEEL
 PioneerDDJFLX4.fastSeekScale = 150;
 PioneerDDJFLX4.bendScale = 0.8;
-
-PioneerDDJFLX4.shiftButtonDown = [false, false];
 
 // Jog wheel loop adjust
 PioneerDDJFLX4.loopAdjustIn = [false, false];
@@ -1259,7 +1256,6 @@ PioneerDDJFLX4._loopPendingOut = PioneerDDJFLX4._loopPendingOut || {
 };
 
 // Timer storage (Blink + Timeout)
-PioneerDDJFLX4.timers = PioneerDDJFLX4.timers || {};
 PioneerDDJFLX4._loopAdjustTimeoutTimer = PioneerDDJFLX4._loopAdjustTimeoutTimer || {
   "[Channel1]": undefined,
   "[Channel2]": undefined,
@@ -1693,12 +1689,12 @@ PioneerDDJFLX4.cycleTempoRange = function(_ch, _ctrl, value, _status, group) {
     // Float-sicher: nicht auf exakte Gleichheit verlassen
     const eps = 1e-6;
     let idx = -1;
-    for (let i = 0; i < this.tempoRanges.length; i++) {
-        if (Math.abs(cur - this.tempoRanges[i]) < eps) { idx = i; break; }
+    for (let i = 0; i < PioneerDDJFLX4.tempoRanges.length; i++) {
+        if (Math.abs(cur - PioneerDDJFLX4.tempoRanges[i]) < eps) { idx = i; break; }
     }
 
-    const nextIdx = (idx === -1) ? 0 : (idx + 1) % this.tempoRanges.length;
-    engine.setValue(group, "rateRange", this.tempoRanges[nextIdx]);
+    const nextIdx = (idx === -1) ? 0 : (idx + 1) % PioneerDDJFLX4.tempoRanges.length;
+    engine.setValue(group, "rateRange", PioneerDDJFLX4.tempoRanges[nextIdx]);
 };
 
 ///////////////////////////////////////////////////////////////
@@ -1793,11 +1789,6 @@ PioneerDDJFLX4.jogTouch = function(channel, _control, value, _status, group) {
     }
 };
 
-// Optional Shift-touch (bind it in XML if you have a separate touch note/cc for shift layer)
-PioneerDDJFLX4.jogTouchShift = function(channel, _control, value, _status, group) {
-    const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
-    const deckNum = deckIdx + 1;
-
     // same loop-adjust guard
     if (PioneerDDJFLX4.loopAdjustIn[deckIdx] || PioneerDDJFLX4.loopAdjustOut[deckIdx]) {
         return;
@@ -1885,7 +1876,7 @@ PioneerDDJFLX4.jogTurn = function(channel, _control, value, _status, group) {
     }
 
     // Fallback: bend/jog
-    engine.setValue(group, "jog", delta * this.bendScale);
+    engine.setValue(group, "jog", delta * PioneerDDJFLX4.bendScale);
 };
 
 PioneerDDJFLX4.jogSearch = function(_channel, _control, value, _status, group) {
