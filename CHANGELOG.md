@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Optional vinyl brake / soft start behaviour for the PLAY button when Vinyl Mode is active
+- Config flag `PLAY_BRAKE_ON_VINYL` to enable or disable this behaviour
+
+### Documentation
+
+- Documented optional vinyl brake behaviour in the README
+
 ## v1.0
 
 Initial public GitHub release of the custom Pioneer DDJ-FLX4 mapping.
