@@ -821,6 +821,186 @@ PioneerDDJFLX4.loadShiftPressed = function(_channel, control, value, _status, _g
     }
 };
 
+///////////////////////////////////////////////////////////////
+// PLAY BUTTON: OPTIONAL VINYL BRAKE / SOFT START
+//
+// Configurable behaviour for the PLAY button when Vinyl Mode
+// is active on the deck.
+//
+// Behaviour:
+//
+// PLAY_BRAKE_ON_VINYL = false
+//     -> PLAY behaves like normal Play/Pause
+//
+// PLAY_BRAKE_ON_VINYL = true
+//     -> when Vinyl Mode is active:
+//        stopped deck  -> soft start playback
+//        playing deck  -> apply vinyl brake
+//        press during brake -> cancel brake and resume playback
+//
+// SHIFT+PLAY (reverseroll) is unaffected.
+///////////////////////////////////////////////////////////////
+
+
+// -----------------------------------------------------------------------------
+// USER OPTION
+// -----------------------------------------------------------------------------
+PioneerDDJFLX4.PLAY_BRAKE_ON_VINYL = false;
+
+
+// -----------------------------------------------------------------------------
+// RUNTIME STATE
+// -----------------------------------------------------------------------------
+
+if (!Array.isArray(PioneerDDJFLX4._brakeInProgress)) {
+    PioneerDDJFLX4._brakeInProgress = [false, false];
+}
+
+if (!Array.isArray(PioneerDDJFLX4._brakeCompleted)) {
+    PioneerDDJFLX4._brakeCompleted = [false, false];
+}
+
+if (!Array.isArray(PioneerDDJFLX4._brakeWatchTimer)) {
+    PioneerDDJFLX4._brakeWatchTimer = [-1, -1];
+}
+
+
+// -----------------------------------------------------------------------------
+// CANCEL BRAKE WATCH
+// -----------------------------------------------------------------------------
+
+PioneerDDJFLX4._cancelBrakeWatch = function(deckIdx) {
+
+    const t = PioneerDDJFLX4._brakeWatchTimer[deckIdx];
+
+    if (t !== -1) {
+        try {
+            engine.stopTimer(t);
+        } catch (e) {}
+
+        PioneerDDJFLX4._brakeWatchTimer[deckIdx] = -1;
+    }
+
+    PioneerDDJFLX4._brakeInProgress[deckIdx] = false;
+};
+
+
+// -----------------------------------------------------------------------------
+// STOP VINYL FX
+// -----------------------------------------------------------------------------
+
+PioneerDDJFLX4._stopAllVinylFx = function(deck) {
+
+    try {
+        if (typeof engine.isBrakeActive === "function" && engine.isBrakeActive(deck)) {
+            engine.brake(deck, false);
+        }
+    } catch (e) {}
+
+    try {
+        if (typeof engine.isSoftStartActive === "function" && engine.isSoftStartActive(deck)) {
+            engine.softStart(deck, false);
+        }
+    } catch (e) {}
+};
+
+
+// -----------------------------------------------------------------------------
+// BRAKE WATCH TIMER
+// -----------------------------------------------------------------------------
+
+PioneerDDJFLX4._startBrakeWatch = function(deckIdx, group) {
+
+    const deck = deckIdx + 1;
+
+    PioneerDDJFLX4._cancelBrakeWatch(deckIdx);
+
+    PioneerDDJFLX4._brakeInProgress[deckIdx] = true;
+    PioneerDDJFLX4._brakeCompleted[deckIdx] = false;
+
+    PioneerDDJFLX4._brakeWatchTimer[deckIdx] = engine.beginTimer(50, function() {
+
+        let done = false;
+
+        if (typeof engine.isBrakeActive === "function") {
+            done = !engine.isBrakeActive(deck);
+        } else {
+            done = engine.getValue(group, "play") === 0;
+        }
+
+        if (done) {
+
+            engine.setValue(group, "play", 0);
+
+            PioneerDDJFLX4._cancelBrakeWatch(deckIdx);
+            PioneerDDJFLX4._brakeCompleted[deckIdx] = true;
+        }
+
+    });
+};
+
+
+// -----------------------------------------------------------------------------
+// PLAY BUTTON HANDLER
+// -----------------------------------------------------------------------------
+
+PioneerDDJFLX4.playPressed = function(_channel, _control, value, _status, group) {
+
+    if (value !== 0x7F) return;
+
+    const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
+    const deck = deckIdx + 1;
+
+    const vinylOn = !!PioneerDDJFLX4._vinylWanted[deckIdx];
+    const brakeMode = !!PioneerDDJFLX4.PLAY_BRAKE_ON_VINYL;
+
+    // Normal behaviour if vinyl mode is off or brake mode disabled
+    if (!vinylOn || !brakeMode) {
+        script.toggleControl(group, "play");
+        return;
+    }
+
+    // If brake currently running → cancel brake and resume playback
+    if (PioneerDDJFLX4._brakeInProgress[deckIdx] &&
+        !PioneerDDJFLX4._brakeCompleted[deckIdx]) {
+
+        PioneerDDJFLX4._stopAllVinylFx(deck);
+        PioneerDDJFLX4._cancelBrakeWatch(deckIdx);
+
+        PioneerDDJFLX4._brakeInProgress[deckIdx] = false;
+        PioneerDDJFLX4._brakeCompleted[deckIdx] = false;
+
+        engine.setValue(group, "play", 1);
+        return;
+    }
+
+    // Deck stopped → start playback with soft start
+    if (PioneerDDJFLX4._brakeCompleted[deckIdx] ||
+        engine.getValue(group, "play") === 0) {
+
+        PioneerDDJFLX4._cancelBrakeWatch(deckIdx);
+        PioneerDDJFLX4._brakeCompleted[deckIdx] = false;
+
+        engine.setValue(group, "play", 1);
+
+        if (typeof engine.softStart === "function") {
+            engine.softStart(deck, true);
+        }
+
+        return;
+    }
+
+    // Deck playing → start brake
+    PioneerDDJFLX4._stopAllVinylFx(deck);
+    PioneerDDJFLX4._startBrakeWatch(deckIdx, group);
+
+    if (typeof engine.brake === "function") {
+        engine.brake(deck, true);
+    } else {
+        engine.setValue(group, "play", 0);
+    }
+};
+
 //
 // Effects (Beat FX rework)
 //

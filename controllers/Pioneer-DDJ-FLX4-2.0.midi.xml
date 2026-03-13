@@ -129,11 +129,11 @@
       <control>
         <description>PLAY/PAUSE (DECK1) - press - Play/Pause</description>
         <group>[Channel1]</group>
-        <key>play</key>
+        <key>PioneerDDJFLX4.playPressed</key>
         <status>0x90</status>
         <midino>0x0B</midino>
         <options>
-          <Normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
@@ -143,13 +143,13 @@
         <status>0x90</status>
         <midino>0x0E</midino>
         <options>
-          <Normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
         <description>PLAY/PAUSE (DECK2) - press - Play/Pause</description>
         <group>[Channel2]</group>
-        <key>play</key>
+        <key>PioneerDDJFLX4.playPressed</key>
         <status>0x91</status>
         <midino>0x0B</midino>
         <options>
