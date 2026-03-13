@@ -1,10 +1,6 @@
-# OS / Editor
+# -----------------------------------------------------------------------------
+# OS files
+# -----------------------------------------------------------------------------
+
 .DS_Store
 Thumbs.db
-*~
-*.swp
-*.bak
-
-# Mixxx caches/logs (falls du doch mal aus dem Home kopierst)
-mixxx.log
-*.midi.xml~
