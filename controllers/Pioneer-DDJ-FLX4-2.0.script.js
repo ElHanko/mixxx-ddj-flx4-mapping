@@ -845,8 +845,12 @@ PioneerDDJFLX4.loadShiftPressed = function(_channel, control, value, _status, _g
 // -----------------------------------------------------------------------------
 // USER OPTION
 // -----------------------------------------------------------------------------
-PioneerDDJFLX4.PLAY_BRAKE_ON_VINYL = false;
+PioneerDDJFLX4.PLAY_BRAKE_ON_VINYL = true;
 
+PioneerDDJFLX4.vinylFx = {
+    brakeFactor: 10,
+    softStartFactor: 15,
+};
 
 // -----------------------------------------------------------------------------
 // RUNTIME STATE
@@ -984,7 +988,7 @@ PioneerDDJFLX4.playPressed = function(_channel, _control, value, _status, group)
         engine.setValue(group, "play", 1);
 
         if (typeof engine.softStart === "function") {
-            engine.softStart(deck, true);
+            engine.softStart(deck, true, PioneerDDJFLX4.vinylFx.softStartFactor);
         }
 
         return;
@@ -995,7 +999,7 @@ PioneerDDJFLX4.playPressed = function(_channel, _control, value, _status, group)
     PioneerDDJFLX4._startBrakeWatch(deckIdx, group);
 
     if (typeof engine.brake === "function") {
-        engine.brake(deck, true);
+        engine.brake(deck, true, PioneerDDJFLX4.vinylFx.brakeFactor);
     } else {
         engine.setValue(group, "play", 0);
     }
@@ -2006,66 +2010,71 @@ PioneerDDJFLX4._scratchDisable = function(deckNum) {
     PioneerDDJFLX4._scratchAction[deckNum - 1] = "bend";
 };
 
-// ---------- touch handlers ----------
-PioneerDDJFLX4.jogTouch = function(channel, _control, value, _status, group) {
-    const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
-    const deckNum = deckIdx + 1;
+ // ---------- touch handlers ----------
+ PioneerDDJFLX4.jogTouch = function(channel, _control, value, _status, group) {
+     const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
+     const deckNum = deckIdx + 1;
 
-    // If we are adjusting loop points, ignore touch changes to prevent scratch toggling while editing.
-    if (PioneerDDJFLX4.loopAdjustIn[deckIdx] || PioneerDDJFLX4.loopAdjustOut[deckIdx]) {
-        return;
-    }
+     // If we are adjusting loop points, ignore touch changes to prevent scratch toggling while editing.
+     if (PioneerDDJFLX4.loopAdjustIn[deckIdx] || PioneerDDJFLX4.loopAdjustOut[deckIdx]) {
+         return;
+     }
 
-    const touching = (value !== 0);
-    PioneerDDJFLX4.wheelTouch[deckIdx] = touching;
+     const touching = (value !== 0);
+     PioneerDDJFLX4.wheelTouch[deckIdx] = touching;
 
-    if (touching) {
-        // Decide scratch vs bend based on CONTROLLER vinyl state:
-        // scratch if deck not playing OR controller is in vinyl mode.
-        const playing = engine.getValue(group, "play") === 1;
-        const wantScratch = (!playing) || !!PioneerDDJFLX4._jogVinylFromController[deckIdx];
+     if (touching) {
+         // Decide scratch vs bend based on CONTROLLER vinyl state:
+         // scratch if deck not playing OR controller is in vinyl mode.
+         const playing = engine.getValue(group, "play") === 1;
+         const wantScratch = (!playing) || !!PioneerDDJFLX4._jogVinylFromController[deckIdx];
 
-        if (wantScratch) {
-            PioneerDDJFLX4._scratchAction[deckIdx] = "scratch";
-            PioneerDDJFLX4._scratchEnable(deckNum);
-        } else {
-            PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
-            // ensure scratch is off if it was on
-            if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
-                PioneerDDJFLX4._scratchDisable(deckNum);
-            }
-        }
-        return;
-    }
+         if (wantScratch) {
+             PioneerDDJFLX4._scratchAction[deckIdx] = "scratch";
+             PioneerDDJFLX4._scratchEnable(deckNum);
+         } else {
+             PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
 
-    // Touch released
-    if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
-        PioneerDDJFLX4._scratchDisable(deckNum);
-    } else {
-        PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
-    }
-};
+             // ensure scratch is off if it was on
+             if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
+                 PioneerDDJFLX4._scratchDisable(deckNum);
+             }
+         }
+         return;
+     }
 
-    // same loop-adjust guard
-    if (PioneerDDJFLX4.loopAdjustIn[deckIdx] || PioneerDDJFLX4.loopAdjustOut[deckIdx]) {
-        return;
-    }
+     // Touch released
+     if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
+         PioneerDDJFLX4._scratchDisable(deckNum);
+     } else {
+         PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
+     }
+ };
 
-    const touching = (value !== 0);
-    PioneerDDJFLX4.wheelTouch[deckIdx] = touching;
+ PioneerDDJFLX4.jogTouchShift = function(channel, _control, value, _status, group) {
+     const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
+     const deckNum = deckIdx + 1;
 
-    if (touching) {
-        PioneerDDJFLX4._scratchAction[deckIdx] = "seek";
-        PioneerDDJFLX4._scratchEnable(deckNum);
-        return;
-    }
+     // same loop-adjust guard
+     if (PioneerDDJFLX4.loopAdjustIn[deckIdx] || PioneerDDJFLX4.loopAdjustOut[deckIdx]) {
+         return;
+     }
 
-    if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
-        PioneerDDJFLX4._scratchDisable(deckNum);
-    } else {
-        PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
-    }
-};
+     const touching = (value !== 0);
+     PioneerDDJFLX4.wheelTouch[deckIdx] = touching;
+
+     if (touching) {
+         PioneerDDJFLX4._scratchAction[deckIdx] = "seek";
+         PioneerDDJFLX4._scratchEnable(deckNum);
+         return;
+     }
+
+     if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
+         PioneerDDJFLX4._scratchDisable(deckNum);
+     } else {
+         PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
+     }
+ };
 
 // ---------- turn handlers ----------
 PioneerDDJFLX4.jogTurn = function(channel, _control, value, _status, group) {
