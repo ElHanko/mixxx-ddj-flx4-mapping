@@ -1,409 +1,671 @@
-# Pioneer DDJ-FLX4 Custom Mapping — Controls
+# CONTROLS.md
 
-This document describes the **user-visible controller behavior** of the custom Mixxx mapping.
+# Pioneer DDJ-FLX4 (Custom) — Controller Reference
 
-The JavaScript mapping script is the authoritative source of truth.
+This file documents the current control layout and behavior of the custom Mixxx mapping for the Pioneer DDJ-FLX4.
 
-If XML descriptions differ from the script, the script behavior takes precedence.
+It is intended as a practical reference for users and contributors.
+
+## Scope
+
+This mapping is not the stock Mixxx mapping. Several behaviors were intentionally changed to provide:
+
+- more predictable transport behavior
+- stronger LED consistency
+- clearer loop handling
+- more useful pad modes
+- Pioneer-like workflow where possible
+- Hercules-style logic where Mixxx defaults are weak
+
+Some functions are configurable in the script. Where relevant, this document notes that behavior may depend on script options.
 
 ---
 
-# Browser / Library
+# Global Notes
+
+## Shift behavior
+Each deck has its own Shift button. Shift modifies transport, loop, pad, browser, and sync behavior depending on the section.
+
+## Vinyl mode
+Vinyl mode is handled per deck and changes jog behavior.  
+It is toggled in this mapping with:
+
+- **Shift + 4BEAT/EXIT**
+
+Depending on script configuration, Vinyl mode may also enable optional **Play button brake / soft-start behavior**.
+
+## Sync behavior
+This mapping follows current Mixxx behavior:
+
+- **Short press Sync** = one-shot beat sync
+- **Long press Sync** = toggle sync lock (`sync_enabled`)
+
+This is **not Rekordbox-style persistent Beat Sync mode**.  
+If Mixxx changes its sync model in the future, this may be revisited.
+
+---
+
+# Browser / Library Section
 
 ## Browse encoder
+### Rotate
+- Scroll library vertically
 
-Rotate  
-• Scroll library vertically
+### Press
+Handled by script.
 
-Shift + rotate  
-• Zoom waveform on both decks
+Depending on configuration:
 
-Press  
-• Toggle focus between library tree and track table
+- default Mixxx focus behavior, or
+- toggle only between sidebar/tree and track table
 
-Shift + press  
-• Currently unused
-
----
+## Shift + Browse encoder rotate
+- Zoom waveform on both decks
 
 ## Load buttons
+### LOAD
+- Load selected track to the deck
+- Double press within configured timing window:
+  - Instant doubles / clone from the other deck
 
-Load  
-• Load selected track into the deck
+### Shift + LOAD (Deck 1)
+- Toggle maximize/minimize library
 
-Double press  
-• Instant double (clone track from the opposite deck)
-
-Shift + Load (Deck 1)  
-• Toggle maximize / minimize library
-
-Shift + Load (Deck 2)  
-• Expand folder / MoveRight in library tree
+### Shift + LOAD (Deck 2)
+- Move right / open folder in library tree
 
 ---
 
-# Transport
+# Transport Section
+
+## Shift
+Per-deck Shift button used to access modified functions.
 
 ## Play / Pause
+### Normal
+- Default:
+  - Play / Pause
+- Optional behavior when enabled in script:
+  - if Vinyl mode is active, PLAY can behave like vinyl brake / soft start
 
-Default  
-• Standard Mixxx play / pause
+### Optional Vinyl Brake Mode
+When enabled by script config:
 
-Shift + Play  
-• Reverse roll (censor)
+- stopped deck + Play -> soft start
+- playing deck + Play -> brake
+- pressing Play again during brake -> cancel brake and resume playback
 
-Optional behavior exists where Play acts like a vinyl start/stop when Vinyl mode is active.
+This is optional and disabled by default unless configured otherwise.
 
----
+## Shift + Play
+- `reverseroll`
+- Reverse playback in slip mode while held
 
 ## Cue
+### Normal
+- `cue_default`
+- Standard cue behavior / back cue
 
-Cue  
-• Standard cue_default
-
-Shift + Cue  
-• Jump to track start (start_stop)
+### Shift + Cue
+- `start_stop`
+- Jump to track start
 
 ---
 
-# Sync
+# Sync / Tempo Section
 
-Short press  
-• One-shot beat sync
+## Sync
+### Short press
+- One-shot beat sync (`beatsync`)
 
-Long press  
-• Toggle sync lock
+### Long press
+- Toggle sync lock (`sync_enabled`)
 
-Shift + Sync  
-• Cycle tempo range
+## Shift + Sync
+- Cycle tempo slider range
 
-Tempo ranges cycle:
+Current range cycle:
 
-• ±8%  
-• ±16%  
-• ±32%  
-• ±64%  
-• ±100%
+- ±8%
+- ±16%
+- ±32%
+- ±64%
+- ±100%
+
+## Tempo fader
+- High-resolution tempo control
+- 14-bit MSB/LSB mapping per deck
 
 ---
 
 # Jog Wheels
 
 ## Platter rotate
+### Vinyl mode ON
+- Scratch
 
-Vinyl mode ON  
-• Scratch
+### Vinyl mode OFF
+- Pitch bend
 
-Vinyl mode OFF  
-• Pitch bend
+The mapping also learns the controller’s internal vinyl state from incoming jog MIDI data.
 
-Side ring  
-• Pitch bend
-
-Shift + rotate  
-• Fast search
-
----
+## Shift + platter rotate
+- Fast search / faster bend
 
 ## Platter touch
+Script-controlled touch logic:
 
-Touch behavior is script controlled.
-
-Touching the platter:
-
-• Deck stopped → scratch  
-• Vinyl mode active → scratch  
-• Otherwise → pitch bend
-
-Releasing the platter disables scratch.
-
----
+- If deck is stopped -> scratch mode on touch
+- If Vinyl mode is active -> scratch mode on touch
+- Otherwise -> bend mode
 
 ## Shift + platter touch
+Current script intends high-speed bend / seek-style behavior.  
+This should be considered script-driven behavior rather than a stock Pioneer function.
 
-Activates **seek scratch mode**.
+## Jog side ring rotate
+- Pitch bend
 
-Jog rotation behaves like fast track seeking.
-
----
-
-# Vinyl Mode
-
-Vinyl mode is toggled per deck with:
-
-Shift + 4BEAT / EXIT
-
-When enabled:
-
-• jog touch enables scratching while playing  
-• jog rotation behaves like a vinyl platter
-
----
-
-# Tempo Fader
-
-High-resolution 14-bit tempo control.
+## Loop-adjust priority
+When loop-adjust mode is active, jog movement is used for loop point editing instead of scratch/bend.
 
 ---
 
 # Loop Section
 
-## Loop In
+## LOOP IN
+### Normal press
+Current custom mapping uses a script wrapper.
 
-Sets loop in point.
+Depending on active loop mode:
 
-Pending loop-out state is indicated via LED behavior.
+### Simple mode
+- Set loop in
+
+### Hercules mode
+- If no loop is active:
+  - set loop in
+  - enter pending loop-out state
+- If loop is active:
+  - toggle loop-in adjust mode
+
+## LOOP OUT
+### Normal press
+Current custom mapping uses a script wrapper.
+
+Depending on active loop mode:
+
+### Simple mode
+- Set loop out
+
+### Hercules mode
+- If no loop is active:
+  - set loop out and complete loop
+- If loop is active:
+  - toggle loop-out adjust mode
+
+## 4BEAT/EXIT
+### Normal press
+- If loop is active:
+  - exit / reloop toggle
+- If loop is inactive:
+  - re-enable stored loop if available
+  - otherwise create default beat loop (`reloopExitBeats`, default 4)
+
+## Shift + 4BEAT/EXIT
+- Toggle Vinyl mode for the deck
+
+## Shift + LOOP IN
+- Loop in adjust mode using jog wheel
+
+## Shift + LOOP OUT
+- Loop out adjust mode using jog wheel
+
+## CUE/LOOP CALL LEFT
+### Normal
+- Halve active loop
+- If no active loop, attempts reloop behavior
+
+### Shift
+- Quick jump backward
+
+## CUE/LOOP CALL RIGHT
+### Normal
+- Double active loop
+- If no active loop, attempts reloop behavior
+
+### Shift
+- Quick jump forward
+
+## Loop adjust modes
+This mapping supports two loop-adjust models in script config:
+
+### `simple`
+- More Mixxx-like behavior
+- adjust only when loop is already active
+
+### `hercules`
+- loop-in / loop-out workflow
+- pending loop-out state
+- jog adjusts loop points sample-based
+- optional adjust timeout
 
 ---
 
-## Loop Out
-
-Sets loop out point and activates loop.
-
----
-
-## 4BEAT / EXIT
-
-If loop active  
-• exit loop
-
-If loop inactive  
-• reloop previous loop if available  
-• otherwise create default loop
-
----
-
-## Shift + 4BEAT / EXIT
-
-Toggle Vinyl mode.
-
----
-
-## Cue / Loop Call
-
-Left  
-• halve active loop
-
-Right  
-• double active loop
-
-Shift + Left  
-• quick jump backward
-
-Shift + Right  
-• quick jump forward
-
----
-
-# Mixer
-
-## Channel faders
-Standard deck volume control.
+# Mixer Section
 
 ## Crossfader
-Standard Mixxx crossfader.
+- Standard high-resolution crossfader
 
-## Trim
-Pregain control.
+## Channel faders
+- Standard high-resolution channel volume
+
+## Trim / Gain
+- Standard high-resolution pregain control per deck
 
 ## EQ
+Per deck:
 
-Three band EQ:
+- HI
+- MID
+- LOW
 
-• High  
-• Mid  
-• Low
-
----
+All mapped in high-resolution mode.
 
 ## Headphone Cue
+- Toggle PFL per channel
 
-Toggle deck PFL.
+## Headphones Mixing
+- Adjust cue/master monitor mix
 
----
+## Quantize / Keylock
 
-# Quantize / Keylock
+This mapping assigns Quantize and Keylock control to the **Shift + Channel Cue buttons** in the mixer section.
 
-Mixer cue buttons use custom behavior:
+These are the two **headphone cue buttons** above the channel faders.
+
+This keeps the controller layout simple and avoids dedicating additional buttons
+to Quantize and Keylock while still keeping both functions quickly accessible.
+
+### Shift + Channel Cue (Deck 1 / Deck 2)
 
 Short press  
-• toggle quantize
+- toggle Quantize
 
 Long press  
-• toggle keylock
+- toggle Keylock
 
 ---
 
-# Smart CFX
+# Quick Effects / Smart CFX / Beat FX
 
-Smart CFX button:
+## Filter knobs
+Per channel:
 
-Press  
-• Toggle QuickEffectRack
+- QuickEffect super knob (`super1`)
 
-Shift + press  
-• Cycle QuickEffect preset
+## Smart CFX
+### Press
+- Toggle Smart CFX mode
 
----
+### Shift + press
+- Cycle Smart CFX preset
 
-# Beat FX
-
-## Channel selectors
-
-CH1 → Deck 1 FX  
-CH2 → Deck 2 FX
-
-Both selected → both decks.
+This is implemented through QuickEffectRack enable/preset logic, not Pioneer firmware magic.
 
 ---
+
+# Beat FX Section
+
+## Beat FX Select
+Currently reserved / unused.
 
 ## Beat Left / Right
+- Cycle effect chain preset backward / forward
+- Applies to currently selected Beat FX target(s)
 
-Cycle effect chain preset.
+## Beat FX channel selector
+Target routing:
 
----
+- CH1 -> Deck 1 via EffectUnit1
+- CH2 -> Deck 2 via EffectUnit2
+- 1&2 -> both
 
-## Level / Depth knob
+## Beat FX Level/Depth encoder
+14-bit script-controlled behavior.
 
-Normal  
-• Control effect parameter (super1)
+### Normal
+- Adjust `super1`
 
-Shift  
-• Control effect mix
+### Shift
+- Adjust `mix`
 
----
+## Beat FX On/Off
+### Press
+- Toggle selected Beat FX target(s)
+- If anything is on -> turn all off
+- If everything is off -> turn all on
 
-## Beat FX On / Off
+### Shift + press
+- Turn selected Beat FX target(s) off
 
-Press  
-• Toggle all FX slots
-
-Shift + press  
-• Turn FX off
+LED behavior is script-driven and follows slot state rather than blindly trusting one unit flag.
 
 ---
 
 # Pad Modes
 
-Pad mode buttons select:
+The FLX4 pad mode buttons are remapped as follows.
 
-• Hot Cue  
-• Keyboard (STEMS)  
-• Pad FX1  
-• Pad FX2  
-• Beat Jump  
-• Beat Loop  
-• Sampler  
-• Key Shift
+## Hot Cue Mode
+- Standard hotcue mode
+
+## Keyboard Mode
+Used as **STEMS mode** in this custom mapping.
+
+## Pad FX1 Mode
+- Custom pad FX layer
+- Deck 1 -> EffectUnit1
+- Deck 2 -> EffectUnit2
+
+## Pad FX2 Mode
+- Custom pad FX layer
+- Deck 1 -> EffectUnit3
+- Deck 2 -> EffectUnit4
+
+## Beat Jump Mode
+- Direct beatjump controls
+- Static pad LEDs when mode is active
+
+## Beat Loop Mode
+- Direct beatloop controls
+- Static pad LEDs when mode is active
+
+## Sampler Mode
+- Sampler trigger / stop / eject mode
+- Custom LED state machine
+
+## Key Shift Mode
+- Pitch shift / semitone mode
 
 ---
 
 # Hot Cue Mode
 
-Pads 1-8  
-• Trigger / set hot cues
+## Pads 1–8
+- Activate or set Hotcue 1–8
 
-Shift + pads  
-• Clear hot cues
+## Shift + Pads 1–8
+- Clear Hotcue 1–8
 
----
-
-# Keyboard Mode (STEMS)
-
-Pads 1-4  
-• Toggle stem mute
-
-Shift + pads  
-• Solo stem
-
-Pads 5-8  
-• Stem solo / momentary mute depending on configuration
+This is standard direct Mixxx hotcue behavior.
 
 ---
 
-# Pad FX Modes
+# Keyboard Mode / STEMS Mode
 
-Pad FX modes control Mixxx effect units.
+This mapping repurposes **Keyboard Mode** as **STEMS Mode**.
 
-Pad layout:
+## Pads 1–4
+### Normal
+- Toggle stem mute for Stem 1–4
 
-Pad1 → slot1  
-Pad2 → slot2  
-Pad3 → slot3  
-Pad4 → unit enable  
-Pad5 → route FX to own deck  
-Pad6 → route FX to opposite deck  
-Pad7 → unused  
-Pad8 → toggle all slots
+### Shift
+- Solo-style "only this stem active"
 
-Shift pads currently mirror normal pads.
+## Pads 5–8
+Behavior depends on script config.
+
+### If `STEMS_PAD5_8_MODE = "solo"`
+#### Normal
+- Momentary solo for selected stem
+
+#### Shift
+- Momentary hold-mute for selected stem
+
+### If `STEMS_PAD5_8_MODE = "fx"`
+#### Normal
+- Toggle Stem QuickEffect
+
+#### Shift
+- Next QuickEffect preset for that stem
+
+## LED behavior
+Stem LEDs are updated from:
+
+- stem mute state
+- stem quick effect state
+- stem count availability
+
+So unavailable stems should stay dark.
 
 ---
 
-# Beat Jump Mode
+# Pad FX1 / Pad FX2 Modes
 
-Pads:
+These are custom effect control layers.
 
-1 beat back  
-1 beat forward  
-2 beat back  
-2 beat forward  
-4 beat back  
-4 beat forward  
-32 beat back  
-32 beat forward
+## General layout
+For both Pad FX modes:
+
+- Pad 1 -> Slot 1 enable
+- Pad 2 -> Slot 2 enable
+- Pad 3 -> Slot 3 enable
+- Pad 4 -> Unit enable
+- Pad 5 -> Route FX to own deck
+- Pad 6 -> Route FX to other deck
+- Pad 7 -> unused
+- Pad 8 -> toggle all slots on/off
+
+## Pad FX1
+- Deck 1 controls EffectUnit1
+- Deck 2 controls EffectUnit2
+
+## Pad FX2
+- Deck 1 controls EffectUnit3
+- Deck 2 controls EffectUnit4
+
+## LED logic
+LEDs are script-synchronized and reflect:
+
+- slot enabled state
+- unit enabled state
+- routing state
+- all-on state
+
+The script also auto-arms routing when needed so active slots do not silently do nothing.
 
 ---
 
 # Beat Loop Mode
 
-Pads:
+## Pads 1–8
+Per deck:
 
-¼ beat  
-½ beat  
-1 beat  
-2 beat  
-4 beat  
-8 beat  
-16 beat  
-32 beat
+1. 1/4 beat loop
+2. 1/2 beat loop
+3. 1 beat loop
+4. 2 beat loop
+5. 4 beat loop
+6. 8 beat loop
+7. 16 beat loop
+8. 32 beat loop
+
+These are direct Mixxx beatloop toggle actions.
+
+---
+
+# Beat Jump Mode
+
+## Pads 1–8
+Per deck:
+
+1. beatjump 1 backward
+2. beatjump 1 forward
+3. beatjump 2 backward
+4. beatjump 2 forward
+5. beatjump 4 backward
+6. beatjump 4 forward
+7. beatjump 32 backward
+8. beatjump 32 forward
+
+This mode is intentionally practical rather than symmetric in tiny increments.
 
 ---
 
 # Sampler Mode
 
-16 samplers are used.
+This mapping uses 16 samplers.
 
-Short press  
-• play sample
+## Left side sampler pads
+Left deck pad layout maps to:
 
-Long press  
-• stop sample
+- Pads 1–4 -> Sampler 1–4
+- Pads 5–8 -> Sampler 9–12
 
-Shift + pad  
-• stop or eject sample
+## Right side sampler pads
+Right deck pad layout maps to:
 
-LED states:
+- Pads 1–4 -> Sampler 5–8
+- Pads 5–8 -> Sampler 13–16
 
-off → empty  
-solid → loaded  
-blink → playing
+## Normal press
+- If sample loaded:
+  - play / cue_gotoandplay
+- If no sample loaded:
+  - load selected track into sampler
+
+## Long press
+- Stop currently playing sampler
+
+## Shift + pad
+- If sample is playing:
+  - stop playback
+- If sample is loaded but not playing:
+  - eject sample
+
+## Sampler LED behavior
+Script-controlled:
+
+- off -> no sample loaded
+- solid -> sample loaded, not playing
+- blinking -> sample playing
 
 ---
 
 # Key Shift Mode
 
-Pads select fixed pitch offsets.
+This mode is implemented as direct semitone selection via `pitch_adjust`.
 
-Current mapping:
+## Current semitone layout
+The script maps pads to semitone offsets in a custom way.
 
-Pad1 → +4  
-Pad2 → +5  
-Pad3 → +6  
-Pad4 → +7  
-Pad5 → 0  
-Pad6 → +1  
-Pad7 → +2  
-Pad8 → +3
+Current mapping in script:
 
-Shift layer currently unused.
+- Pad 1 -> +4
+- Pad 2 -> +5
+- Pad 3 -> +6
+- Pad 4 -> +7
+- Pad 5 -> 0
+- Pad 6 -> +1
+- Pad 7 -> +2
+- Pad 8 -> +3
+
+This is script-defined behavior and takes precedence over older XML descriptions if they conflict.
+
+## Shift layer
+Currently intentionally left empty / not implemented for additional pitch-bank logic.
+
+That means:
+
+- normal layer works
+- shift layer is reserved for future extension
+
+---
+
+# LEDs and Visual Feedback
+
+## Transport LEDs
+Script aims for engine-driven feedback instead of controller-side assumptions.
+
+## Loop LEDs
+Loop LEDs are centrally managed and depend on:
+
+- track loaded state
+- loop active state
+- loop adjust state
+- pending loop-out state
+
+## Sampler LEDs
+Sampler LEDs use an explicit off / solid / blink state machine.
+
+## Pad FX LEDs
+Pad FX LEDs reflect actual engine state:
+
+- slot on/off
+- unit on/off
+- routing on/off
+
+## Stem LEDs
+Stem LEDs reflect:
+
+- mute status
+- quick effect status
+- stem count availability
+
+## VU meters
+VU meters are script-managed and include peak latch behavior.
+
+---
+
+# Configurable Script Options
+
+Some important behavior is controlled in the script.
+
+Examples include:
+
+- `BROWSE_FOCUS_TOGGLE_ONLY`
+- `BROWSE_LONGPRESS_MS`
+- `SAMPLER_LONGPRESS_MS`
+- `QUANTIZE_LONGPRESS_MS`
+- `LOOP_ADJUST_MODE`
+- `loopAdjustStepBeats`
+- `reloopExitBeats`
+- `loopAdjustTimeoutMs`
+- `quickJumpSize`
+- `fastSeekScale`
+- `bendScale`
+- `loopAdjustMultiply`
+- `STEMS_PAD5_8_MODE`
+- `PLAY_BRAKE_ON_VINYL`
+
+Users should check the script header and config section for exact current defaults.
+
+---
+
+# Known Differences from Rekordbox / Stock Pioneer Expectations
+
+This mapping does not try to fake unsupported engine behavior.
+
+Examples:
+
+- Sync short press is not a persistent Beat Sync mode
+- Some LED behavior is based on Mixxx engine states, not Rekordbox states
+- Keyboard mode is repurposed as STEMS mode
+- Pad FX modes are custom and not stock Pioneer functions
+- Optional Vinyl brake behavior is custom and configurable
+
+---
+
+# Contributor Notes
+
+When changing control behavior:
+
+1. update the XML if MIDI binding changes
+2. update the script if logic changes
+3. update this file if user-visible behavior changes
+4. do not document imagined behavior — document actual current behavior
+
+If XML labels and script behavior conflict, the script is the source of truth.
+
+---
