@@ -19,16 +19,37 @@ Older versions of Mixxx (e.g. 2.5) are not supported.
 
 ---
 
+## Repository Structure
+
+controllers/
+  Pioneer-DDJ-FLX4-2.0.midi.xml
+  Pioneer-DDJ-FLX4-2.0.script.js
+
+CONTROLS.md
+  Detailed controller behavior reference
+
+CONFIGURATION.md
+  Script configuration options
+
+CHANGELOG.md
+  Version history
+
+---
+
 ## Documentation
 
-Detailed documentation is available in the repository:
+This repository contains the mapping implementation.
 
-- **[CONTROLS.md](CONTROLS.md)**  
-  Full controller reference describing what each button, pad and knob does.
+The full controller documentation is maintained in the Mixxx manual
+documentation repository:
 
-- **[CONFIGURATION.md](CONFIGURATION.md)**  
-  Script configuration options and adjustable behaviour.
+https://github.com/ElHanko/manual/blob/feat/flx4-controller-doc/source/hardware/controllers/pioneer_ddj_flx4.rst
 
+Additional project documentation:
+
+- `CONTROLS.md` – detailed control behavior
+- `CONFIGURATION.md` – script configuration options
+- `CHANGELOG.md` – project history
 ---
 
 ## Features
