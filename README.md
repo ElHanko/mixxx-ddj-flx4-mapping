@@ -9,6 +9,12 @@ Hercules Inpulse 300 Mk2 mapping.
 The goal is a workflow that feels closer to standalone Pioneer players
 while still taking advantage of Mixxx features.
 
+## Requirements
+
+This mapping targets **Mixxx 2.6 or newer**.
+
+Older versions of Mixxx (e.g. 2.5) are not supported.
+
 ## Features
 
 - Improved Beat FX behaviour
