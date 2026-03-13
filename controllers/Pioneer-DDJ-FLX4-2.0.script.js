@@ -845,7 +845,7 @@ PioneerDDJFLX4.loadShiftPressed = function(_channel, control, value, _status, _g
 // -----------------------------------------------------------------------------
 // USER OPTION
 // -----------------------------------------------------------------------------
-PioneerDDJFLX4.PLAY_BRAKE_ON_VINYL = true;
+PioneerDDJFLX4.PLAY_BRAKE_ON_VINYL = false;
 
 PioneerDDJFLX4.vinylFx = {
     brakeFactor: 10,
