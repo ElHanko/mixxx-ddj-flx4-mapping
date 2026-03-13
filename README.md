@@ -9,11 +9,27 @@ Hercules Inpulse 300 Mk2 mapping.
 The goal is a workflow that feels closer to standalone Pioneer players
 while still taking advantage of Mixxx features.
 
+---
+
 ## Requirements
 
 This mapping targets **Mixxx 2.6 or newer**.
 
 Older versions of Mixxx (e.g. 2.5) are not supported.
+
+---
+
+## Documentation
+
+Detailed documentation is available in the repository:
+
+- **[CONTROLS.md](CONTROLS.md)**  
+  Full controller reference describing what each button, pad and knob does.
+
+- **[CONFIGURATION.md](CONFIGURATION.md)**  
+  Script configuration options and adjustable behaviour.
+
+---
 
 ## Features
 
@@ -24,41 +40,25 @@ Older versions of Mixxx (e.g. 2.5) are not supported.
 - Instant doubles
 - Browser focus toggle
 - Quantize / Keylock shortcuts
-- Vinyl mode toggle via SHIFT + 4BEAT/EXIT
+- Vinyl mode toggle via **SHIFT + 4BEAT/EXIT**
 - Optional vinyl brake / soft start behaviour on the PLAY button
 - Configurable controller behaviour for selected features
 
-## Configuration
-
-Some optional behaviours can be adjusted directly in the script.
-
-### Optional vinyl brake on PLAY
-
-The mapping can optionally apply vinyl-style transport behaviour to the normal
-PLAY button when Vinyl Mode is active.
-
-This feature is disabled by default.
-
-When enabled:
-
-- pressing PLAY on a playing deck applies a brake
-- pressing PLAY on a stopped deck starts playback with a soft start
-- pressing PLAY during an active brake cancels the brake and resumes playback
-
-To enable it, set the following option in the script:
-
-    PioneerDDJFLX4.PLAY_BRAKE_ON_VINYL = true;
-
-If disabled, the PLAY button keeps the normal Mixxx Play/Pause behaviour.
+---
 
 ## Status
 
 Work in progress.  
 I will continue improving the mapping as I discover issues or new ideas.
 
+---
+
 ## Author
 
 ElHanko
 
+---
+
 ## License
+
 MIT
