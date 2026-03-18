@@ -1838,12 +1838,6 @@ PioneerDDJFLX4.setPadModePadFx2 = function(_ch, _ctrl, value, _st, group) {
 // - Auto-exit: wenn 5s kein Adjust (Jog) kommt -> Adjust-Modus aus + LEDs zurück
 ///////////////////////////////////////////////////////////////
 
-// Timer storage (Blink + Timeout)
-PioneerDDJFLX4._loopAdjustTimeoutTimer = PioneerDDJFLX4._loopAdjustTimeoutTimer || {
-  "[Channel1]": undefined,
-  "[Channel2]": undefined,
-};
-
 // ------------------- LED HELPERS -------------------
 // Zwei Signale, damit die LED auch im Shift-Layer konsistent ist (wie bisher)
 PioneerDDJFLX4.setReloopLight = function(status, value) {
@@ -2262,8 +2256,6 @@ PioneerDDJFLX4.syncLongPressed = function(_channel, _control, value, _status, gr
     engine.setValue(group, "sync_enabled", hold ? 0 : 1);
 };
 
-PioneerDDJFLX4.tempoRanges = [0.08, 0.16, 0.32, 0.64, 1.0];
-
 PioneerDDJFLX4.cycleTempoRange = function(_ch, _ctrl, value, _status, group) {
     if (!value) return;
 
@@ -2580,13 +2572,6 @@ PioneerDDJFLX4._setBeatloopPadsLit = function(status, on) {
 // Sampler mode
 //
 
-// --- Sampler LED state machine ---
-
-// --- Sampler long-press ---
-PioneerDDJFLX4._samplerHold = PioneerDDJFLX4._samplerHold || {
-    timer: {},   // group -> timerId
-    fired: {},   // group -> bool
-};
 // LED off if not loaded, solid if loaded+stopped, blink if playing
 PioneerDDJFLX4.samplerLedUpdate = function(_value, group, _control) {
     const m = group.match(script.samplerRegEx);
