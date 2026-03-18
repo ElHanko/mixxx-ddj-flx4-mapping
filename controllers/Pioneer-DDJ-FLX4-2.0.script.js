@@ -421,6 +421,20 @@ PioneerDDJFLX4.shiftPressed = function(_channel, _control, value, status, _group
 PioneerDDJFLX4.updateDeckLeds = function(group) {
     const status = (group === "[Channel1]") ? 0x90 : 0x91;
     const padStatus = (group === "[Channel1]") ? 0x97 : 0x99;
+        const deckLights = (group === "[Channel1]")
+        ? PioneerDDJFLX4.lights.deck1
+        : PioneerDDJFLX4.lights.deck2;
+    const mode = PioneerDDJFLX4.padMode[group];
+
+    // Pad mode button LEDs: exclusive per deck
+    PioneerDDJFLX4.toggleLight(deckLights.hotcueMode,   mode === PioneerDDJFLX4.PADMODE.HOTCUE);
+    PioneerDDJFLX4.toggleLight(deckLights.keyboardMode, mode === PioneerDDJFLX4.PADMODE.KEYBOARD);
+    PioneerDDJFLX4.toggleLight(deckLights.padFX1Mode,   mode === PioneerDDJFLX4.PADMODE.PADFX1);
+    PioneerDDJFLX4.toggleLight(deckLights.padFX2Mode,   mode === PioneerDDJFLX4.PADMODE.PADFX2);
+    PioneerDDJFLX4.toggleLight(deckLights.beatJumpMode, mode === PioneerDDJFLX4.PADMODE.BEATJUMP);
+    PioneerDDJFLX4.toggleLight(deckLights.beatLoopMode, mode === PioneerDDJFLX4.PADMODE.BEATLOOP);
+    PioneerDDJFLX4.toggleLight(deckLights.samplerMode,  mode === PioneerDDJFLX4.PADMODE.SAMPLER);
+    PioneerDDJFLX4.toggleLight(deckLights.keyShiftMode, mode === PioneerDDJFLX4.PADMODE.KEYSHIFT);
 
     // Loop LEDs
     if (typeof PioneerDDJFLX4._updateLoopLeds === "function") {
@@ -2624,12 +2638,10 @@ PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, 
     if (value !== 0x7F) return;
 
     const ch = (_status === 0x90) ? "[Channel1]" : "[Channel2]";
-    const deck = (_status === 0x90) ? PioneerDDJFLX4.lights.deck1 : PioneerDDJFLX4.lights.deck2;
 
     // KEYBOARD MODE = STEMS
     if (_control === 0x69) {
         PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.KEYBOARD;
-        PioneerDDJFLX4.toggleLight(deck.keyboardMode, true);
         PioneerDDJFLX4.updateDeckLeds(ch);
         return;
     }
@@ -2642,32 +2654,24 @@ PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, 
             PioneerDDJFLX4.cycleHotcueBank(ch);
         } else {
             PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.HOTCUE;
-            PioneerDDJFLX4.toggleLight(deck.hotcueMode, true);
             PioneerDDJFLX4._bindHotcueBankConnections(ch);
             PioneerDDJFLX4.updateDeckLeds(ch);
         }
         return;
     }
 
-    // all other modes
     if (_control === 0x1E) {
         PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.PADFX1;
-        PioneerDDJFLX4.toggleLight(deck.padFX1Mode, true);
     } else if (_control === 0x6B) {
         PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.PADFX2;
-        PioneerDDJFLX4.toggleLight(deck.padFX2Mode, true);
     } else if (_control === 0x20) {
         PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.BEATJUMP;
-        PioneerDDJFLX4.toggleLight(deck.beatJumpMode, true);
     } else if (_control === 0x6D) {
         PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.BEATLOOP;
-        PioneerDDJFLX4.toggleLight(deck.beatLoopMode, true);
     } else if (_control === 0x22) {
         PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.SAMPLER;
-        PioneerDDJFLX4.toggleLight(deck.samplerMode, true);
     } else if (_control === 0x6F) {
         PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.KEYSHIFT;
-        PioneerDDJFLX4.toggleLight(deck.keyShiftMode, true);
     } else {
         return;
     }
