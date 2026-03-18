@@ -1292,323 +1292,330 @@
       <!-- PAD MODE SECTION END -->
       <!-- HOT CUE MODE START -->
       <control>
-        <description>PAD 1 (DECK1) HOT CUE MODE - press - set hotcue</description>
+        <description>PAD 1 (DECK1) HOT CUE MODE - press</description>
         <group>[Channel1]</group>
-        <key>hotcue_1_activate</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x97</status>
         <midino>0x00</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 1 +SHIFT (DECK1) HOT CUE MODE - press - delete hotcue</description>
+        <description>PAD 1 +SHIFT (DECK1) HOT CUE MODE - press</description>
         <group>[Channel1]</group>
-        <key>hotcue_1_clear</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x98</status>
         <midino>0x00</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 1 (DECK2) HOT CUE MODE - press - set hotcue</description>
+        <description>PAD 1 (DECK2) HOT CUE MODE - press</description>
         <group>[Channel2]</group>
-        <key>hotcue_1_activate</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x99</status>
         <midino>0x00</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 1 +SHIFT (DECK2) HOT CUE MODE - press - delete hotcue</description>
+        <description>PAD 1 +SHIFT (DECK2) HOT CUE MODE - press</description>
         <group>[Channel2]</group>
-        <key>hotcue_1_clear</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x9A</status>
         <midino>0x00</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
+
       <control>
-        <description>PAD 2 (DECK1) HOT CUE MODE - press - set hotcue</description>
+        <description>PAD 2 (DECK1) HOT CUE MODE - press</description>
         <group>[Channel1]</group>
-        <key>hotcue_2_activate</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x97</status>
         <midino>0x01</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 2 +SHIFT (DECK1) HOT CUE MODE - press - delete hotcue</description>
+        <description>PAD 2 +SHIFT (DECK1) HOT CUE MODE - press</description>
         <group>[Channel1]</group>
-        <key>hotcue_2_clear</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x98</status>
         <midino>0x01</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 2 (DECK2) HOT CUE MODE - press - set hotcue</description>
+        <description>PAD 2 (DECK2) HOT CUE MODE - press</description>
         <group>[Channel2]</group>
-        <key>hotcue_2_activate</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x99</status>
         <midino>0x01</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 2 +SHIFT (DECK2) HOT CUE MODE - press - delete hotcue</description>
+        <description>PAD 2 +SHIFT (DECK2) HOT CUE MODE - press</description>
         <group>[Channel2]</group>
-        <key>hotcue_2_clear</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x9A</status>
         <midino>0x01</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
+
       <control>
-        <description>PAD 3 (DECK1) HOT CUE MODE - press - set hotcue</description>
+        <description>PAD 3 (DECK1) HOT CUE MODE - press</description>
         <group>[Channel1]</group>
-        <key>hotcue_3_activate</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x97</status>
         <midino>0x02</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 3 +SHIFT (DECK1) HOT CUE MODE - press - delete hotcue</description>
+        <description>PAD 3 +SHIFT (DECK1) HOT CUE MODE - press</description>
         <group>[Channel1]</group>
-        <key>hotcue_3_clear</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x98</status>
         <midino>0x02</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 3 (DECK2) HOT CUE MODE - press - set hotcue</description>
+        <description>PAD 3 (DECK2) HOT CUE MODE - press</description>
         <group>[Channel2]</group>
-        <key>hotcue_3_activate</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x99</status>
         <midino>0x02</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 3 +SHIFT (DECK2) HOT CUE MODE - press - delete hotcue</description>
+        <description>PAD 3 +SHIFT (DECK2) HOT CUE MODE - press</description>
         <group>[Channel2]</group>
-        <key>hotcue_3_clear</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x9A</status>
         <midino>0x02</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
+
       <control>
-        <description>PAD 4 (DECK1) HOT CUE MODE - press - set hotcue</description>
+        <description>PAD 4 (DECK1) HOT CUE MODE - press</description>
         <group>[Channel1]</group>
-        <key>hotcue_4_activate</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x97</status>
         <midino>0x03</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 4 +SHIFT (DECK1) HOT CUE MODE - press - delete hotcue</description>
+        <description>PAD 4 +SHIFT (DECK1) HOT CUE MODE - press</description>
         <group>[Channel1]</group>
-        <key>hotcue_4_clear</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x98</status>
         <midino>0x03</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 4 (DECK2) HOT CUE MODE - press - set hotcue</description>
+        <description>PAD 4 (DECK2) HOT CUE MODE - press</description>
         <group>[Channel2]</group>
-        <key>hotcue_4_activate</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x99</status>
         <midino>0x03</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 4 +SHIFT (DECK2) HOT CUE MODE - press - delete hotcue</description>
+        <description>PAD 4 +SHIFT (DECK2) HOT CUE MODE - press</description>
         <group>[Channel2]</group>
-        <key>hotcue_4_clear</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x9A</status>
         <midino>0x03</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
+
       <control>
-        <description>PAD 5(DECK1) HOT CUE MODE - press - set hotcue</description>
+        <description>PAD 5 (DECK1) HOT CUE MODE - press</description>
         <group>[Channel1]</group>
-        <key>hotcue_5_activate</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x97</status>
         <midino>0x04</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 5 +SHIFT (DECK1) HOT CUE MODE - press - delete hotcue</description>
+        <description>PAD 5 +SHIFT (DECK1) HOT CUE MODE - press</description>
         <group>[Channel1]</group>
-        <key>hotcue_5_clear</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x98</status>
         <midino>0x04</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 5 (DECK2) HOT CUE MODE - press - set hotcue</description>
+        <description>PAD 5 (DECK2) HOT CUE MODE - press</description>
         <group>[Channel2]</group>
-        <key>hotcue_5_activate</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x99</status>
         <midino>0x04</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 5 +SHIFT (DECK2) HOT CUE MODE - press - delete hotcue</description>
+        <description>PAD 5 +SHIFT (DECK2) HOT CUE MODE - press</description>
         <group>[Channel2]</group>
-        <key>hotcue_5_clear</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x9A</status>
         <midino>0x04</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
+
       <control>
-        <description>PAD 6 (DECK1) HOT CUE MODE - press - set hotcue</description>
+        <description>PAD 6 (DECK1) HOT CUE MODE - press</description>
         <group>[Channel1]</group>
-        <key>hotcue_6_activate</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x97</status>
         <midino>0x05</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 6 +SHIFT (DECK1) HOT CUE MODE - press - delete hotcue</description>
+        <description>PAD 6 +SHIFT (DECK1) HOT CUE MODE - press</description>
         <group>[Channel1]</group>
-        <key>hotcue_6_clear</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x98</status>
         <midino>0x05</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 6 (DECK2) HOT CUE MODE - press - set hotcue</description>
+        <description>PAD 6 (DECK2) HOT CUE MODE - press</description>
         <group>[Channel2]</group>
-        <key>hotcue_6_activate</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x99</status>
         <midino>0x05</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 6 +SHIFT (DECK2) HOT CUE MODE - press - delete hotcue</description>
+        <description>PAD 6 +SHIFT (DECK2) HOT CUE MODE - press</description>
         <group>[Channel2]</group>
-        <key>hotcue_6_clear</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x9A</status>
         <midino>0x05</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
+
       <control>
-        <description>PAD 7 (DECK1) HOT CUE MODE - press - set hotcue</description>
+        <description>PAD 7 (DECK1) HOT CUE MODE - press</description>
         <group>[Channel1]</group>
-        <key>hotcue_7_activate</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x97</status>
         <midino>0x06</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 7 +SHIFT (DECK1) HOT CUE MODE - press - delete hotcue</description>
+        <description>PAD 7 +SHIFT (DECK1) HOT CUE MODE - press</description>
         <group>[Channel1]</group>
-        <key>hotcue_7_clear</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x98</status>
         <midino>0x06</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 7 (DECK2) HOT CUE MODE - press - set hotcue</description>
+        <description>PAD 7 (DECK2) HOT CUE MODE - press</description>
         <group>[Channel2]</group>
-        <key>hotcue_7_activate</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x99</status>
         <midino>0x06</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 7 +SHIFT (DECK2) HOT CUE MODE - press - delete hotcue</description>
+        <description>PAD 7 +SHIFT (DECK2) HOT CUE MODE - press</description>
         <group>[Channel2]</group>
-        <key>hotcue_7_clear</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x9A</status>
         <midino>0x06</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
+
       <control>
-        <description>PAD 8 (DECK1) HOT CUE MODE - press - set hotcue</description>
+        <description>PAD 8 (DECK1) HOT CUE MODE - press</description>
         <group>[Channel1]</group>
-        <key>hotcue_8_activate</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x97</status>
         <midino>0x07</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 8 +SHIFT (DECK1) HOT CUE MODE - press - delete hotcue</description>
+        <description>PAD 8 +SHIFT (DECK1) HOT CUE MODE - press</description>
         <group>[Channel1]</group>
-        <key>hotcue_8_clear</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x98</status>
         <midino>0x07</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 8 (DECK2) HOT CUE MODE - press - set hotcue</description>
+        <description>PAD 8 (DECK2) HOT CUE MODE - press</description>
         <group>[Channel2]</group>
-        <key>hotcue_8_activate</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x99</status>
         <midino>0x07</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <control>
-        <description>PAD 8 +SHIFT (DECK2) HOT CUE MODE - press - delete hotcue</description>
+        <description>PAD 8 +SHIFT (DECK2) HOT CUE MODE - press</description>
         <group>[Channel2]</group>
-        <key>hotcue_8_clear</key>
+        <key>PioneerDDJFLX4.hotcuePad</key>
         <status>0x9A</status>
         <midino>0x07</midino>
         <options>
-          <normal />
+          <Script-Binding />
         </options>
       </control>
       <!-- HOT CUE MODE END -->
@@ -3663,266 +3670,6 @@
         <key>pfl</key>
         <status>0x91</status>
         <midino>0x54</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <!-- Hotcue Mode Pads -->
-      <output>
-        <group>[Channel1]</group>
-        <key>hotcue_1_status</key>
-        <status>0x97</status>
-        <midino>0x00</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel2]</group>
-        <key>hotcue_1_status</key>
-        <status>0x99</status>
-        <midino>0x00</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel1]</group>
-        <key>hotcue_2_status</key>
-        <status>0x97</status>
-        <midino>0x01</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel2]</group>
-        <key>hotcue_2_status</key>
-        <status>0x99</status>
-        <midino>0x01</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel1]</group>
-        <key>hotcue_3_status</key>
-        <status>0x97</status>
-        <midino>0x02</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel2]</group>
-        <key>hotcue_3_status</key>
-        <status>0x99</status>
-        <midino>0x02</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel1]</group>
-        <key>hotcue_4_status</key>
-        <status>0x97</status>
-        <midino>0x03</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel2]</group>
-        <key>hotcue_4_status</key>
-        <status>0x99</status>
-        <midino>0x03</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel1]</group>
-        <key>hotcue_5_status</key>
-        <status>0x97</status>
-        <midino>0x04</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel2]</group>
-        <key>hotcue_5_status</key>
-        <status>0x99</status>
-        <midino>0x04</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel1]</group>
-        <key>hotcue_6_status</key>
-        <status>0x97</status>
-        <midino>0x05</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel2]</group>
-        <key>hotcue_6_status</key>
-        <status>0x99</status>
-        <midino>0x05</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel1]</group>
-        <key>hotcue_7_status</key>
-        <status>0x97</status>
-        <midino>0x06</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel2]</group>
-        <key>hotcue_7_status</key>
-        <status>0x99</status>
-        <midino>0x06</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel1]</group>
-        <key>hotcue_8_status</key>
-        <status>0x97</status>
-        <midino>0x07</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel2]</group>
-        <key>hotcue_8_status</key>
-        <status>0x99</status>
-        <midino>0x07</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <!-- Repeat the output signal for the OFF status (Deck 1: 0x98, Deck 2: 0x9A.)
-            This is to ensure that the hotcue lights don't turn off when pressing the SHIFT button
-            -->
-      <output>
-        <group>[Channel1]</group>
-        <key>hotcue_1_status</key>
-        <status>0x98</status>
-        <midino>0x00</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel2]</group>
-        <key>hotcue_1_status</key>
-        <status>0x9A</status>
-        <midino>0x00</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel1]</group>
-        <key>hotcue_2_status</key>
-        <status>0x98</status>
-        <midino>0x01</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel2]</group>
-        <key>hotcue_2_status</key>
-        <status>0x9A</status>
-        <midino>0x01</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel1]</group>
-        <key>hotcue_3_status</key>
-        <status>0x98</status>
-        <midino>0x02</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel2]</group>
-        <key>hotcue_3_status</key>
-        <status>0x9A</status>
-        <midino>0x02</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel1]</group>
-        <key>hotcue_4_status</key>
-        <status>0x98</status>
-        <midino>0x03</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel2]</group>
-        <key>hotcue_4_status</key>
-        <status>0x9A</status>
-        <midino>0x03</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel1]</group>
-        <key>hotcue_5_status</key>
-        <status>0x98</status>
-        <midino>0x04</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel2]</group>
-        <key>hotcue_5_status</key>
-        <status>0x9A</status>
-        <midino>0x04</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel1]</group>
-        <key>hotcue_6_status</key>
-        <status>0x98</status>
-        <midino>0x05</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel2]</group>
-        <key>hotcue_6_status</key>
-        <status>0x9A</status>
-        <midino>0x05</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel1]</group>
-        <key>hotcue_7_status</key>
-        <status>0x98</status>
-        <midino>0x06</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel2]</group>
-        <key>hotcue_7_status</key>
-        <status>0x9A</status>
-        <midino>0x06</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel1]</group>
-        <key>hotcue_8_status</key>
-        <status>0x98</status>
-        <midino>0x07</midino>
-        <on>0x7F</on>
-        <minimum>0.5</minimum>
-      </output>
-      <output>
-        <group>[Channel2]</group>
-        <key>hotcue_8_status</key>
-        <status>0x9A</status>
-        <midino>0x07</midino>
         <on>0x7F</on>
         <minimum>0.5</minimum>
       </output>

@@ -519,6 +519,12 @@ for (let unit = 1; unit <= 2; unit++) {
     engine.makeConnection("[Channel1]", "pitch_adjust", PioneerDDJFLX4.pitchAdjusted);
     engine.makeConnection("[Channel2]", "pitch_adjust", PioneerDDJFLX4.pitchAdjusted);
 
+    // Hotcue bank setup
+    PioneerDDJFLX4._bindHotcueBankConnections("[Channel1]");
+    PioneerDDJFLX4._bindHotcueBankConnections("[Channel2]");
+    PioneerDDJFLX4.updateHotcueLeds("[Channel1]");
+    PioneerDDJFLX4.updateHotcueLeds("[Channel2]");
+
     // --- PAD FX LED SYNC (Engine -> Controller) ---
     [1,2,3,4].forEach((unitIdx) => {
         const U = `[EffectRack1_EffectUnit${unitIdx}]`;
@@ -1003,6 +1009,290 @@ PioneerDDJFLX4.playPressed = function(_channel, _control, value, _status, group)
     } else {
         engine.setValue(group, "play", 0);
     }
+};
+
+///////////////////////////////////////////////////////////////
+// HOTCUE BANKS (FLX4)
+// - 4 banks à 8 hotcues by default -> hotcue_1..32
+// - Re-press HOT CUE mode button to cycle bank
+// - LEDs are script-driven for the active bank
+// - Saved loops (hotcue_X_type == 4) blink in Hotcue mode
+// - Optional preview-on-hold when deck is stopped
+///////////////////////////////////////////////////////////////
+
+// -----------------------------------------------------------------------------
+// CONFIG
+// -----------------------------------------------------------------------------
+
+PioneerDDJFLX4.hotcueBankCount = 4;
+
+// If true:
+// - deck stopped + existing hotcue pressed -> play while held
+// - release -> stop and jump back to that hotcue
+//
+// If false:
+// - existing hotcue always behaves like normal activate/goto
+//
+PioneerDDJFLX4.HOTCUE_PREVIEW_ON_HOLD = true;
+
+
+// -----------------------------------------------------------------------------
+// STATE
+// -----------------------------------------------------------------------------
+
+PioneerDDJFLX4.hotcueBank = PioneerDDJFLX4.hotcueBank || {
+    "[Channel1]": 0,
+    "[Channel2]": 0,
+};
+
+PioneerDDJFLX4._hotcuePreview = PioneerDDJFLX4._hotcuePreview || {
+    "[Channel1]": 0,
+    "[Channel2]": 0,
+};
+
+PioneerDDJFLX4._hotcueBlinkState = PioneerDDJFLX4._hotcueBlinkState || {
+    "[Channel1]": false,
+    "[Channel2]": false,
+};
+
+PioneerDDJFLX4._hotcueBlinkTimer = PioneerDDJFLX4._hotcueBlinkTimer || {
+    "[Channel1]": 0,
+    "[Channel2]": 0,
+};
+
+PioneerDDJFLX4._hotcueBankFlashTimer = PioneerDDJFLX4._hotcueBankFlashTimer || {
+    "[Channel1]": 0,
+    "[Channel2]": 0,
+};
+
+
+// -----------------------------------------------------------------------------
+// HELPERS
+// -----------------------------------------------------------------------------
+
+PioneerDDJFLX4.getHotcueBank = function(group) {
+    return PioneerDDJFLX4.hotcueBank[group] || 0;
+};
+
+PioneerDDJFLX4._hotcueBaseNumber = function(group) {
+    return PioneerDDJFLX4.getHotcueBank(group) * 8;
+};
+
+PioneerDDJFLX4._hotcueNumberFromPad = function(group, padIndex) {
+    return PioneerDDJFLX4._hotcueBaseNumber(group) + padIndex + 1;
+};
+
+PioneerDDJFLX4._hotcuePadStatuses = function(group) {
+    return (group === "[Channel1]") ? [0x97, 0x98] : [0x99, 0x9A];
+};
+
+PioneerDDJFLX4._hotcuePadLed = function(group, padIndex, on) {
+    const statuses = PioneerDDJFLX4._hotcuePadStatuses(group);
+    const note = padIndex & 0x7F;
+    const val = on ? 0x7F : 0x00;
+
+    statuses.forEach((st) => {
+        midi.sendShortMsg(st, note, val);
+    });
+};
+
+PioneerDDJFLX4._stopHotcueBlinkTimer = function(group) {
+    const t = PioneerDDJFLX4._hotcueBlinkTimer[group];
+    if (t) {
+        engine.stopTimer(t);
+        PioneerDDJFLX4._hotcueBlinkTimer[group] = 0;
+    }
+};
+
+PioneerDDJFLX4._ensureHotcueBlinkTimer = function(group) {
+    if (PioneerDDJFLX4._hotcueBlinkTimer[group]) {
+        return;
+    }
+
+    PioneerDDJFLX4._hotcueBlinkTimer[group] = engine.beginTimer(500, function() {
+        PioneerDDJFLX4._hotcueBlinkState[group] = !PioneerDDJFLX4._hotcueBlinkState[group];
+        PioneerDDJFLX4.updateHotcueLeds(group);
+    });
+};
+
+PioneerDDJFLX4._hotcueConnectionKey = function(group, num, suffix) {
+    return `${group}|${num}|${suffix}`;
+};
+
+PioneerDDJFLX4._hotcueConnections = PioneerDDJFLX4._hotcueConnections || {};
+
+PioneerDDJFLX4._bindHotcueBankConnections = function(group) {
+    const base = PioneerDDJFLX4._hotcueBaseNumber(group);
+
+    for (let i = 0; i < 8; i++) {
+        const num = base + i + 1;
+        const statusKey = PioneerDDJFLX4._hotcueConnectionKey(group, num, "status");
+        const typeKey = PioneerDDJFLX4._hotcueConnectionKey(group, num, "type");
+
+        if (!PioneerDDJFLX4._hotcueConnections[statusKey]) {
+            PioneerDDJFLX4._hotcueConnections[statusKey] = engine.makeConnection(
+                group,
+                `hotcue_${num}_status`,
+                function() {
+                    PioneerDDJFLX4.updateHotcueLeds(group);
+                }
+            );
+        }
+
+        if (!PioneerDDJFLX4._hotcueConnections[typeKey]) {
+            PioneerDDJFLX4._hotcueConnections[typeKey] = engine.makeConnection(
+                group,
+                `hotcue_${num}_type`,
+                function() {
+                    PioneerDDJFLX4.updateHotcueLeds(group);
+                }
+            );
+        }
+    }
+};
+
+PioneerDDJFLX4.updateHotcueLeds = function(group) {
+    if (PioneerDDJFLX4.padMode[group] !== PioneerDDJFLX4.PADMODE.HOTCUE) {
+        return;
+    }
+
+    const base = PioneerDDJFLX4._hotcueBaseNumber(group);
+    let needsBlinkTimer = false;
+
+    for (let i = 0; i < 8; i++) {
+        const num = base + i + 1;
+        const enabled = engine.getValue(group, `hotcue_${num}_status`) > 0;
+        const type = engine.getValue(group, `hotcue_${num}_type`);
+
+        if (!enabled) {
+            PioneerDDJFLX4._hotcuePadLed(group, i, false);
+            continue;
+        }
+
+        // saved loop -> blink
+        if (type === 4) {
+            needsBlinkTimer = true;
+            PioneerDDJFLX4._hotcuePadLed(group, i, PioneerDDJFLX4._hotcueBlinkState[group]);
+            continue;
+        }
+
+        PioneerDDJFLX4._hotcuePadLed(group, i, true);
+    }
+
+    if (needsBlinkTimer) {
+        PioneerDDJFLX4._ensureHotcueBlinkTimer(group);
+    } else {
+        PioneerDDJFLX4._stopHotcueBlinkTimer(group);
+        PioneerDDJFLX4._hotcueBlinkState[group] = false;
+    }
+};
+
+PioneerDDJFLX4.flashHotcueBank = function(group) {
+    const statuses = PioneerDDJFLX4._hotcuePadStatuses(group);
+    const bank = PioneerDDJFLX4.getHotcueBank(group); // 0..3
+    const litPads = (bank === 0) ? 8 : (bank + 1);
+
+    const old = PioneerDDJFLX4._hotcueBankFlashTimer[group];
+    if (old) {
+        engine.stopTimer(old);
+        PioneerDDJFLX4._hotcueBankFlashTimer[group] = 0;
+    }
+
+    // first clear all
+    for (let i = 0; i < 8; i++) {
+        statuses.forEach((st) => midi.sendShortMsg(st, i, 0x00));
+    }
+
+    // then light feedback pattern
+    for (let i = 0; i < litPads; i++) {
+        statuses.forEach((st) => midi.sendShortMsg(st, i, 0x7F));
+    }
+
+    PioneerDDJFLX4._hotcueBankFlashTimer[group] = engine.beginTimer(220, function() {
+        PioneerDDJFLX4._hotcueBankFlashTimer[group] = 0;
+        PioneerDDJFLX4.updateHotcueLeds(group);
+    }, true);
+};
+
+PioneerDDJFLX4.cycleHotcueBank = function(group) {
+    const cur = PioneerDDJFLX4.getHotcueBank(group);
+    const max = Math.max(1, PioneerDDJFLX4.hotcueBankCount | 0);
+    PioneerDDJFLX4.hotcueBank[group] = (cur + 1) % max;
+
+    PioneerDDJFLX4._bindHotcueBankConnections(group);
+    PioneerDDJFLX4.flashHotcueBank(group);
+};
+
+
+// -----------------------------------------------------------------------------
+// HOTCUE PAD INPUT
+// normal layer: activate / preview
+// shift layer: clear
+// -----------------------------------------------------------------------------
+
+PioneerDDJFLX4.hotcuePad = function(_channel, control, value, status, group) {
+    const note = control & 0x7F;
+    const isShiftLayer = (status === 0x98 || status === 0x9A);
+    const padIndex = note;
+
+    if (padIndex < 0 || padIndex > 7) {
+        return;
+    }
+
+    if (PioneerDDJFLX4.padMode[group] !== PioneerDDJFLX4.PADMODE.HOTCUE) {
+        return;
+    }
+
+    const hotcueNumber = PioneerDDJFLX4._hotcueNumberFromPad(group, padIndex);
+    const baseName = `hotcue_${hotcueNumber}`;
+
+    // Note-Off
+    if (value === 0x00) {
+        if (!isShiftLayer &&
+            PioneerDDJFLX4.HOTCUE_PREVIEW_ON_HOLD &&
+            PioneerDDJFLX4._hotcuePreview[group] === hotcueNumber) {
+
+            PioneerDDJFLX4._hotcuePreview[group] = 0;
+            engine.setValue(group, "play", 0);
+            engine.setValue(group, `${baseName}_goto`, 1);
+            PioneerDDJFLX4.updateHotcueLeds(group);
+        }
+        return;
+    }
+
+    if (value !== 0x7F) {
+        return;
+    }
+
+    // Shift layer = clear
+    if (isShiftLayer) {
+        script.triggerControl(group, `${baseName}_clear`);
+        PioneerDDJFLX4.updateHotcueLeds(group);
+        return;
+    }
+
+    const playing = engine.getValue(group, "play") > 0;
+    const enabled = engine.getValue(group, `${baseName}_status`) > 0;
+
+    // empty slot -> set cue
+    if (!enabled) {
+        script.triggerControl(group, `${baseName}_activate`);
+        PioneerDDJFLX4.updateHotcueLeds(group);
+        return;
+    }
+
+    // stopped deck -> optional preview while held
+    if (!playing && PioneerDDJFLX4.HOTCUE_PREVIEW_ON_HOLD) {
+        engine.setValue(group, `${baseName}_goto`, 1);
+        engine.setValue(group, "play", 1);
+        PioneerDDJFLX4._hotcuePreview[group] = hotcueNumber;
+        PioneerDDJFLX4.updateHotcueLeds(group);
+        return;
+    }
+
+    // normal activate while playing
+    script.triggerControl(group, `${baseName}_activate`);
+    PioneerDDJFLX4.updateHotcueLeds(group);
 };
 
 //
@@ -2321,11 +2611,12 @@ PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, 
     const deck = (_status === 0x90 ? PioneerDDJFLX4.lights.deck1 : PioneerDDJFLX4.lights.deck2);
 
     const padStatus = (_status === 0x90) ? 0x97 : 0x99;
+
     // Beatjump pads
     if (typeof PioneerDDJFLX4._setBeatjumpPadsLit === "function") {
         PioneerDDJFLX4._setBeatjumpPadsLit(
             padStatus,
-            _control === 0x20 // BEATJUMP
+            _control === 0x20
         );
     }
 
@@ -2333,34 +2624,45 @@ PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, 
     if (typeof PioneerDDJFLX4._setBeatloopPadsLit === "function") {
         PioneerDDJFLX4._setBeatloopPadsLit(
             padStatus,
-            _control === 0x6D // BEATLOOP
+            _control === 0x6D
         );
     }
 
-    // --- KEYBOARD MODE (used as STEMS) ---
-if (_control === 0x69) { // KEYBOARD MODE button (STEMS)
-    PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.KEYBOARD;
+    // KEYBOARD MODE = STEMS
+    if (_control === 0x69) {
+        PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.KEYBOARD;
+        PioneerDDJFLX4.toggleLight(deck.keyboardMode, true);
 
-    PioneerDDJFLX4.toggleLight(deck.keyboardMode, true);
-
-    if (typeof PioneerDDJFLX4._refreshKeyboardStemLeds === "function") {
-        PioneerDDJFLX4._refreshKeyboardStemLeds(ch);
+        if (typeof PioneerDDJFLX4._refreshKeyboardStemLeds === "function") {
+            PioneerDDJFLX4._refreshKeyboardStemLeds(ch);
+        }
+        return;
     }
-    return;
-}
 
-    // set per-deck padMode for everything else (optional but consistent)
-    if (_control === 0x1B) PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.HOTCUE;
-    else if (_control === 0x1E) PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.PADFX1;
+    // HOT CUE MODE:
+    // first press -> enter hotcue mode
+    // re-press while already in hotcue mode -> cycle bank
+    if (_control === 0x1B) {
+        if (PioneerDDJFLX4.padMode[ch] === PioneerDDJFLX4.PADMODE.HOTCUE) {
+            PioneerDDJFLX4.cycleHotcueBank(ch);
+        } else {
+            PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.HOTCUE;
+            PioneerDDJFLX4.toggleLight(deck.hotcueMode, true);
+            PioneerDDJFLX4._bindHotcueBankConnections(ch);
+            PioneerDDJFLX4.updateHotcueLeds(ch);
+        }
+        return;
+    }
+
+    // all other modes
+    if (_control === 0x1E) PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.PADFX1;
     else if (_control === 0x6B) PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.PADFX2;
     else if (_control === 0x20) PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.BEATJUMP;
     else if (_control === 0x6D) PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.BEATLOOP;
     else if (_control === 0x22) PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.SAMPLER;
     else if (_control === 0x6F) PioneerDDJFLX4.padMode[ch] = PioneerDDJFLX4.PADMODE.KEYSHIFT;
 
-    // keep your original LED toggle calls
-    if (_control === 0x1B) PioneerDDJFLX4.toggleLight(deck.hotcueMode, true);
-    else if (_control === 0x1E) PioneerDDJFLX4.toggleLight(deck.padFX1Mode, true);
+    if (_control === 0x1E) PioneerDDJFLX4.toggleLight(deck.padFX1Mode, true);
     else if (_control === 0x6B) PioneerDDJFLX4.toggleLight(deck.padFX2Mode, true);
     else if (_control === 0x20) PioneerDDJFLX4.toggleLight(deck.beatJumpMode, true);
     else if (_control === 0x6D) PioneerDDJFLX4.toggleLight(deck.beatLoopMode, true);
@@ -2839,6 +3141,17 @@ PioneerDDJFLX4.shutdown = function() {
             if (PioneerDDJFLX4.timersLoop[g]) PioneerDDJFLX4.timersLoop[g].loopBlink = undefined;
         }
     }
+    // --- stop hotcue timers ---
+    ["[Channel1]", "[Channel2]"].forEach(function(group) {
+        if (PioneerDDJFLX4._hotcueBlinkTimer[group]) {
+            engine.stopTimer(PioneerDDJFLX4._hotcueBlinkTimer[group]);
+            PioneerDDJFLX4._hotcueBlinkTimer[group] = 0;
+        }
+        if (PioneerDDJFLX4._hotcueBankFlashTimer[group]) {
+            engine.stopTimer(PioneerDDJFLX4._hotcueBankFlashTimer[group]);
+            PioneerDDJFLX4._hotcueBankFlashTimer[group] = 0;
+        }
+    });
     // --- Reset VU meter bargraph (CC 0x02) ---
     // Deck 1: 0xB0, Deck 2: 0xB1
     midi.sendShortMsg(0xB0, 0x02, 0x00);
