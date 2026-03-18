@@ -4,12 +4,11 @@
 // =============================================================================
 //
 // Design goals:
-// - Native FLX4 feel with deterministic behavior
-// - Engine-driven LED state (no controller-side guessing)
+// - Native FLX4 feel with predictable and consistent behavior
+// - Engine-driven LED state (avoids relying on controller assumptions)
 // - Consistent short/long press semantics
 // - Custom behavior for improved consistency and usability
 //
-// This mapping is NOT a simple DDJ-400 port.
 // Large parts were redesigned from scratch.
 //
 // -----------------------------------------------------------------------------
@@ -18,7 +17,9 @@
 //
 // Decks / Transport
 // - Play / Cue with proper LED sync
-// - Beat Sync (short = momentary, long = hold)
+// Beat Sync:
+//   short press -> one-shot beatsync
+//   long press  -> toggle sync lock (sync_enabled)
 // - Vinyl mode with real hardware state control
 // - Jog wheels with:
 //     * Scratch / bend decision on touch
@@ -34,7 +35,7 @@
 //     * Short press: play / load
 //     * Long press: stop
 //     * Shift: stop / eject
-// - Pad FX (custom implementation):
+// - Pad FX (engine-driven effect control layer):
 //     * PAD FX1 → EffectUnit 1/2
 //     * PAD FX2 → EffectUnit 3/4
 //     * Slot, Unit, Routing and All-On logic
@@ -79,11 +80,9 @@
 // These are intentionally omitted to avoid half-working features.
 //
 // -----------------------------------------------------------------------------
-// Notes
-// -----------------------------------------------------------------------------
-// - This mapping assumes Script-Binding for pads.
-// - Complexity is intentional. Read the code before modifying.
-// - Mixing timer buckets WILL break things.
+// Note:
+// - This mapping relies on multiple timer-based subsystems (loop, sampler, hotcue).
+// - Changes to timer handling should be made carefully to avoid unintended side effects.
 //
 // =============================================================================
 
