@@ -157,13 +157,6 @@ PioneerDDJFLX4.lights = {
 //
 PioneerDDJFLX4.BROWSE_FOCUS_TOGGLE_ONLY = true;
 
-
-// Time threshold (milliseconds) before a BROWSE press is treated as a long press.
-// Long press expands the selected folder in the library tree.
-//
-PioneerDDJFLX4.BROWSE_LONGPRESS_MS = 300;
-
-
 // Time threshold (milliseconds) to detect long press on sampler pads.
 //
 // Short press → play sample / load track
@@ -259,9 +252,9 @@ PioneerDDJFLX4.loopAdjustMultiply = 50;
 //
 PioneerDDJFLX4.STEMS_PAD5_8_MODE = "solo";
 
-//
-// Runtime state
-//
+// -----------------------------------------------------------------------------
+// STATE
+// -----------------------------------------------------------------------------
 
 PioneerDDJFLX4.shiftDown = false;
 PioneerDDJFLX4._shiftDeck1 = false;
@@ -272,17 +265,14 @@ PioneerDDJFLX4.highResMSB = {
     "[Channel2]": {}
 };
 
+// pro Deck index (0/1) für Adjust-Flags (werden in beiden Modes genutzt)
 PioneerDDJFLX4.loopAdjustIn = [false, false];
 PioneerDDJFLX4.loopAdjustOut = [false, false];
 
+// Pending-Out (nur relevant in "hercules"): loop_in gesetzt, loop_out fehlt noch
 PioneerDDJFLX4._loopPendingOut = {
     "[Channel1]": false,
     "[Channel2]": false,
-};
-
-PioneerDDJFLX4._browseLP = {
-    timer: { 0x41: -1 },
-    fired: { 0x41: false },
 };
 
 PioneerDDJFLX4._samplerHold = {
@@ -402,9 +392,6 @@ PioneerDDJFLX4._deckIndexFromGroup = PioneerDDJFLX4._deckIndexFromGroup || funct
 //
 // Shift button
 //
-
-
-PioneerDDJFLX4.shiftDown = false;
 
 PioneerDDJFLX4.shiftPressed = function(_channel, _control, value, status, _group) {
     const down = (value === 0x7F);
@@ -1579,7 +1566,7 @@ PioneerDDJFLX4.beatFxOnOffShiftPressed = function(_channel, _control, value) {
     PioneerDDJFLX4._updateBeatFxOnOffLed();
 };
 // --- SMART CFX (Version A: universal) ---
-PioneerDDJFLX4._smartCfx = { enabled: false };
+PioneerDDJFLX4._smartCfx = PioneerDDJFLX4._smartCfx || { enabled: false };
 
 PioneerDDJFLX4._qfxGroup = function(ch) {
     return `[QuickEffectRack1_[Channel${ch}]]`;
@@ -1850,31 +1837,6 @@ PioneerDDJFLX4.setPadModePadFx2 = function(_ch, _ctrl, value, _st, group) {
 // - LED/Blinking bleibt zentral über loop_enabled callback + Blink-Timer
 // - Auto-exit: wenn 5s kein Adjust (Jog) kommt -> Adjust-Modus aus + LEDs zurück
 ///////////////////////////////////////////////////////////////
-
-// ------------------- CONFIG SWITCH -------------------
-// "simple"  = dein bisheriges Verhalten (DEFAULT)
-// "hercules"= Hercules-Style loop_in/loop_out + Pending-Out + sample-based Adjust
-PioneerDDJFLX4.LOOP_ADJUST_MODE = "simple"; // <- "simple" oder "hercules"
-
-// Schrittweite fürs Hercules-style sample based adjust (Anteil eines Beats pro Jog-Tick)
-PioneerDDJFLX4.loopAdjustStepBeats = 0.02; // 2% Beat pro Tick
-
-// Fixe Loop-Länge für RELOOP/EXIT wenn kein Loop aktiv ist
-PioneerDDJFLX4.reloopExitBeats = 4;
-
-// Auto-timeout für Adjust-Mode (ms)
-PioneerDDJFLX4.loopAdjustTimeoutMs = 5000;
-
-// ------------------- STATE -------------------
-// pro Deck index (0/1) für Adjust-Flags (werden in beiden Modes genutzt)
-PioneerDDJFLX4.loopAdjustIn  = PioneerDDJFLX4.loopAdjustIn  || [false, false];
-PioneerDDJFLX4.loopAdjustOut = PioneerDDJFLX4.loopAdjustOut || [false, false];
-
-// Pending-Out (nur relevant in "hercules"): loop_in gesetzt, loop_out fehlt noch
-PioneerDDJFLX4._loopPendingOut = PioneerDDJFLX4._loopPendingOut || {
-  "[Channel1]": false,
-  "[Channel2]": false,
-};
 
 // Timer storage (Blink + Timeout)
 PioneerDDJFLX4._loopAdjustTimeoutTimer = PioneerDDJFLX4._loopAdjustTimeoutTimer || {
@@ -2621,7 +2583,6 @@ PioneerDDJFLX4._setBeatloopPadsLit = function(status, on) {
 // --- Sampler LED state machine ---
 
 // --- Sampler long-press ---
-PioneerDDJFLX4.SAMPLER_LONGPRESS_MS = 350;
 PioneerDDJFLX4._samplerHold = PioneerDDJFLX4._samplerHold || {
     timer: {},   // group -> timerId
     fired: {},   // group -> bool
@@ -2846,8 +2807,6 @@ PioneerDDJFLX4._quantizeLP = PioneerDDJFLX4._quantizeLP || {
     fired: {}
 };
 
-PioneerDDJFLX4.QUANTIZE_LONGPRESS_MS = 350;
-
 PioneerDDJFLX4.toggleQuantize = function (_channel, _control, value, _status, group) {
     const key = group; // pro Deck getrennt
 
@@ -2909,9 +2868,6 @@ PioneerDDJFLX4.toggleQuantize = function (_channel, _control, value, _status, gr
 // - Additionally, when entering KEYBOARD mode, call _refreshKeyboardStemLeds(channel)
 //   from padModeKeyPressed (das hast du schon).
 ///////////////////////////////////////////////////////////////
-
-// ------------------- CONFIG -------------------
-PioneerDDJFLX4.STEMS_PAD5_8_MODE = "solo"; // "fx" or "solo"
 
 // ------------------- CONSTANTS -------------------
 // (Ja: behalten. Wird fürs LED-Senden benutzt.)
