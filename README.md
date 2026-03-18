@@ -2,9 +2,8 @@
 
 Custom Mixxx controller mapping for the Pioneer DDJ-FLX4.
 
-This mapping started as the official FLX4 mapping but has been heavily modified
-and partially rewritten. Some components originate from my previous
-Hercules Inpulse 300 Mk2 mapping.
+This mapping started from the official FLX4 mapping but has been heavily modified
+and partially rewritten.
 
 The goal is a workflow that feels closer to standalone Pioneer players
 while still taking advantage of Mixxx features.
@@ -21,18 +20,20 @@ Older versions of Mixxx (e.g. 2.5) are not supported.
 
 ## Repository Structure
 
+```
 controllers/
   Pioneer-DDJ-FLX4-2.0.midi.xml
   Pioneer-DDJ-FLX4-2.0.script.js
 
 CONTROLS.md
-  Detailed controller behavior reference
-
 CONFIGURATION.md
-  Script configuration options
-
 CHANGELOG.md
-  Version history
+```
+
+* `controllers/` – actual mapping files
+* `CONTROLS.md` – detailed controller behavior
+* `CONFIGURATION.md` – script options
+* `CHANGELOG.md` – version history
 
 ---
 
@@ -40,37 +41,40 @@ CHANGELOG.md
 
 This repository contains the mapping implementation.
 
-The full controller documentation is maintained in the Mixxx manual
-documentation repository:
+The full controller documentation is maintained separately:
 
 https://github.com/ElHanko/manual/blob/feat/flx4-controller-doc/source/hardware/controllers/pioneer_ddj_flx4.rst
 
-Additional project documentation:
+Additional documentation in this repository:
 
-- `CONTROLS.md` – detailed control behavior
-- `CONFIGURATION.md` – script configuration options
-- `CHANGELOG.md` – project history
+* `CONTROLS.md` – control behavior reference
+* `CONFIGURATION.md` – configurable options
+* `CHANGELOG.md` – project history
+
 ---
 
 ## Features
 
-- Improved Beat FX behaviour
-- PAD FX1 / PAD FX2 implementation
-- Sampler LED state machine
-- Keyshift pad mode
-- Instant doubles
-- Browser focus toggle
-- Quantize / Keylock shortcuts
-- Vinyl mode toggle via **SHIFT + 4BEAT/EXIT**
-- Optional vinyl brake / soft start behaviour on the PLAY button
-- Configurable controller behaviour for selected features
+* Improved Beat FX behaviour
+* PAD FX1 / PAD FX2 implementation
+* Sampler LED state machine
+* Keyshift pad mode
+* Instant doubles
+* Browser focus control
+* Quantize / Keylock shortcuts
+* Vinyl mode toggle via **SHIFT + 4BEAT/EXIT**
+* Optional vinyl brake / soft-start behavior on PLAY
+* Banked hotcue system (up to 32 hotcues)
+* Script-driven LED logic
 
 ---
 
 ## Status
 
-Work in progress.  
-I will continue improving the mapping as I discover issues or new ideas.
+Work in progress.
+
+This mapping is actively used and updated when issues are found
+or improvements are identified.
 
 ---
 
