@@ -7,7 +7,7 @@
 // - Native FLX4 feel with deterministic behavior
 // - Engine-driven LED state (no controller-side guessing)
 // - Consistent short/long press semantics
-// - Hercules-style logic where Pioneer defaults are weak
+// - Custom behavior for improved consistency and usability
 //
 // This mapping is NOT a simple DDJ-400 port.
 // Large parts were redesigned from scratch.
@@ -34,7 +34,7 @@
 //     * Short press: play / load
 //     * Long press: stop
 //     * Shift: stop / eject
-// - Pad FX (Hercules-style):
+// - Pad FX (custom implementation):
 //     * PAD FX1 → EffectUnit 1/2
 //     * PAD FX2 → EffectUnit 3/4
 //     * Slot, Unit, Routing and All-On logic
@@ -54,7 +54,7 @@
 // Looping
 // - Dual loop behavior:
 //     * SIMPLE mode (default Mixxx-style)
-//     * HERCULES mode:
+//     * WORKFLOW mode:
 //         - loop_in / loop_out workflow
 //         - sample-based jog adjust
 //         - auto-timeout for adjust mode
@@ -183,14 +183,14 @@ PioneerDDJFLX4.QUANTIZE_LONGPRESS_MS = 350;
 // "simple"
 //     Classic Mixxx loop adjust behaviour.
 //
-// "hercules"
-//     Hercules-style workflow with pending loop-out and jog-based loop
+// "workflow"
+//     Extended loop workflow with pending loop-out and jog-based loop
 //     adjustment while a loop is active.
 //
 PioneerDDJFLX4.LOOP_ADJUST_MODE = "simple";
 
 
-// Step size (in beats) used when adjusting loop points in "hercules" mode.
+// Step size (in beats) used when adjusting loop points in "workflow" mode.
 //
 PioneerDDJFLX4.loopAdjustStepBeats = 0.02;
 
@@ -269,7 +269,7 @@ PioneerDDJFLX4.highResMSB = {
 PioneerDDJFLX4.loopAdjustIn = [false, false];
 PioneerDDJFLX4.loopAdjustOut = [false, false];
 
-// Pending-Out (nur relevant in "hercules"): loop_in gesetzt, loop_out fehlt noch
+// Pending-Out (nur relevant in "workflow"): loop_in gesetzt, loop_out fehlt noch
 PioneerDDJFLX4._loopPendingOut = {
     "[Channel1]": false,
     "[Channel2]": false,
@@ -705,7 +705,7 @@ PioneerDDJFLX4.waveformZoom = function (_ch, _ctrl, value /* 0x01 / 0x7F */, _st
     else if (value === 0x01) dir = "down";
     else return;
 
-    // "global" feel: apply to both decks (wie Hercules)
+    // "global" feel: apply to both decks
     script.triggerControl("[Channel1]", "waveform_zoom_" + dir, 50);
     script.triggerControl("[Channel2]", "waveform_zoom_" + dir, 50);
 };
@@ -1524,7 +1524,7 @@ PioneerDDJFLX4.beatFxLevelDepthRotate = function(_channel, control, value) {
         engine.setParameter(u, key, v);
     });
 };
-// ---- ON/OFF: toggle Unit + Slots 1..3 together (Hercules-style) ----
+// ---- ON/OFF: toggle Unit + Slots 1..3 together ----
 PioneerDDJFLX4._beatFxSetUnitAndSlots = function(u, on) {
     const unitIdx = PioneerDDJFLX4._beatFxUnitIdx(u);
     if (!unitIdx) return;
@@ -1563,7 +1563,7 @@ PioneerDDJFLX4.beatFxOnOffPressed = function(_channel, _control, value) {
 
     const anyOn = targets.some((u) => PioneerDDJFLX4._beatFxAnySlotOn(u));
 
-    // Hercules-/Pioneer-Logik:
+    // Pioneer-Logik:
     // irgendwas an -> alles aus
     // alles aus     -> alles an
     targets.forEach((u) => {
@@ -1619,7 +1619,7 @@ PioneerDDJFLX4.smartCfxPress = function(_ch, control, value, _status, _group) {
     PioneerDDJFLX4.setLed(0x96, 0x00, PioneerDDJFLX4._smartCfx.enabled);
 };
 ///////////////////////////////////////////////////////////////
-// PAD FX (Hercules-style) for FLX4
+// PAD FX for FLX4
 // - PAD FX1 Mode: Deck1->Unit1, Deck2->Unit2
 // - PAD FX2 Mode: Deck1->Unit3, Deck2->Unit4
 //
@@ -1692,7 +1692,7 @@ PioneerDDJFLX4._allSlotsOn = function(unitIdx) {
 };
 
 PioneerDDJFLX4._autoArmIfNeeded = function(unitIdx, group) {
-    // Hercules-like: if any slot is on -> ensure Unit enabled + routing to current deck ON
+    // if any slot is on -> ensure Unit enabled + routing to current deck ON
     if (!PioneerDDJFLX4._anySlotOn(unitIdx)) return;
 
     const U = PioneerDDJFLX4._U(unitIdx);
@@ -1843,7 +1843,7 @@ PioneerDDJFLX4.setPadModePadFx2 = function(_ch, _ctrl, value, _st, group) {
 //                 Loop OFF -> activate fixed N-beat loop (default 4)
 // - LOOP IN / OUT buttons:
 //    Mode "simple":    wie bisher: Adjust-Modus nur wenn Loop aktiv
-//    Mode "hercules":  wenn Loop aus:
+//    Mode "workflow":  wenn Loop aus:
 //                        IN  -> setzt loop_in + Pending-Out (OUT fehlt noch)
 //                        OUT -> setzt loop_out (und aktiviert Loop)
 //                      wenn Loop an:
@@ -2030,7 +2030,7 @@ PioneerDDJFLX4.reloopExitPressed = function(_channel, _control, value, _status, 
   script.triggerControl(group, "beatloop_activate");
 };
 
-// ------------------- HERCULES-STYLE HELPERS -------------------
+// -------------------  HELPERS -------------------
 PioneerDDJFLX4._samplesPerBeat = function(group) {
   const sr = engine.getValue(group, "track_samplerate");
   let bpm = engine.getValue(group, "bpm");
@@ -2062,9 +2062,9 @@ PioneerDDJFLX4._adjustLoopEdge = function(group, edge /*"in"|"out"*/, interval /
   engine.setValue(group, "loop_end_position",   b);
 };
 
-// Hook für jogTurn(): in hercules-mode sample-based adjust
+// Hook für jogTurn(): in workflow-mode sample-based adjust
 PioneerDDJFLX4._handleJogLoopAdjust = function(channelIdx, group, jogDelta /*signed*/, controlForBlink, statusForLed) {
-  if (PioneerDDJFLX4.LOOP_ADJUST_MODE !== "hercules") return false;
+  if (PioneerDDJFLX4.LOOP_ADJUST_MODE !== "workflow") return false;
 
   const loopOn = engine.getValue(group, "loop_enabled") > 0;
   if (!loopOn) return false;
@@ -2089,8 +2089,8 @@ PioneerDDJFLX4.toggleLoopAdjustIn = function(channelIdx, control, value, _status
   const loopOn = engine.getValue(group, "loop_enabled") > 0;
   const st = (group === "[Channel1]") ? 0x90 : 0x91;
 
-  // --- HERCULES MODE ---
-  if (PioneerDDJFLX4.LOOP_ADJUST_MODE === "hercules") {
+  // --- workflow MODE ---
+  if (PioneerDDJFLX4.LOOP_ADJUST_MODE === "workflow") {
     if (!loopOn) {
       // pending already? -> cancel
       if (PioneerDDJFLX4._loopPendingOut[group]) {
@@ -2138,8 +2138,8 @@ PioneerDDJFLX4.toggleLoopAdjustOut = function(channelIdx, control, value, _statu
   const loopOn = engine.getValue(group, "loop_enabled") > 0;
   const st = (group === "[Channel1]") ? 0x90 : 0x91;
 
-  // --- HERCULES MODE ---
-  if (PioneerDDJFLX4.LOOP_ADJUST_MODE === "hercules") {
+  // --- workflow MODE ---
+  if (PioneerDDJFLX4.LOOP_ADJUST_MODE === "workflow") {
     if (!loopOn) {
       // set loop out (also activates loop)
       script.triggerControl(group, "loop_out");
@@ -2287,7 +2287,7 @@ PioneerDDJFLX4.cycleTempoRange = function(_ch, _ctrl, value, _status, group) {
 };
 
 ///////////////////////////////////////////////////////////////
-// Jog wheels (FLX4) – stateful scratch/bend (Hercules-style light)
+// Jog wheels (FLX4) – stateful scratch/bend 
 //
 // Goals:
 // - Loop-adjust has priority (your existing _handleJogLoopAdjust hook stays).
@@ -2844,7 +2844,7 @@ PioneerDDJFLX4.toggleQuantize = function (_channel, _control, value, _status, gr
 //
 // Pads 5–8: configurable via STEMS_PAD5_8_MODE
 //   - "fx"   (default): toggle Stem QuickEffect enabled, Shift = next preset
-//   - "solo" (Hercules-style momentary):
+//   - "solo" ( momentary):
 //        Pad held        -> SOLO (only that stem unmuted, others muted)
 //        Shift + held    -> HOLD-MUTE (only that stem muted, others unmuted)
 //        Release         -> restore previous mute state
