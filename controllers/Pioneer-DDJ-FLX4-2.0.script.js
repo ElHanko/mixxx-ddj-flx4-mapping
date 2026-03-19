@@ -251,6 +251,30 @@ PioneerDDJFLX4.loopAdjustMultiply = 50;
 //
 PioneerDDJFLX4.STEMS_PAD5_8_MODE = "solo";
 
+// ============================================================
+// FX response tuning
+// ============================================================
+//
+// Keep these options explicit and easy to find.
+// Default should stay conservative to avoid surprising users.
+
+PioneerDDJFLX4.fxTuning = PioneerDDJFLX4.fxTuning || {
+    // Beat FX knob shaping:
+    // false = linear/default Mixxx-style response
+    // true  = apply custom response curves
+    shapedBeatFxKnob: false,
+
+    // Color / Smart CFX filter knob shaping:
+    // false = linear/default XML-style response
+    // true  = apply symmetric center curve in JS
+    shapedFilterKnob: false,
+
+    // Curve strengths (only used when shaping is enabled)
+    beatFxSuperExp: 1.5,
+    beatFxMixExp: 1.2,
+    filterCenterExp: 1.8
+};
+
 // -----------------------------------------------------------------------------
 // STATE
 // -----------------------------------------------------------------------------
@@ -1519,8 +1543,16 @@ PioneerDDJFLX4.beatFxLevelDepthRotate = function(_channel, control, value) {
     const isShift = !!PioneerDDJFLX4.shiftDown;
     const key = isShift ? "mix" : "super1";
 
-    (PioneerDDJFLX4._beatFxTargets ? PioneerDDJFLX4._beatFxTargets() : []).forEach((u) => {
-        engine.setParameter(u, key, v);
+    let out = v;
+
+    if (PioneerDDJFLX4.fxTuning.shapedBeatFxKnob) {
+        out = isShift
+            ? Math.pow(v, PioneerDDJFLX4.fxTuning.beatFxMixExp)
+            : Math.pow(v, PioneerDDJFLX4.fxTuning.beatFxSuperExp);
+    }
+
+    PioneerDDJFLX4._beatFxTargets().forEach((u) => {
+        engine.setParameter(u, key, out);
     });
 };
 // ---- ON/OFF: toggle Unit + Slots 1..3 together ----
@@ -1617,6 +1649,121 @@ PioneerDDJFLX4.smartCfxPress = function(_ch, control, value, _status, _group) {
     // LED feedback (SMART CFX button)
     PioneerDDJFLX4.setLed(0x96, 0x00, PioneerDDJFLX4._smartCfx.enabled);
 };
+
+/**
+ * Shapes a linear value (0..1) into a symmetric curve around the center (0.5).
+ *
+ * Purpose:
+ * - Keep the center (neutral filter position) stable and easy to control
+ * - Increase sensitivity toward the edges (stronger LPF/HPF effect)
+ * - Maintain symmetry (left = LPF, right = HPF)
+ *
+ * @param {number} v   - linear input value (0..1)
+ * @param {number} exp - curve exponent:
+ *                       ~1.6 = softer response
+ *                       ~1.8 = good default
+ *                       ~2.0 = stronger effect at edges
+ *
+ * @returns {number}   - shaped output value (0..1)
+ */
+PioneerDDJFLX4._centerCurve = function(v, exp) {
+    let x = v - 0.5;               // shift center (0.5 → 0)
+    const sign = x < 0 ? -1 : 1;   // remember direction (left/right)
+
+    x = Math.abs(x) * 2;           // map 0..0.5 → 0..1
+    x = Math.pow(x, exp) / 2;      // apply curve, scale back
+
+    return 0.5 + sign * x;         // restore original range (0..1)
+};
+
+/**
+ * Storage for 14-bit MIDI values (MSB + LSB).
+ *
+ * Why:
+ * - The controller sends high-resolution knob data in two parts
+ * - We need to combine them into a single 0..16383 value
+ * - Then normalize to 0..1
+ *
+ * Separate storage per channel (ch1 / ch2).
+ */
+PioneerDDJFLX4._filterKnob = PioneerDDJFLX4._filterKnob || {
+    ch1: { msb: 0, lsb: 0 },
+    ch2: { msb: 0, lsb: 0 }
+};
+
+/**
+ * Last received values to suppress duplicate MIDI events.
+ *
+ * Some controllers repeatedly send identical values → unnecessary updates.
+ */
+PioneerDDJFLX4._filterKnobLast = PioneerDDJFLX4._filterKnobLast || {
+    ch1: { msb: -1, lsb: -1 },
+    ch2: { msb: -1, lsb: -1 }
+};
+
+/**
+ * Handles the Color FX / Filter knob for Channel 1.
+ *
+ * Steps:
+ * 1. Combine MSB + LSB into a 14-bit value
+ * 2. Normalize to 0..1
+ * 3. Apply center curve (better filter behavior)
+ * 4. Send result to Mixxx (QuickEffectRack super1)
+ */
+PioneerDDJFLX4.filterCh1Rotate = function(_channel, control, value) {
+    if (control === 0x17) {
+        if (PioneerDDJFLX4._filterKnobLast.ch1.msb === value) return;
+        PioneerDDJFLX4._filterKnobLast.ch1.msb = value;
+        PioneerDDJFLX4._filterKnob.ch1.msb = value & 0x7F;
+    } else if (control === 0x37) {
+        if (PioneerDDJFLX4._filterKnobLast.ch1.lsb === value) return;
+        PioneerDDJFLX4._filterKnobLast.ch1.lsb = value;
+        PioneerDDJFLX4._filterKnob.ch1.lsb = value & 0x7F;
+    } else {
+        return;
+    }
+
+    const full14 = (PioneerDDJFLX4._filterKnob.ch1.msb << 7)
+                 | PioneerDDJFLX4._filterKnob.ch1.lsb;
+
+    const v = full14 / 0x3FFF;
+
+    const out = PioneerDDJFLX4.fxTuning.shapedFilterKnob
+        ? PioneerDDJFLX4._centerCurve(v, PioneerDDJFLX4.fxTuning.filterCenterExp)
+        : v;
+
+    engine.setParameter("[QuickEffectRack1_[Channel1]]", "super1", out);
+};
+
+/**
+ * Same logic as Channel 1, applied to Channel 2.
+ * Only MIDI controls and target group differ.
+ */
+PioneerDDJFLX4.filterCh2Rotate = function(_channel, control, value) {
+    if (control === 0x18) {
+        if (PioneerDDJFLX4._filterKnobLast.ch2.msb === value) return;
+        PioneerDDJFLX4._filterKnobLast.ch2.msb = value;
+        PioneerDDJFLX4._filterKnob.ch2.msb = value & 0x7F;
+    } else if (control === 0x38) {
+        if (PioneerDDJFLX4._filterKnobLast.ch2.lsb === value) return;
+        PioneerDDJFLX4._filterKnobLast.ch2.lsb = value;
+        PioneerDDJFLX4._filterKnob.ch2.lsb = value & 0x7F;
+    } else {
+        return;
+    }
+
+    const full14 = (PioneerDDJFLX4._filterKnob.ch2.msb << 7)
+                 | PioneerDDJFLX4._filterKnob.ch2.lsb;
+
+    const v = full14 / 0x3FFF;
+
+    const out = PioneerDDJFLX4.fxTuning.shapedFilterKnob
+        ? PioneerDDJFLX4._centerCurve(v, PioneerDDJFLX4.fxTuning.filterCenterExp)
+        : v;
+
+    engine.setParameter("[QuickEffectRack1_[Channel2]]", "super1", out);
+};
+
 ///////////////////////////////////////////////////////////////
 // PAD FX for FLX4
 // - PAD FX1 Mode: Deck1->Unit1, Deck2->Unit2

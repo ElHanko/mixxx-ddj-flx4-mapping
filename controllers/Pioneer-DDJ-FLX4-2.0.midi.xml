@@ -915,46 +915,64 @@
       </control>
       <!-- MIXER Section END -->
       <!-- EFFECT Section START -->
-      <control>
-        <description>FILTER CH1 - rotate - Filter Effect Knob</description>
-        <group>[QuickEffectRack1_[Channel1]]</group>
-        <key>super1</key>
-        <status>0xB6</status>
-        <midino>0x17</midino>
-        <options>
-          <fourteen-bit-msb />
-        </options>
-      </control>
-      <control>
-        <description>FILTER CH1 - rotate - Filter Effect Knob</description>
-        <group>[QuickEffectRack1_[Channel1]]</group>
-        <key>super1</key>
-        <status>0xB6</status>
-        <midino>0x37</midino>
-        <options>
-          <fourteen-bit-lsb />
-        </options>
-      </control>
-      <control>
-        <description>FILTER CH2 - rotate - Filter Effect Knob</description>
-        <group>[QuickEffectRack1_[Channel2]]</group>
-        <key>super1</key>
-        <status>0xB6</status>
-        <midino>0x18</midino>
-        <options>
-          <fourteen-bit-msb />
-        </options>
-      </control>
-      <control>
-        <description>FILTER CH2 - rotate - Filter Effect Knob</description>
-        <group>[QuickEffectRack1_[Channel2]]</group>
-        <key>super1</key>
-        <status>0xB6</status>
-        <midino>0x38</midino>
-        <options>
-          <fourteen-bit-lsb />
-        </options>
-      </control>
+<!-- ========================================================= -->
+<!-- Color FX / Filter knob - Channel 1                        -->
+<!-- Uses JS processing instead of direct XML -> super1        -->
+<!-- so we can apply a symmetric center curve around 0.5.      -->
+<!-- ========================================================= -->
+
+<control>
+    <description>FILTER CH1 - rotate - Filter Effect Knob (MSB, script)</description>
+    <group>[QuickEffectRack1_[Channel1]]</group>
+    <key>PioneerDDJFLX4.filterCh1Rotate</key>
+    <status>0xB6</status>
+    <midino>0x17</midino>
+    <options>
+        <fourteen-bit-msb />
+        <script-binding />
+    </options>
+</control>
+
+<control>
+    <description>FILTER CH1 - rotate - Filter Effect Knob (LSB, script)</description>
+    <group>[QuickEffectRack1_[Channel1]]</group>
+    <key>PioneerDDJFLX4.filterCh1Rotate</key>
+    <status>0xB6</status>
+    <midino>0x37</midino>
+    <options>
+        <fourteen-bit-lsb />
+        <script-binding />
+    </options>
+</control>
+
+<!-- ========================================================= -->
+<!-- Color FX / Filter knob - Channel 2                        -->
+<!-- Same idea as CH1, but routed to QuickEffectRack Channel 2 -->
+<!-- ========================================================= -->
+
+<control>
+    <description>FILTER CH2 - rotate - Filter Effect Knob (MSB, script)</description>
+    <group>[QuickEffectRack1_[Channel2]]</group>
+    <key>PioneerDDJFLX4.filterCh2Rotate</key>
+    <status>0xB6</status>
+    <midino>0x18</midino>
+    <options>
+        <fourteen-bit-msb />
+        <script-binding />
+    </options>
+</control>
+
+<control>
+    <description>FILTER CH2 - rotate - Filter Effect Knob (LSB, script)</description>
+    <group>[QuickEffectRack1_[Channel2]]</group>
+    <key>PioneerDDJFLX4.filterCh2Rotate</key>
+    <status>0xB6</status>
+    <midino>0x38</midino>
+    <options>
+        <fourteen-bit-lsb />
+        <script-binding />
+    </options>
+</control>
       <!-- SMART CFX -->
       <control>
         <description>SMART CFX - press - toggle Smart CFX mode</description>
