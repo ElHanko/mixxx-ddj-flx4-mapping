@@ -2,11 +2,8 @@
 
 Custom Mixxx controller mapping for the Pioneer DDJ-FLX4.
 
-This mapping started from the official FLX4 mapping but has been heavily modified
-and partially rewritten.
-
-The goal is a workflow that feels closer to standalone Pioneer players
-while still taking advantage of Mixxx features.
+This mapping replaces large parts of the stock FLX4 mapping with
+script-driven logic to achieve consistent behavior and deterministic control flow.
 
 ---
 
@@ -14,58 +11,69 @@ while still taking advantage of Mixxx features.
 
 This mapping targets **Mixxx 2.6 or newer**.
 
-Older versions of Mixxx (e.g. 2.5) are not supported.
+Older versions (e.g. 2.5) are not supported.
 
 ---
 
 ## Repository Structure
 
-```
+
 controllers/
-  Pioneer-DDJ-FLX4-2.0.midi.xml
-  Pioneer-DDJ-FLX4-2.0.script.js
+Pioneer-DDJ-FLX4-2.0.midi.xml
+Pioneer-DDJ-FLX4-2.0.script.js
 
 CONTROLS.md
 CONFIGURATION.md
 CHANGELOG.md
-```
 
-* `controllers/` – actual mapping files
-* `CONTROLS.md` – detailed controller behavior
-* `CONFIGURATION.md` – script options
+
+* `controllers/` – mapping implementation
+* `CONTROLS.md` – complete control reference
+* `CONFIGURATION.md` – script configuration
 * `CHANGELOG.md` – version history
 
 ---
 
 ## Documentation
 
-This repository contains the mapping implementation.
-
-The full controller documentation is maintained separately:
+Detailed controller documentation is maintained separately:
 
 https://github.com/ElHanko/manual/blob/feat/flx4-controller-doc/source/hardware/controllers/pioneer_ddj_flx4.rst
 
-Additional documentation in this repository:
+This repository focuses on:
 
-* `CONTROLS.md` – control behavior reference
-* `CONFIGURATION.md` – configurable options
-* `CHANGELOG.md` – project history
+* implementation
+* behavior definition
+* configuration
+
+---
+
+## Core Characteristics
+
+This mapping differs from the stock implementation in several key areas:
+
+* Script-driven LED handling based on Mixxx engine state
+* Deterministic button behavior (no implicit toggle assumptions)
+* Centralized pad logic per mode
+* Stateful loop workflow with jog-based adjustment
+* Banked hotcue system (up to 32 hotcues)
+* Explicit short/long press handling for shared controls
 
 ---
 
 ## Features
 
-* Improved Beat FX behaviour
-* PAD FX1 / PAD FX2 implementation
-* Sampler LED state machine
-* Keyshift pad mode
-* Instant doubles
-* Browser focus control
-* Quantize / Keylock shortcuts
+* Beat FX system with group + variant control
+* Custom Pad FX layers (FX1 / FX2)
+* Sampler with explicit LED state machine (off / solid / blink)
+* STEMS mode on Keyboard layer
+* Keyshift pad mode (semitone mapping)
+* Instant doubles via LOAD double press
+* Configurable browser focus behavior
+* Quantize / Keylock on shared control (short / long press)
 * Vinyl mode toggle via **SHIFT + 4BEAT/EXIT**
-* Optional vinyl brake / soft-start behavior on PLAY
-* Banked hotcue system (up to 32 hotcues)
-* Script-driven LED logic
+* Optional vinyl brake / soft-start on PLAY
+* Script-controlled VU meters with peak hold
 
 ---
 
@@ -73,8 +81,11 @@ Additional documentation in this repository:
 
 Work in progress.
 
-This mapping is actively used and updated when issues are found
-or improvements are identified.
+The mapping is actively used and updated based on:
+
+* real-world usage
+* identified inconsistencies
+* engine behavior changes
 
 ---
 

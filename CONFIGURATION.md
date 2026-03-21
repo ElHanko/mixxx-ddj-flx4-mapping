@@ -2,7 +2,7 @@
 
 This file documents script configuration options available in the mapping.
 
-These values can be changed directly in the mapping script.
+All values are defined directly in the script and must be modified there.
 
 ---
 
@@ -10,24 +10,26 @@ These values can be changed directly in the mapping script.
 
 ## BROWSE_FOCUS_TOGGLE_ONLY
 
-Toggle between simple focus switching and full Mixxx focus cycling.
+Controls browse encoder press behavior.
 
 true  
-Browse press toggles only between:
+Toggle only between:
 
 • library tree  
-• track table
+• track table  
 
 false  
-Use Mixxx default focus cycling.
+Use full Mixxx focus cycling.
+
+Default: false
 
 ---
 
 ## BROWSE_LONGPRESS_MS
 
-Reserved for possible long-press browser behavior.
+Reserved for future long-press handling of the browse encoder.
 
-Currently unused.
+Currently not used.
 
 Default: 300
 
@@ -37,7 +39,11 @@ Default: 300
 
 ## SAMPLER_LONGPRESS_MS
 
-Time threshold for detecting sampler long press.
+Threshold for detecting long press on sampler pads.
+
+Used for:
+
+• stop vs trigger behavior  
 
 Default: 350 ms
 
@@ -47,10 +53,13 @@ Default: 350 ms
 
 ## QUANTIZE_LONGPRESS_MS
 
-Long press threshold for mixer cue buttons.
+Long-press threshold for **Shift + Channel Cue buttons**.
 
-Short press → quantize  
-Long press → keylock
+Short press  
+→ toggle quantize  
+
+Long press  
+→ toggle keylock  
 
 Default: 350 ms
 
@@ -60,15 +69,19 @@ Default: 350 ms
 
 ## LOOP_ADJUST_MODE
 
-Controls loop adjust workflow.
+Selects loop adjustment model.
 
 Options:
 
 simple  
-Standard Mixxx loop adjustment
+Basic Mixxx-style loop adjustment  
 
-hercules  
-Hercules-style loop workflow with jog-based loop edge editing
+workflow  
+Stateful loop workflow with:
+
+• pending loop-out state  
+• jog-based loop edge editing  
+• optional timeout  
 
 Default: simple
 
@@ -76,7 +89,9 @@ Default: simple
 
 ## loopAdjustStepBeats
 
-Step size used for loop edge adjustment.
+Step size for jog-based loop edge adjustment.
+
+Used in both modes.
 
 Default: 0.02
 
@@ -84,15 +99,17 @@ Default: 0.02
 
 ## loopAdjustTimeoutMs
 
-Time until loop adjust mode exits automatically.
+Timeout for automatic exit of loop-adjust mode.
 
-Default: 5000
+Only relevant in `workflow` mode.
+
+Default: 5000 ms
 
 ---
 
 ## reloopExitBeats
 
-Default loop size created by 4BEAT/EXIT if no loop exists.
+Default loop size when pressing 4BEAT/EXIT without an existing loop.
 
 Default: 4
 
@@ -102,17 +119,23 @@ Default: 4
 
 ## quickJumpSize
 
-Beat jump size used for quick jump commands.
+Step size for quick jump actions.
 
-Default: 32
+Used by:
+
+• Shift + loop call buttons  
+
+Default: 32 beats
 
 ---
 
-# Jog behavior
+# Jog Behavior
 
 ## fastSeekScale
 
-Multiplier used for Shift + jog search.
+Multiplier for Shift + jog fast seek.
+
+Higher value = faster movement.
 
 Default: 150
 
@@ -122,13 +145,17 @@ Default: 150
 
 Pitch bend sensitivity.
 
+Affects jog behavior when not scratching.
+
 Default: 0.8
 
 ---
 
 ## loopAdjustMultiply
 
-Legacy multiplier for simple loop adjust mode.
+Legacy multiplier used in `simple` loop mode.
+
+Not used in `workflow` mode.
 
 Default: 50
 
@@ -136,7 +163,9 @@ Default: 50
 
 ## jogPPR
 
-Jog pulses per revolution.
+Jog resolution (pulses per revolution).
+
+Used for scratch calculations.
 
 Default: 720
 
@@ -144,7 +173,9 @@ Default: 720
 
 ## jogRPM
 
-Virtual platter speed.
+Virtual platter rotation speed.
+
+Used for scratch simulation.
 
 Default: 33⅓
 
@@ -152,7 +183,7 @@ Default: 33⅓
 
 ## scratchScale
 
-Scratch movement scaling.
+Scaling factor for scratch movement.
 
 Default: 1.0
 
@@ -160,7 +191,7 @@ Default: 1.0
 
 ## seekScratchMultiplier
 
-Speed multiplier for seek scratch mode.
+Speed multiplier for seek-style scratch (Shift + touch).
 
 Default: 4.0
 
@@ -170,41 +201,46 @@ Default: 4.0
 
 ## STEMS_PAD5_8_MODE
 
-Controls behavior of pads 5-8 in STEMS mode.
+Controls behavior of pads 5–8 in STEMS mode.
 
 Options:
 
 solo  
-Momentary solo / hold-mute behavior
+Momentary solo / hold-mute  
 
 fx  
-Pads control stem quick effects
+Control stem QuickEffect  
 
 Default: solo
 
 ---
 
-# Optional Vinyl Brake
+# Transport / Vinyl Behavior
 
 ## PLAY_BRAKE_ON_VINYL
 
-Enables optional vinyl start/stop behavior for Play button.
+Enables vinyl-style transport behavior on PLAY button.
 
 false  
-Play behaves normally
+Standard Play / Pause  
 
 true  
-Play triggers vinyl brake / soft start when Vinyl mode is active
+When Vinyl mode is active:
+
+• stopped → soft start  
+• playing → brake  
+• during brake → cancel + resume  
 
 Default: false
 
 ---
 
-## Vinyl FX parameters
+## vinylFx
+
+Controls strength of vinyl-style transport effects.
+
+```js
 vinylFx = {
-brakeFactor: 10,
-softStartFactor: 15
-}
-
-
-Control strength of brake and soft start.
+    brakeFactor: 10,
+    softStartFactor: 15
+};
