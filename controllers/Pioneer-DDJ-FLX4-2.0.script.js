@@ -3,86 +3,126 @@
 // Mixxx MIDI Mapping for Pioneer DDJ-FLX4
 // =============================================================================
 //
-// Design goals:
-// - Native FLX4 feel with predictable and consistent behavior
-// - Engine-driven LED state (avoids relying on controller assumptions)
-// - Consistent short/long press semantics
-// - Custom behavior for improved consistency and usability
+// This mapping replaces large parts of the stock FLX4 mapping with
+// script-driven logic to achieve deterministic behavior and consistent
+// LED feedback based on Mixxx engine state.
 //
-// Large parts were redesigned from scratch.
+// The implementation focuses on predictable control flow, explicit state
+// handling and separation of concerns between MIDI input, engine control
+// and LED output.
 //
 // -----------------------------------------------------------------------------
-// Implemented Features
+// Core Characteristics
 // -----------------------------------------------------------------------------
 //
-// Decks / Transport
-// - Play / Cue with proper LED sync
-// Beat Sync:
-//   short press -> one-shot beatsync
-//   long press  -> toggle sync lock (sync_enabled)
-// - Vinyl mode with real hardware state control
-// - Jog wheels with:
-//     * Scratch / bend decision on touch
-//     * Controller-reported vinyl mode awareness
-//     * Loop-adjust priority
+// - Script-driven pad handling (no direct XML-only logic for pads)
+// - Engine-state-based LED feedback (no blind controller assumptions)
+// - Deterministic button behavior (no implicit toggles)
+// - Consistent short/long press handling where applicable
+// - Explicit state tracking for subsystems (loop, sampler, hotcue, brake)
 //
-// Pads & Pad Modes
-// - Hotcue
-// - Beat Jump (static pad LEDs)
-// - Beat Loop (static pad LEDs, separate from Beatjump)
-// - Sampler mode:
-//     * LED state machine (off / solid / blink)
-//     * Short press: play / load
-//     * Long press: stop
-//     * Shift: stop / eject
-// - Pad FX (engine-driven effect control layer):
-//     * PAD FX1 → EffectUnit 1/2
-//     * PAD FX2 → EffectUnit 3/4
-//     * Slot, Unit, Routing and All-On logic
-//     * Full engine → controller LED sync
-// - Keyboard mode used as STEMS:
-//     * Pads 1–4: stem mute
-//     * Pads 5–8: momentary solo / hold-mute (configurable)
+// -----------------------------------------------------------------------------
+// Implemented Subsystems
+// -----------------------------------------------------------------------------
 //
-// Effects
-// - Beat FX completely reworked:
-//     * Proper slot-aware ON/OFF logic
-//     * Any-slot-on → LED on
-//     * Press while partially enabled → all off
-//     * Deterministic routing per deck
-//     * Engine-driven LED sync (no first-press desync)
+// Transport
+// - Play / Cue with engine-synced LED handling
+// - Beat Sync:
+//     * short press -> beatsync (one-shot)
+//     * long press  -> sync_enabled toggle
+// - Vinyl mode (per deck) with controller-state awareness
+// - Optional Play-button brake / soft-start logic
+//
+// Jog Handling
+// - Scratch vs bend decision based on:
+//     * deck play state
+//     * controller vinyl mode
+//     * touch state
+// - Shifted jog behavior for fast seek / high-speed bend
+// - Loop-adjust mode overrides normal jog behavior
+//
+// Hotcues
+// - 4 banks × 8 hotcues (1–32)
+// - Bank switching via HOT CUE mode button re-press
+// - Optional preview-on-hold when deck is stopped
+// - Saved loops (type 4) blink via timer
+// - Script-controlled LED updates per active bank
+//
+// Pads
+// - Central pad handler per mode (Hotcue, Beat Jump, Beat Loop, Sampler, STEMS, Key Shift)
+// - Static LED modes where appropriate (Beat Jump / Beat Loop)
+// - Sampler:
+//     * explicit LED state machine (off / solid / blink)
+//     * long-press detection
+//
+// STEMS
+// - Pads 1–4: mute / isolate
+// - Pads 5–8: configurable behavior ("solo" or "fx")
+// - LED state derived from engine stem state and availability
+//
+// Beat FX
+// - Preset grouping with:
+//     * group index
+//     * variant index
+//     * absolute preset index
+// - FX SELECT cycles groups
+// - BEAT LEFT / RIGHT cycles variants
+// - Slot-aware ON/OFF logic
+// - Deterministic routing:
+//     * Unit1 -> Channel1
+//     * Unit2 -> Channel2
+// - 14-bit LEVEL/DEPTH handling
+//
+// Color FX / QuickEffect
+// - Smart CFX enable toggle (engine-driven)
+// - SHIFT + SMART CFX cycles QuickEffect presets
+// - 14-bit filter knob handling
+// - Optional response shaping around center position
 //
 // Looping
-// - Dual loop behavior:
-//     * SIMPLE mode (default Mixxx-style)
-//     * WORKFLOW mode:
-//         - loop_in / loop_out workflow
-//         - sample-based jog adjust
-//         - auto-timeout for adjust mode
-// - RELOOP/EXIT with sensible fallback when no loop exists
+// - Two loop models:
+//     * simple (direct)
+//     * workflow-based (stateful)
+// - LOOP IN / OUT wrappers with explicit state tracking
+// - Pending loop-out state
+// - Jog-based loop adjustment (sample-accurate)
+// - Optional adjust timeout
+//
+// Library / Navigation
+// - Configurable browse encoder behavior
+// - Optional sidebar/table toggle
+// - Waveform zoom control
+// - Tempo range cycling
+// - Instant doubles via LOAD double-press
 //
 // Quantize / Keylock
-// - Short press: Quantize toggle
-// - Long press: Keylock toggle
+// - Shared control with short/long press separation
 //
 // Visual Feedback
-// - Accurate VU meters with peak latch
-// - Static pad LEDs for mode indication
-// - Blink timers isolated per subsystem (Sampler / Loop / FX)
+// - Centralized LED update functions per subsystem
+// - Timer-driven blinking (sampler, hotcue, loop)
+// - VU meters with peak latch
 //
 // -----------------------------------------------------------------------------
-// Explicitly NOT implemented
+// Not Implemented
 // -----------------------------------------------------------------------------
+//
 // - Smart Fader
-// - Smart CFX presets beyond basic toggle
-// - Secondary experimental pad layers
-//
-// These are intentionally omitted to avoid half-working features.
+// - Dedicated Vinyl LED feedback
+// - Backspin inertia simulation
+// - Additional experimental pad layers
 //
 // -----------------------------------------------------------------------------
-// Note:
-// - This mapping relies on multiple timer-based subsystems (loop, sampler, hotcue).
-// - Changes to timer handling should be made carefully to avoid unintended side effects.
+// Notes
+// -----------------------------------------------------------------------------
+//
+// - Script logic is the authoritative behavior definition.
+//   XML mappings should be considered input routing only.
+//
+// - Several features rely on timers. Timer lifecycle must remain consistent.
+//
+// - Engine connections (engine.makeConnection) are used for LED updates
+//   and must be kept in sync with active state (e.g. hotcue banks).
 //
 // =============================================================================
 
