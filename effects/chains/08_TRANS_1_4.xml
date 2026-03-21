@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <EffectChain>
- <Name>TRANS_DJ</Name>
+ <Name>08_TRANS_1_4</Name>
  <MixMode>DRY/WET</MixMode>
  <SuperParameterValue>0.28</SuperParameterValue>
  <Effects>

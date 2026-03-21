@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <EffectChain>
- <Name>ECHO_DJ</Name>
+ <Name>04_ECHO_2</Name>
  <MixMode>DRY+WET</MixMode>
  <SuperParameterValue>0.38</SuperParameterValue>
  <Effects>

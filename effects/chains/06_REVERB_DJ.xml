@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <EffectChain>
- <Name>REVERB_DJ</Name>
+ <Name>06_REVERB_DJ</Name>
  <MixMode>DRY+WET</MixMode>
  <SuperParameterValue>0.45</SuperParameterValue>
  <Effects>

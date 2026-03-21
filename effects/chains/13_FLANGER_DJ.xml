@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <EffectChain>
- <Name>FLANGER_DJ</Name>
+ <Name>13_FLANGER_DJ</Name>
  <MixMode>DRY/WET</MixMode>
  <SuperParameterValue>0.35</SuperParameterValue>
  <Effects>
