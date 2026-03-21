@@ -1,0 +1,69 @@
+<?xml version='1.0' encoding='utf-8'?>
+<EffectChain>
+ <Name>FLANGER_DJ</Name>
+ <MixMode>DRY/WET</MixMode>
+ <SuperParameterValue>0.35</SuperParameterValue>
+ <Effects>
+  <Effect>
+   <MetaParameterValue>0</MetaParameterValue>
+   <Id>org.mixxx.effects.flanger</Id>
+   <BackendType>Built-In</BackendType>
+   <Parameters>
+
+    <!-- Rate bleibt konstant -->
+    <Parameter>
+     <Id>speed</Id>
+     <Value>8</Value>
+     <LinkType>NONE</LinkType>
+     <LinkInversion>0</LinkInversion>
+     <Hidden>0</Hidden>
+    </Parameter>
+
+    <!-- Breite moderat -->
+    <Parameter>
+     <Id>width</Id>
+     <Value>6.0</Value>
+     <LinkType>NONE</LinkType>
+     <LinkInversion>0</LinkInversion>
+     <Hidden>0</Hidden>
+    </Parameter>
+
+    <!-- Basisposition -->
+    <Parameter>
+     <Id>manual</Id>
+     <Value>6.5</Value>
+     <LinkType>NONE</LinkType>
+     <LinkInversion>0</LinkInversion>
+     <Hidden>0</Hidden>
+    </Parameter>
+
+    <!-- FEEDBACK = wichtigster Charakter-Parameter -->
+    <Parameter>
+     <Id>regen</Id>
+     <Value>0.15</Value>
+     <LinkType>LINKED</LinkType>
+     <LinkInversion>0</LinkInversion>
+     <Hidden>0</Hidden>
+    </Parameter>
+
+    <!-- Effektanteil -->
+    <Parameter>
+     <Id>mix</Id>
+     <Value>0.35</Value>
+     <LinkType>LINKED</LinkType>
+     <LinkInversion>0</LinkInversion>
+     <Hidden>0</Hidden>
+    </Parameter>
+
+    <Parameter>
+     <Id>triplet</Id>
+     <Value>0</Value>
+     <LinkType>NONE</LinkType>
+     <LinkInversion>0</LinkInversion>
+     <Hidden>0</Hidden>
+    </Parameter>
+
+   </Parameters>
+  </Effect>
+ </Effects>
+</EffectChain>

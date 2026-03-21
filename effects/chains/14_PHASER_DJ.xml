@@ -1,0 +1,77 @@
+<?xml version='1.0' encoding='utf-8'?>
+<EffectChain>
+ <Name>PHASER_DJ</Name>
+ <MixMode>DRY/WET</MixMode>
+ <SuperParameterValue>0.35</SuperParameterValue>
+ <Effects>
+  <Effect>
+   <MetaParameterValue>0</MetaParameterValue>
+   <Id>org.mixxx.effects.phaser</Id>
+   <BackendType>Built-In</BackendType>
+   <Parameters>
+
+    <!-- Rate konstant lassen -->
+    <Parameter>
+     <Id>lfo_period</Id>
+     <Value>1</Value>
+     <LinkType>NONE</LinkType>
+     <LinkInversion>0</LinkInversion>
+     <Hidden>0</Hidden>
+    </Parameter>
+
+    <!-- FEEDBACK = entscheidend für Charakter -->
+    <Parameter>
+     <Id>feedback</Id>
+     <Value>0.2</Value>
+     <LinkType>LINKED</LinkType>
+     <LinkInversion>0</LinkInversion>
+     <Hidden>0</Hidden>
+    </Parameter>
+
+    <!-- Sweep-Bereich -->
+    <Parameter>
+     <Id>range</Id>
+     <Value>0.9</Value>
+     <LinkType>NONE</LinkType>
+     <LinkInversion>0</LinkInversion>
+     <Hidden>0</Hidden>
+    </Parameter>
+
+    <!-- Anzahl Stages → Klangfarbe -->
+    <Parameter>
+     <Id>stages</Id>
+     <Value>7</Value>
+     <LinkType>NONE</LinkType>
+     <LinkInversion>0</LinkInversion>
+     <Hidden>0</Hidden>
+    </Parameter>
+
+    <!-- Hauptbewegung -->
+    <Parameter>
+     <Id>depth</Id>
+     <Value>0.35</Value>
+     <LinkType>LINKED</LinkType>
+     <LinkInversion>0</LinkInversion>
+     <Hidden>0</Hidden>
+    </Parameter>
+
+    <Parameter>
+     <Id>triplet</Id>
+     <Value>0</Value>
+     <LinkType>NONE</LinkType>
+     <LinkInversion>0</LinkInversion>
+     <Hidden>0</Hidden>
+    </Parameter>
+
+    <Parameter>
+     <Id>stereo</Id>
+     <Value>0</Value>
+     <LinkType>NONE</LinkType>
+     <LinkInversion>0</LinkInversion>
+     <Hidden>0</Hidden>
+    </Parameter>
+
+   </Parameters>
+  </Effect>
+ </Effects>
+</EffectChain>
