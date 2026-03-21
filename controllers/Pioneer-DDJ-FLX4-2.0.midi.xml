@@ -996,7 +996,7 @@
       </control>
       <!-- BEAT FX SECTION START -->
       <control>
-        <description>BEAT FX SELECT - press once - (reserved / currently unused)</description>
+        <description>BEAT FX SELECT - press - cycle Beat FX groups</description>
         <group>[EffectRack1_EffectUnit1]</group>
         <key>PioneerDDJFLX4.beatFxSelectPressed</key>
         <status>0x94</status>
@@ -1006,7 +1006,7 @@
         </options>
       </control>
       <control>
-        <description>BEAT FX SELECT +SHIFT - press once - (reserved / currently unused)</description>
+        <description>BEAT FX SELECT +SHIFT - press - cycle Beat FX groups backwards</description>
         <group>[EffectRack1_EffectUnit1]</group>
         <key>PioneerDDJFLX4.beatFxSelectShiftPressed</key>
         <status>0x94</status>
@@ -1016,7 +1016,7 @@
         </options>
       </control>
       <control>
-        <description>BEAT LEFT - press - cycle chain preset backwards (applies to selected BeatFX target(s))</description>
+        <description>BEAT LEFT - press - cycle variants inside current Beat FX group backwards </description>
         <group>[EffectRack1_EffectUnit1]</group>
         <key>PioneerDDJFLX4.beatFxLeftPressed</key>
         <status>0x94</status>
@@ -1026,7 +1026,7 @@
         </options>
       </control>
       <control>
-        <description>BEAT RIGHT - press - cycle chain preset forward (applies to selected BeatFX target(s))</description>
+        <description>BEAT RIGHT - press - cycle variants inside current Beat FX group forward </description>
         <group>[EffectRack1_EffectUnit1]</group>
         <key>PioneerDDJFLX4.beatFxRightPressed</key>
         <status>0x94</status>
