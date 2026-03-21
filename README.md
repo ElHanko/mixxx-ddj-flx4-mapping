@@ -15,6 +15,19 @@ Older versions (e.g. 2.5) are not supported.
 
 ---
 
+## Setup Notes
+
+For full functionality:
+
+1. Copy the contents of `effects/chains/` into your Mixxx effects directory.
+2. Restart Mixxx or reload effect chains.
+
+Without these chains:
+
+- Beat FX selection will not match the intended behavior
+- Some FX combinations may be missing
+---
+
 ## Repository Structure
 
 
@@ -22,15 +35,18 @@ controllers/
 Pioneer-DDJ-FLX4-2.0.midi.xml
 Pioneer-DDJ-FLX4-2.0.script.js
 
+effects/chains/
+
 CONTROLS.md
 CONFIGURATION.md
 CHANGELOG.md
 
 
-* `controllers/` – mapping implementation
-* `CONTROLS.md` – complete control reference
-* `CONFIGURATION.md` – script configuration
-* `CHANGELOG.md` – version history
+* `controllers/` – mapping implementation  
+* `effects/chains/` – effect chain presets used by the Beat FX system  
+* `CONTROLS.md` – complete control reference  
+* `CONFIGURATION.md` – script configuration  
+* `CHANGELOG.md` – version history  
 
 ---
 
@@ -75,6 +91,17 @@ This mapping differs from the stock implementation in several key areas:
 * Optional vinyl brake / soft-start on PLAY
 * Script-controlled VU meters with peak hold
 
+---
+
+## Beat FX
+
+The Beat FX implementation relies on predefined effect chains.
+
+These are provided in:
+
+effects/chains/
+
+The mapping expects these chains to be available in Mixxx.
 ---
 
 ## Status
