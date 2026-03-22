@@ -690,6 +690,11 @@ for (let unit = 1; unit <= 2; unit++) {
         });
     });
 
+// Default BeatFX mode
+PioneerDDJFLX4._initBeatFx = function() {
+    PioneerDDJFLX4._setBeatFxGroupVariant(0, 2); // Echo_1
+};
+
 // ------------------- DEFAULT PAD MODE -------------------
 PioneerDDJFLX4.padMode = PioneerDDJFLX4.padMode || {};
 PioneerDDJFLX4.padMode["[Channel1]"] = PioneerDDJFLX4.PADMODE.HOTCUE;
@@ -1508,6 +1513,40 @@ PioneerDDJFLX4._getBeatFxGroup = function() {
 };
 
 /**
+ * Returns the default variant index for a Beat FX group.
+ *
+ * This allows the preset order to stay musically/logically sorted
+ * (1/4, 1/2, 1, 2, 4) while still choosing a more useful default
+ * when switching effect types.
+ *
+ * Defaults:
+ * - Echo   -> 1 beat
+ * - Reverb -> DJ
+ * - Trans  -> 1 beat
+ * - Flanger/Phaser -> only available variant
+ */
+PioneerDDJFLX4._getBeatFxDefaultVariant = function(groupIndex) {
+    const groups = PioneerDDJFLX4._beatFxPresetGroups;
+    const group = groups[groupIndex];
+    if (!group) return 0;
+
+    switch (group.name) {
+        case "Echo":
+            return 2; // 01_ECHO_1_4, 02_ECHO_1_2, 03_ECHO_1
+        case "Reverb":
+            return 0; // 06_REVERB_DJ
+        case "Trans":
+            return 2; // 08_TRANS_1_4, 09_TRANS_1_2, 10_TRANS_1
+        case "Flanger":
+            return 0;
+        case "Phaser":
+            return 0;
+        default:
+            return 0;
+    }
+};
+
+/**
  * Step the currently targeted units by a relative number of presets.
  *
  * Positive delta -> next_chain_preset
@@ -1557,7 +1596,9 @@ PioneerDDJFLX4._setBeatFxGroupVariant = function(groupIndex, variantIndex) {
 PioneerDDJFLX4._nextBeatFxGroup = function() {
     const groups = PioneerDDJFLX4._beatFxPresetGroups;
     const nextGroup = (PioneerDDJFLX4._beatFxPresetState.groupIndex + 1) % groups.length;
-    PioneerDDJFLX4._setBeatFxGroupVariant(nextGroup, 0);
+    const defaultVariant = PioneerDDJFLX4._getBeatFxDefaultVariant(nextGroup);
+
+    PioneerDDJFLX4._setBeatFxGroupVariant(nextGroup, defaultVariant);
 };
 
 /**
@@ -1567,7 +1608,9 @@ PioneerDDJFLX4._prevBeatFxGroup = function() {
     const groups = PioneerDDJFLX4._beatFxPresetGroups;
     const prevGroup =
         (PioneerDDJFLX4._beatFxPresetState.groupIndex - 1 + groups.length) % groups.length;
-    PioneerDDJFLX4._setBeatFxGroupVariant(prevGroup, 0);
+    const defaultVariant = PioneerDDJFLX4._getBeatFxDefaultVariant(prevGroup);
+
+    PioneerDDJFLX4._setBeatFxGroupVariant(prevGroup, defaultVariant);
 };
 
 /**
