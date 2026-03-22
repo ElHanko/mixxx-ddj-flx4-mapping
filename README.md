@@ -15,17 +15,20 @@ Older versions (e.g. 2.5) are not supported.
 
 ---
 
-## Setup Notes
+## Setup
 
-For full functionality:
+To use this mapping:
 
-1. Copy the contents of `effects/chains/` into your Mixxx effects directory.
-2. Restart Mixxx or reload effect chains.
+1. Copy the files from `controllers/` into your Mixxx controllers directory.
 
-Without these chains:
+For full Beat FX functionality:
 
-- Beat FX selection will not match the intended behavior
-- Some FX combinations may be missing
+2. Copy the contents of `effects/chains/` into your Mixxx effects directory.
+3. Restart Mixxx.
+
+Without the provided effect chains:
+
+- Beat FX behavior will not match the intended design
 ---
 
 ## Repository Structure
