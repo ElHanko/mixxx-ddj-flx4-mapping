@@ -211,7 +211,30 @@ PioneerDDJFLX4.SAMPLER_LONGPRESS_MS = 350;
 //
 PioneerDDJFLX4.QUANTIZE_LONGPRESS_MS = 350;
 
+//beatFx
+// Preset order expected:
+//   0  = 01_ECHO_1_4
+//   1  = 02_ECHO_1_2
+//   2  = 03_ECHO_1
+//   3  = 04_ECHO_2
+//   4  = 05_ECHO_4
+//   5  = 06_REVERB_DJ
+//   6  = 07_REVERB_WASH
+//   7  = 08_TRANS_1_4
+//   8  = 09_TRANS_1_2
+//   9  = 10_TRANS_1
+//   10 = 11_TRANS_2
+//   11 = 12_TRANS_4
+//   12 = 13_FLANGER_DJ
+//   13 = 14_PHASER_DJ
 
+PioneerDDJFLX4._beatFxPresetGroups = [
+    { name: "Echo",    presets: [0, 1, 2, 3, 4] },
+    { name: "Reverb",  presets: [5, 6] },
+    { name: "Trans",   presets: [7, 8, 9, 10, 11] },
+    { name: "Flanger", presets: [12] },
+    { name: "Phaser",  presets: [13] }
+];
 
 // -----------------------------------------------------------------------------
 // LOOP BEHAVIOUR
@@ -361,6 +384,19 @@ PioneerDDJFLX4._scratchAction = ["bend", "bend"];
 if (!Array.isArray(PioneerDDJFLX4._vinylWanted)) {
     PioneerDDJFLX4._vinylWanted = [false, false];
 }
+
+/**
+ * Internal Beat FX preset state.
+ *
+ * groupIndex    = currently selected effect type
+ * variantIndex  = currently selected preset inside that type
+ * absoluteIndex = absolute preset index in Mixxx preset order
+ */
+PioneerDDJFLX4._beatFxPresetState = PioneerDDJFLX4._beatFxPresetState || {
+    groupIndex: 0,
+    variantIndex: 0,
+    absoluteIndex: 0
+};
 
 //
 // Timer buckets
@@ -690,10 +726,9 @@ for (let unit = 1; unit <= 2; unit++) {
         });
     });
 
-// Default BeatFX mode
-PioneerDDJFLX4._initBeatFx = function() {
-    PioneerDDJFLX4._setBeatFxGroupVariant(0, 2); // Echo_1
-};
+    // Default BeatFX mode
+    // Force known Beat FX preset state on startup
+    PioneerDDJFLX4._initBeatFx();
 
 // ------------------- DEFAULT PAD MODE -------------------
 PioneerDDJFLX4.padMode = PioneerDDJFLX4.padMode || {};
@@ -1465,45 +1500,9 @@ PioneerDDJFLX4._beatFxTargets = function() {
 // - This logic assumes the chain presets are stored in a fixed,
 //   alphabetically stable order in Mixxx.
 // - If presets are added/removed/renamed, update the table below.
-// - If presets are changed manually in the Mixxx GUI, this internal
-//   state can get out of sync.
-//
-// Preset order expected:
-//   0  = 01_ECHO_1_4
-//   1  = 02_ECHO_1_2
-//   2  = 03_ECHO_1
-//   3  = 04_ECHO_2
-//   4  = 05_ECHO_4
-//   5  = 06_REVERB_DJ
-//   6  = 07_REVERB_WASH
-//   7  = 08_TRANS_1_4
-//   8  = 09_TRANS_1_2
-//   9  = 10_TRANS_1
-//   10 = 11_TRANS_2
-//   11 = 12_TRANS_4
-//   12 = 13_FLANGER_DJ
-//   13 = 14_PHASER_DJ
-
-PioneerDDJFLX4._beatFxPresetGroups = [
-    { name: "Echo",    presets: [0, 1, 2, 3, 4] },
-    { name: "Reverb",  presets: [5, 6] },
-    { name: "Trans",   presets: [7, 8, 9, 10, 11] },
-    { name: "Flanger", presets: [12] },
-    { name: "Phaser",  presets: [13] }
-];
-
-/**
- * Internal Beat FX preset state.
- *
- * groupIndex    = currently selected effect type
- * variantIndex  = currently selected preset inside that type
- * absoluteIndex = absolute preset index in Mixxx preset order
- */
-PioneerDDJFLX4._beatFxPresetState = PioneerDDJFLX4._beatFxPresetState || {
-    groupIndex: 0,
-    variantIndex: 0,
-    absoluteIndex: 0
-};
+// - This implementation treats the internal mapping state as the source of
+//   truth and always applies the same preset delta to both Beat FX units.
+// - Manual preset changes in the Mixxx GUI will desync this state.
 
 /**
  * Returns the current Beat FX group object.
@@ -1547,48 +1546,95 @@ PioneerDDJFLX4._getBeatFxDefaultVariant = function(groupIndex) {
 };
 
 /**
- * Step the currently targeted units by a relative number of presets.
+ * Read the currently loaded Beat FX preset slot of one unit.
+ *
+ * Mixxx uses:
+ *   -1 = invalid / unsaved
+ *    0 = empty/passthrough preset ("---")
+ *    1 = first real preset
+ *    2 = second real preset
+ *    ...
+ */
+PioneerDDJFLX4._getBeatFxUnitLoadedSlot = function(u) {
+    return engine.getValue(u, "loaded_chain_preset");
+};
+
+/**
+ * Step one Beat FX unit by a relative number of presets.
  *
  * Positive delta -> next_chain_preset
  * Negative delta -> prev_chain_preset
  */
-PioneerDDJFLX4._stepBeatFxPresetBy = function(delta) {
+PioneerDDJFLX4._stepBeatFxUnitPresetBy = function(u, delta) {
     if (!delta) return;
 
     const stepControl = delta > 0 ? "next_chain_preset" : "prev_chain_preset";
     const steps = Math.abs(delta);
 
-    PioneerDDJFLX4._beatFxTargets().forEach((u) => {
-        for (let i = 0; i < steps; i++) {
-            engine.setValue(u, stepControl, 1);
-        }
-    });
-
-    PioneerDDJFLX4._beatFxPresetState.absoluteIndex += delta;
+    for (let i = 0; i < steps; i++) {
+        engine.setValue(u, stepControl, 1);
+    }
 };
 
 /**
- * Jump to a specific group + variant.
+ * Force one Beat FX unit to a specific internal absolute preset index.
+ *
+ * Internal mapping index:
+ *   0 = first real preset file (01_ECHO_1_4)
+ *   1 = second real preset file
+ *   ...
+ *
+ * Mixxx slot index:
+ *   0 = passthrough ("---")
+ *   1 = first real preset
+ *   2 = second real preset
+ *   ...
+ */
+PioneerDDJFLX4._setBeatFxUnitToAbsolute = function(u, targetAbsolute) {
+    const currentSlot = PioneerDDJFLX4._getBeatFxUnitLoadedSlot(u);
+    if (currentSlot < 0) return;
+
+    const targetSlot = targetAbsolute + 1; // convert internal index -> Mixxx slot
+    const delta = targetSlot - currentSlot;
+
+    PioneerDDJFLX4._stepBeatFxUnitPresetBy(u, delta);
+};
+
+/**
+ * Force both Beat FX units to the same absolute preset index.
+ *
+ * The mapping state is still the source of truth for the TARGET,
+ * but each unit is moved from its own actual current Mixxx slot.
+ */
+PioneerDDJFLX4._setBothBeatFxUnitsToAbsoluteFromState = function(targetAbsolute) {
+    PioneerDDJFLX4._setBeatFxUnitToAbsolute(PioneerDDJFLX4._beatFx.unit1, targetAbsolute);
+    PioneerDDJFLX4._setBeatFxUnitToAbsolute(PioneerDDJFLX4._beatFx.unit2, targetAbsolute);
+};
+
+/**
+ * Set Beat FX group + variant.
+ *
+ * The internal mapping state is treated as the source of truth.
+ * Both Beat FX units are always stepped to the same target preset.
  */
 PioneerDDJFLX4._setBeatFxGroupVariant = function(groupIndex, variantIndex) {
-    const groups = PioneerDDJFLX4._beatFxPresetGroups;
-    const group = groups[groupIndex];
+    const group = PioneerDDJFLX4._beatFxPresetGroups[groupIndex];
     if (!group) return;
     if (variantIndex < 0 || variantIndex >= group.presets.length) return;
 
     const targetAbsolute = group.presets[variantIndex];
-    const currentAbsolute = PioneerDDJFLX4._beatFxPresetState.absoluteIndex;
-    const delta = targetAbsolute - currentAbsolute;
 
-    PioneerDDJFLX4._stepBeatFxPresetBy(delta);
+    // Move both units using the current internal state as reference.
+    PioneerDDJFLX4._setBothBeatFxUnitsToAbsoluteFromState(targetAbsolute);
 
+    // Update internal state afterwards.
     PioneerDDJFLX4._beatFxPresetState.groupIndex = groupIndex;
     PioneerDDJFLX4._beatFxPresetState.variantIndex = variantIndex;
     PioneerDDJFLX4._beatFxPresetState.absoluteIndex = targetAbsolute;
 };
 
 /**
- * Select next Beat FX type and reset to its first variant.
+ * Select next Beat FX type and jump to its default variant.
  *
  * Example:
  * Echo -> Reverb -> Trans -> Flanger -> Phaser -> Echo
@@ -1602,7 +1648,7 @@ PioneerDDJFLX4._nextBeatFxGroup = function() {
 };
 
 /**
- * Select previous Beat FX type and reset to its first variant.
+ * Select previous Beat FX type and jump to its default variant.
  */
 PioneerDDJFLX4._prevBeatFxGroup = function() {
     const groups = PioneerDDJFLX4._beatFxPresetGroups;
@@ -1614,7 +1660,7 @@ PioneerDDJFLX4._prevBeatFxGroup = function() {
 };
 
 /**
- * Select previous preset variant inside current Beat FX type.
+ * Select previous preset variant inside the current Beat FX group.
  */
 PioneerDDJFLX4._prevBeatFxVariant = function() {
     const group = PioneerDDJFLX4._getBeatFxGroup();
@@ -1630,7 +1676,7 @@ PioneerDDJFLX4._prevBeatFxVariant = function() {
 };
 
 /**
- * Select next preset variant inside current Beat FX type.
+ * Select next preset variant inside the current Beat FX group.
  */
 PioneerDDJFLX4._nextBeatFxVariant = function() {
     const group = PioneerDDJFLX4._getBeatFxGroup();
@@ -1643,6 +1689,29 @@ PioneerDDJFLX4._nextBeatFxVariant = function() {
         PioneerDDJFLX4._beatFxPresetState.groupIndex,
         currentVariant + 1
     );
+};
+
+/**
+ * Force a known Beat FX startup state on both units.
+ *
+ * Default:
+ * Echo group -> 1 beat variant
+ */
+PioneerDDJFLX4._initBeatFx = function() {
+    const groupIndex = 0;
+    const variantIndex = PioneerDDJFLX4._getBeatFxDefaultVariant(groupIndex);
+    const targetAbsolute = PioneerDDJFLX4._beatFxPresetGroups[groupIndex].presets[variantIndex];
+
+    // Assume startup state begins at preset 0 in the mapping logic.
+    PioneerDDJFLX4._beatFxPresetState.groupIndex = 0;
+    PioneerDDJFLX4._beatFxPresetState.variantIndex = 0;
+    PioneerDDJFLX4._beatFxPresetState.absoluteIndex = 0;
+
+    PioneerDDJFLX4._setBothBeatFxUnitsToAbsoluteFromState(targetAbsolute);
+
+    PioneerDDJFLX4._beatFxPresetState.groupIndex = groupIndex;
+    PioneerDDJFLX4._beatFxPresetState.variantIndex = variantIndex;
+    PioneerDDJFLX4._beatFxPresetState.absoluteIndex = targetAbsolute;
 };
 
 // ---- helpers: unit index, routing key, slot state ----
@@ -1799,6 +1868,7 @@ PioneerDDJFLX4.beatFxLevelDepthRotate = function(_channel, control, value) {
         engine.setParameter(u, key, out);
     });
 };
+
 // ---- ON/OFF: toggle Unit + Slots 1..3 together ----
 PioneerDDJFLX4._beatFxSetUnitAndSlots = function(u, on) {
     const unitIdx = PioneerDDJFLX4._beatFxUnitIdx(u);
