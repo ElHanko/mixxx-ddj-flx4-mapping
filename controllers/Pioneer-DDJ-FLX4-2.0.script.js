@@ -277,13 +277,6 @@ PioneerDDJFLX4.loopAdjustTimeoutMs = 5000;
 //
 PioneerDDJFLX4.quickJumpSize = 32;
 
-
-// Multiplier for fast track seeking when turning the jog wheel with SHIFT held.
-//
-PioneerDDJFLX4.fastSeekScale = 150;
-
-
-
 // -----------------------------------------------------------------------------
 // JOG WHEEL BEHAVIOUR
 // -----------------------------------------------------------------------------
@@ -298,6 +291,13 @@ PioneerDDJFLX4.bendScale = 0.8;
 //
 PioneerDDJFLX4.loopAdjustMultiply = 50;
 
+// Multiplier for fast track seeking when turning the jog wheel with SHIFT held.
+//
+PioneerDDJFLX4.fastSeekScale = 50;
+
+// Multiplier for Shift + Jog search when platter touch is held.
+// Higher value = much faster scanning through the track.
+PioneerDDJFLX4.shiftSearchTouchMultiplier = 1.0;
 
 
 // -----------------------------------------------------------------------------
@@ -2790,9 +2790,9 @@ PioneerDDJFLX4._scratchEnable = function(deckNum) {
 };
 
 // Helper: disable scratch for deckNum (1/2)
-PioneerDDJFLX4._scratchDisable = function(deckNum) {
+PioneerDDJFLX4._scratchDisable = function(deckNum, ramp) {
     // "ramp" true makes it feel less abrupt, but if you hate it: set false.
-    engine.scratchDisable(deckNum, true);
+    engine.scratchDisable(deckNum, !!ramp);
     PioneerDDJFLX4._scratchEnabled[deckNum - 1] = false;
     // After release we fall back to bend mode.
     PioneerDDJFLX4._scratchAction[deckNum - 1] = "bend";
@@ -2833,37 +2833,18 @@ PioneerDDJFLX4._scratchDisable = function(deckNum) {
 
      // Touch released
      if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
-         PioneerDDJFLX4._scratchDisable(deckNum);
+         PioneerDDJFLX4._scratchDisable(deckNum, true);
      } else {
          PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
      }
  };
 
- PioneerDDJFLX4.jogTouchShift = function(channel, _control, value, _status, group) {
-     const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
-     const deckNum = deckIdx + 1;
+PioneerDDJFLX4._shiftSearchTouch = PioneerDDJFLX4._shiftSearchTouch || [false, false];
 
-     // same loop-adjust guard
-     if (PioneerDDJFLX4.loopAdjustIn[deckIdx] || PioneerDDJFLX4.loopAdjustOut[deckIdx]) {
-         return;
-     }
-
-     const touching = (value !== 0);
-     PioneerDDJFLX4.wheelTouch[deckIdx] = touching;
-
-     if (touching) {
-         PioneerDDJFLX4._scratchAction[deckIdx] = "seek";
-         PioneerDDJFLX4._scratchEnable(deckNum);
-         return;
-     }
-
-     if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
-         PioneerDDJFLX4._scratchDisable(deckNum);
-     } else {
-         PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
-     }
- };
-
+PioneerDDJFLX4.jogTouchShift = function(_channel, _control, value, _status, group) {
+    const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
+    PioneerDDJFLX4._shiftSearchTouch[deckIdx] = (value !== 0);
+};
 // ---------- turn handlers ----------
 PioneerDDJFLX4.jogTurn = function(channel, _control, value, _status, group) {
     const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
@@ -2934,9 +2915,28 @@ PioneerDDJFLX4.jogTurn = function(channel, _control, value, _status, group) {
 };
 
 PioneerDDJFLX4.jogSearch = function(_channel, _control, value, _status, group) {
-    // keep your existing search behavior
-    const newVal = (value - 64) * PioneerDDJFLX4.fastSeekScale;
-    engine.setValue(group, "jog", newVal);
+    const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
+    const delta = value - 64;
+
+    if (delta === 0) return;
+
+    const duration = engine.getValue(group, "duration");
+    if (duration <= 0) return;
+
+    let step = delta * 0.0005; // Basis-Schritt (fein!)
+
+    if (PioneerDDJFLX4._shiftSearchTouch[deckIdx]) {
+        step *= 6; // Turbo bei Touch
+    }
+
+    const pos = engine.getValue(group, "playposition");
+    let newPos = pos + step;
+
+    // clamp 0..1
+    if (newPos < 0) newPos = 0;
+    if (newPos > 1) newPos = 1;
+
+    engine.setValue(group, "playposition", newPos);
 };
 
 ///////////////////////////////////////////////////////////////

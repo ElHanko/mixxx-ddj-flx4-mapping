@@ -251,7 +251,7 @@
         <description>JOG DIAL PLATTER +SHIFT (DECK1) - touch - enable (on touch) / disable (on release) highspeed
                     Pitch bend</description>
         <group>[Channel1]</group>
-        <key>PioneerDDJFLX4.jogTouch</key>
+        <key>PioneerDDJFLX4.jogTouchShift</key>
         <status>0x90</status>
         <midino>0x67</midino>
         <options>
@@ -313,7 +313,7 @@
         <description>JOG DIAL PLATTER +SHIFT (DECK2) - touch - enable (on touch) / disable (on release) highspeed
                     Pitch bend</description>
         <group>[Channel2]</group>
-        <key>PioneerDDJFLX4.jogTouch</key>
+        <key>PioneerDDJFLX4.jogTouchShift</key>
         <status>0x91</status>
         <midino>0x67</midino>
         <options>
