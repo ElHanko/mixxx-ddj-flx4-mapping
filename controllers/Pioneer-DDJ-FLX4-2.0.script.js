@@ -2920,19 +2920,15 @@ PioneerDDJFLX4.jogSearch = function(_channel, _control, value, _status, group) {
 
     if (delta === 0) return;
 
-    const duration = engine.getValue(group, "duration");
-    if (duration <= 0) return;
-
-    let step = delta * 0.0005; // Basis-Schritt (fein!)
+    let step = delta * 0.00015; // deutlich feiner als vorher
 
     if (PioneerDDJFLX4._shiftSearchTouch[deckIdx]) {
-        step *= 6; // Turbo bei Touch
+        step *= 2.0; // statt 6
     }
 
     const pos = engine.getValue(group, "playposition");
     let newPos = pos + step;
 
-    // clamp 0..1
     if (newPos < 0) newPos = 0;
     if (newPos > 1) newPos = 1;
 
