@@ -925,6 +925,11 @@ PioneerDDJFLX4._doNormalLoad = function(group) {
 PioneerDDJFLX4._doInstantDouble = function(targetGroup) {
     const sourceGroup = PioneerDDJFLX4._otherDeck(targetGroup);
 
+    //  HARD GUARD: target darf nicht laufen
+    if (engine.getValue(targetGroup, "play") === 1) {
+        return false;
+    }
+
     // Quelle muss geladen sein
     if (engine.getValue(sourceGroup, "track_loaded") !== 1) {
         return false;
