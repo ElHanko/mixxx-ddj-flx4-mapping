@@ -418,7 +418,7 @@ PioneerDDJFLX4.alpha = 1.0 / 8;
 PioneerDDJFLX4.beta = PioneerDDJFLX4.alpha / 32;
 PioneerDDJFLX4.jogPPR = PioneerDDJFLX4.jogPPR || 720;
 PioneerDDJFLX4.jogRPM = PioneerDDJFLX4.jogRPM || (33 + 1 / 3);
-PioneerDDJFLX4.scratchScale = PioneerDDJFLX4.scratchScale || 1.0;
+PioneerDDJFLX4.scratchScale = PioneerDDJFLX4.scratchScale || 1.8;
 PioneerDDJFLX4.seekScratchMultiplier = PioneerDDJFLX4.seekScratchMultiplier || 4.0;
 
 PioneerDDJFLX4.PADMODE = {
