@@ -2863,6 +2863,7 @@ PioneerDDJFLX4.jogTurn = function(channel, _control, value, _status, group) {
     // Loop adjust has priority (your dual-mode block)
     if (engine.getValue(group, "loop_enabled") > 0) {
         if (typeof PioneerDDJFLX4._handleJogLoopAdjust === "function") {
+            // _handleJogLoopAdjust expects deckIdx (0/1), not MIDI channel number
             if (PioneerDDJFLX4._handleJogLoopAdjust(deckIdx, group, delta, _control, st)) {
                 return;
             }
