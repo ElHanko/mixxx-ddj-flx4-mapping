@@ -24,7 +24,7 @@ Some functions are configurable in the script. Where relevant, this document not
 
 ## Shift behavior
 
-Each deck has its own Shift button. Shift modifies transport, loop, pad, browser, and sync behavior depending on the section.
+Each deck has its own Shift button. Shift modifies transport, loop, pad, browser, sync, and mixer behavior depending on the section.
 
 ## Vinyl mode
 
@@ -239,7 +239,34 @@ Script-controlled behavior.
 
 ## EQ / Gain / Faders
 
+### Gain
 * standard high-resolution mapping
+
+### Channel faders
+* standard mapping
+
+### EQ knobs
+* 14-bit high-resolution mapping
+* script-controlled routing
+
+#### Normal
+* control deck EQ:
+  * **LOW** → EQ low
+  * **MID** → EQ mid
+  * **HIGH** → EQ high
+
+#### Shift
+* control stem volumes:
+  * **LOW** → drums + bass stem volume
+  * **MID** → melody / instruments stem volume
+  * **HIGH** → vocals stem volume
+
+#### Soft takeover
+* separate soft takeover is used for:
+  * EQ mode
+  * stem mode
+* pickup state is reset automatically when switching between EQ and stem mode
+* this prevents abrupt jumps when returning from stem control to normal EQ operation
 
 ## Headphone Cue buttons
 

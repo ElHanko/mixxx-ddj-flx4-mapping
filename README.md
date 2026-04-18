@@ -17,18 +17,25 @@ Older versions (e.g. 2.5) are not supported.
 
 ## Setup
 
-To use this mapping:
+### Recommended setup
+After cloning the repository, run:
 
-1. Copy the files from `controllers/` into your Mixxx controllers directory.
 
-For full Beat FX functionality:
+./setup-mixxx-links.sh
 
-2. Copy the contents of `effects/chains/` into your Mixxx effects directory.
-3. Restart Mixxx.
+This creates symlinks for the mapping files into your Mixxx user directories.
+
+Manual setup
+
+If you do not want to use symlinks:
+
+Copy the files from controllers/ into your Mixxx controllers directory.
+Copy the contents of effects/chains/ into your Mixxx effects directory.
+Restart Mixxx.
 
 Without the provided effect chains:
 
-- Beat FX behavior will not match the intended design
+Beat FX behavior will not match the intended design
 ---
 
 ## Repository Structure
@@ -40,16 +47,17 @@ Pioneer-DDJ-FLX4-2.0.script.js
 
 effects/chains/
 
+setup-mixxx-links.sh
 CONTROLS.md
 CONFIGURATION.md
 CHANGELOG.md
 
-
-* `controllers/` – mapping implementation  
-* `effects/chains/` – effect chain presets used by the Beat FX system  
-* `CONTROLS.md` – complete control reference  
-* `CONFIGURATION.md` – script configuration  
-* `CHANGELOG.md` – version history  
+* `controllers/` – mapping implementation
+* `effects/chains/` – effect chain presets used by the Beat FX system
+* `setup-mixxx-links.sh` – creates symlinks into local Mixxx user directories
+* `CONTROLS.md` – complete control reference
+* `CONFIGURATION.md` – script configuration
+* `CHANGELOG.md` – version history
 
 ---
 
@@ -77,6 +85,7 @@ This mapping differs from the stock implementation in several key areas:
 * Stateful loop workflow with jog-based adjustment
 * Banked hotcue system (up to 32 hotcues)
 * Explicit short/long press handling for shared controls
+* Script-routed EQ layer with optional Shift-based stem volume control
 
 ---
 
@@ -93,6 +102,7 @@ This mapping differs from the stock implementation in several key areas:
 * Vinyl mode toggle via **SHIFT + 4BEAT/EXIT**
 * Optional vinyl brake / soft-start on PLAY
 * Script-controlled VU meters with peak hold
+* Shift-based stem volume control on EQ knobs with per-mode soft takeover
 
 ---
 
