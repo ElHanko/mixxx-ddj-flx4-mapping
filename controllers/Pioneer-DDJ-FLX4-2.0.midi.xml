@@ -755,8 +755,8 @@
       </control>
       <control>
         <description>EQ HI - rotate</description>
-        <group>[EqualizerRack1_[Channel1]_Effect1]</group>
-        <key>parameter3</key>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.eqHighLsb</key>
         <status>0xB0</status>
         <midino>0x27</midino>
         <options>
@@ -765,8 +765,8 @@
       </control>
       <control>
         <description>EQ MID - rotate</description>
-        <group>[EqualizerRack1_[Channel1]_Effect1]</group>
-        <key>parameter2</key>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.eqMidLsb</key>
         <status>0xB0</status>
         <midino>0x2B</midino>
         <options>
@@ -775,8 +775,8 @@
       </control>
       <control>
         <description>EQ LOW - rotate</description>
-        <group>[EqualizerRack1_[Channel1]_Effect1]</group>
-        <key>parameter1</key>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.eqLowLsb</key>
         <status>0xB0</status>
         <midino>0x2F</midino>
         <options>
@@ -785,8 +785,8 @@
       </control>
       <control>
         <description>EQ HI - rotate</description>
-        <group>[EqualizerRack1_[Channel1]_Effect1]</group>
-        <key>parameter3</key>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.eqHighMsb</key>
         <status>0xB0</status>
         <midino>0x07</midino>
         <options>
@@ -795,8 +795,8 @@
       </control>
       <control>
         <description>EQ MID - rotate</description>
-        <group>[EqualizerRack1_[Channel1]_Effect1]</group>
-        <key>parameter2</key>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.eqMidMsb</key>
         <status>0xB0</status>
         <midino>0x0B</midino>
         <options>
@@ -805,8 +805,8 @@
       </control>
       <control>
         <description>EQ LOW - rotate</description>
-        <group>[EqualizerRack1_[Channel1]_Effect1]</group>
-        <key>parameter1</key>
+        <group>[Channel1]</group>
+        <key>PioneerDDJFLX4.eqLowMsb</key>
         <status>0xB0</status>
         <midino>0x0F</midino>
         <options>
@@ -815,8 +815,8 @@
       </control>
       <control>
         <description>EQ HI - rotate</description>
-        <group>[EqualizerRack1_[Channel2]_Effect1]</group>
-        <key>parameter3</key>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.eqHighLsb</key>
         <status>0xB1</status>
         <midino>0x27</midino>
         <options>
@@ -825,8 +825,8 @@
       </control>
       <control>
         <description>EQ MID - rotate</description>
-        <group>[EqualizerRack1_[Channel2]_Effect1]</group>
-        <key>parameter2</key>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.eqMidLsb</key>
         <status>0xB1</status>
         <midino>0x2B</midino>
         <options>
@@ -835,8 +835,8 @@
       </control>
       <control>
         <description>EQ LOW - rotate</description>
-        <group>[EqualizerRack1_[Channel2]_Effect1]</group>
-        <key>parameter1</key>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.eqLowLsb</key>
         <status>0xB1</status>
         <midino>0x2F</midino>
         <options>
@@ -845,8 +845,8 @@
       </control>
       <control>
         <description>EQ HI - rotate</description>
-        <group>[EqualizerRack1_[Channel2]_Effect1]</group>
-        <key>parameter3</key>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.eqHighMsb</key>
         <status>0xB1</status>
         <midino>0x07</midino>
         <options>
@@ -855,8 +855,8 @@
       </control>
       <control>
         <description>EQ MID - rotate</description>
-        <group>[EqualizerRack1_[Channel2]_Effect1]</group>
-        <key>parameter2</key>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.eqMidMsb</key>
         <status>0xB1</status>
         <midino>0x0B</midino>
         <options>
@@ -865,8 +865,8 @@
       </control>
       <control>
         <description>EQ LOW - rotate</description>
-        <group>[EqualizerRack1_[Channel2]_Effect1]</group>
-        <key>parameter1</key>
+        <group>[Channel2]</group>
+        <key>PioneerDDJFLX4.eqLowMsb</key>
         <status>0xB1</status>
         <midino>0x0F</midino>
         <options>

@@ -1005,6 +1005,275 @@ PioneerDDJFLX4.loadShiftPressed = function(_channel, control, value, _status, _g
 };
 
 ///////////////////////////////////////////////////////////////
+// EQ / STEM ROUTING (14-bit) with per-mode soft takeover
+//
+// Purpose:
+// - Normal mode: EQ knobs control the deck EQ
+// - Shift mode:  EQ knobs control stem volumes
+//
+// Mixxx 2.6 control model:
+// - Deck EQ lives in: [EqualizerRack1_[ChannelN]_Effect1], parameter1..3
+// - Stem channels live in: [ChannelN_StemM]
+// - Per-stem gain control is: [ChannelN_StemM], volume
+// - Per-stem mute control is: [ChannelN_StemM], mute
+// - Number of stems on a deck is: [ChannelN], stem_count
+//
+// IMPORTANT:
+// Mixxx documents the stem subgroup format [ChannelN_StemM], but it does NOT
+// guarantee that Stem1=drums, Stem2=bass, Stem3=melody, Stem4=vocals.
+// Therefore the semantic order must be configured below after verifying the
+// stem order of your files/setup.
+//
+// Intended user mapping:
+// - LOW  + Shift -> Drums + Bass
+// - MID  + Shift -> Melody / Instruments
+// - HIGH + Shift -> Vocals
+//
+// Implementation strategy:
+// - LOW may control more than one stem volume at once
+// - MID / HIGH control one stem each
+// - Separate soft-takeover state for EQ mode and STEM mode
+///////////////////////////////////////////////////////////////
+
+// ---------- config ----------
+PioneerDDJFLX4.eqStemPickupThreshold =
+    Number.isFinite(PioneerDDJFLX4.eqStemPickupThreshold)
+        ? PioneerDDJFLX4.eqStemPickupThreshold
+        : 0.02; // ~2% pickup window
+
+// ---------- STEM INDEX CONFIG ----------
+// Adjust these indices AFTER verifying stem order in Mixxx.
+// Example below assumes:
+//   Stem1 = drums
+//   Stem2 = bass
+//   Stem3 = melody
+//   Stem4 = vocals
+//
+// If your files/controller/UI expose a different order, change ONLY this map.
+PioneerDDJFLX4.stemIndexMap = PioneerDDJFLX4.stemIndexMap || {
+    low:  [1, 2], // drums + bass
+    mid:  [3],    // melody / instruments
+    high: [4],    // vocals
+};
+
+// ---------- 14-bit input state ----------
+PioneerDDJFLX4.eq14bit = PioneerDDJFLX4.eq14bit || {
+    "[Channel1]": { highMsb: 0, midMsb: 0, lowMsb: 0 },
+    "[Channel2]": { highMsb: 0, midMsb: 0, lowMsb: 0 },
+};
+
+// ---------- per-mode soft-takeover state ----------
+PioneerDDJFLX4.eqStemPickup = PioneerDDJFLX4.eqStemPickup || {
+    "[Channel1]": {
+        eq:   { high: false, mid: false, low: false },
+        stem: { high: false, mid: false, low: false },
+    },
+    "[Channel2]": {
+        eq:   { high: false, mid: false, low: false },
+        stem: { high: false, mid: false, low: false },
+    },
+};
+
+// ---------- helpers ----------
+PioneerDDJFLX4._clamp01 = function(value) {
+    if (value < 0) return 0;
+    if (value > 1) return 1;
+    return value;
+};
+
+PioneerDDJFLX4._eqGroupFromChannelGroup = function(channelGroup) {
+    return `[EqualizerRack1_${channelGroup}_Effect1]`;
+};
+
+PioneerDDJFLX4._eqKeyFromBand = function(band) {
+    if (band === "low") return "parameter1";
+    if (band === "mid") return "parameter2";
+    return "parameter3"; // high
+};
+
+PioneerDDJFLX4._deckShiftActive = function(channelGroup) {
+    const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(channelGroup);
+    return deckIdx === 0
+        ? !!PioneerDDJFLX4._shiftDeck1
+        : !!PioneerDDJFLX4._shiftDeck2;
+};
+
+PioneerDDJFLX4._eqStemModeName = function(channelGroup) {
+    return PioneerDDJFLX4._deckShiftActive(channelGroup) ? "stem" : "eq";
+};
+
+PioneerDDJFLX4._stemGroup = function(channelGroup, stemIndex) {
+    const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(channelGroup) + 1;
+    return `[Channel${deckIdx}_Stem${stemIndex}]`;
+};
+
+PioneerDDJFLX4._availableStemCount = function(channelGroup) {
+    return engine.getValue(channelGroup, "stem_count");
+};
+
+PioneerDDJFLX4._configuredStemGroupsForBand = function(channelGroup, band) {
+    const indices = PioneerDDJFLX4.stemIndexMap[band] || [];
+    const stemCount = PioneerDDJFLX4._availableStemCount(channelGroup);
+    const groups = [];
+
+    for (let i = 0; i < indices.length; i++) {
+        const idx = indices[i];
+        if (idx >= 1 && idx <= stemCount) {
+            groups.push(PioneerDDJFLX4._stemGroup(channelGroup, idx));
+        }
+    }
+
+    return groups;
+};
+
+PioneerDDJFLX4._getCurrentEqValue = function(channelGroup, band) {
+    const eqGroup = PioneerDDJFLX4._eqGroupFromChannelGroup(channelGroup);
+    const eqKey = PioneerDDJFLX4._eqKeyFromBand(band);
+    return PioneerDDJFLX4._clamp01(engine.getParameter(eqGroup, eqKey));
+};
+
+PioneerDDJFLX4._getCurrentStemValue = function(channelGroup, band) {
+    const stemGroups = PioneerDDJFLX4._configuredStemGroupsForBand(channelGroup, band);
+    if (stemGroups.length === 0) {
+        return 0;
+    }
+
+    // Use first assigned stem as pickup reference.
+    return PioneerDDJFLX4._clamp01(engine.getParameter(stemGroups[0], "volume"));
+};
+
+PioneerDDJFLX4._getCurrentModeValue = function(channelGroup, band, mode) {
+    if (mode === "stem") {
+        return PioneerDDJFLX4._getCurrentStemValue(channelGroup, band);
+    }
+    return PioneerDDJFLX4._getCurrentEqValue(channelGroup, band);
+};
+
+PioneerDDJFLX4._softTakeoverPass = function(channelGroup, mode, band, targetValue) {
+    const pickupState = PioneerDDJFLX4.eqStemPickup[channelGroup][mode];
+
+    if (pickupState[band]) {
+        return true;
+    }
+
+    const currentValue = PioneerDDJFLX4._getCurrentModeValue(channelGroup, band, mode);
+    const diff = Math.abs(targetValue - currentValue);
+
+    if (diff <= PioneerDDJFLX4.eqStemPickupThreshold) {
+        pickupState[band] = true;
+        return true;
+    }
+
+    return false;
+};
+
+PioneerDDJFLX4._resetEqStemPickupForDeck = function(channelGroup) {
+    if (!PioneerDDJFLX4.eqStemPickup[channelGroup]) {
+        return;
+    }
+
+    PioneerDDJFLX4.eqStemPickup[channelGroup].eq.high = false;
+    PioneerDDJFLX4.eqStemPickup[channelGroup].eq.mid = false;
+    PioneerDDJFLX4.eqStemPickup[channelGroup].eq.low = false;
+
+    PioneerDDJFLX4.eqStemPickup[channelGroup].stem.high = false;
+    PioneerDDJFLX4.eqStemPickup[channelGroup].stem.mid = false;
+    PioneerDDJFLX4.eqStemPickup[channelGroup].stem.low = false;
+};
+
+PioneerDDJFLX4._resetEqStemPickupAll = function() {
+    PioneerDDJFLX4._resetEqStemPickupForDeck("[Channel1]");
+    PioneerDDJFLX4._resetEqStemPickupForDeck("[Channel2]");
+};
+
+PioneerDDJFLX4._setEqValue = function(channelGroup, band, value) {
+    const eqGroup = PioneerDDJFLX4._eqGroupFromChannelGroup(channelGroup);
+    const eqKey = PioneerDDJFLX4._eqKeyFromBand(band);
+    engine.setParameter(eqGroup, eqKey, PioneerDDJFLX4._clamp01(value));
+};
+
+PioneerDDJFLX4._setStemValue = function(channelGroup, band, value) {
+    const stemGroups = PioneerDDJFLX4._configuredStemGroupsForBand(channelGroup, band);
+    const v = PioneerDDJFLX4._clamp01(value);
+
+    for (let i = 0; i < stemGroups.length; i++) {
+        engine.setParameter(stemGroups[i], "volume", v);
+    }
+};
+
+PioneerDDJFLX4._routeEqOrStem = function(channelGroup, band, value14bit) {
+    const normalized = PioneerDDJFLX4._clamp01(value14bit / 16383);
+    const mode = PioneerDDJFLX4._eqStemModeName(channelGroup);
+
+    if (!PioneerDDJFLX4._softTakeoverPass(channelGroup, mode, band, normalized)) {
+        return;
+    }
+
+    if (mode === "stem") {
+        PioneerDDJFLX4._setStemValue(channelGroup, band, normalized);
+    } else {
+        PioneerDDJFLX4._setEqValue(channelGroup, band, normalized);
+    }
+};
+
+// ---------- 14-bit assembly ----------
+PioneerDDJFLX4._eqSetMsb = function(channelGroup, band, value) {
+    if (band === "high") {
+        PioneerDDJFLX4.eq14bit[channelGroup].highMsb = value;
+    } else if (band === "mid") {
+        PioneerDDJFLX4.eq14bit[channelGroup].midMsb = value;
+    } else {
+        PioneerDDJFLX4.eq14bit[channelGroup].lowMsb = value;
+    }
+};
+
+PioneerDDJFLX4._eqApplyLsb = function(channelGroup, band, lsbValue) {
+    let msbValue;
+
+    if (band === "high") {
+        msbValue = PioneerDDJFLX4.eq14bit[channelGroup].highMsb;
+    } else if (band === "mid") {
+        msbValue = PioneerDDJFLX4.eq14bit[channelGroup].midMsb;
+    } else {
+        msbValue = PioneerDDJFLX4.eq14bit[channelGroup].lowMsb;
+    }
+
+    const fullValue = (msbValue << 7) + lsbValue;
+    PioneerDDJFLX4._routeEqOrStem(channelGroup, band, fullValue);
+};
+
+// ---------- public MIDI handlers ----------
+// XML should point the EQ knobs here instead of directly to parameter1..3.
+
+PioneerDDJFLX4.eqHighMsb = function(_channel, _control, value, _status, group) {
+    PioneerDDJFLX4._eqSetMsb(group, "high", value);
+};
+
+PioneerDDJFLX4.eqHighLsb = function(_channel, _control, value, _status, group) {
+    PioneerDDJFLX4._eqApplyLsb(group, "high", value);
+};
+
+PioneerDDJFLX4.eqMidMsb = function(_channel, _control, value, _status, group) {
+    PioneerDDJFLX4._eqSetMsb(group, "mid", value);
+};
+
+PioneerDDJFLX4.eqMidLsb = function(_channel, _control, value, _status, group) {
+    PioneerDDJFLX4._eqApplyLsb(group, "mid", value);
+};
+
+PioneerDDJFLX4.eqLowMsb = function(_channel, _control, value, _status, group) {
+    PioneerDDJFLX4._eqSetMsb(group, "low", value);
+};
+
+PioneerDDJFLX4.eqLowLsb = function(_channel, _control, value, _status, group) {
+    PioneerDDJFLX4._eqApplyLsb(group, "low", value);
+};
+
+///////////////////////////////////////////////////////////////
+// END EQ / STEM ROUTING BLOCK
+///////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////
 // PLAY BUTTON: OPTIONAL VINYL BRAKE / SOFT START
 //
 // Configurable behaviour for the PLAY button when Vinyl Mode
