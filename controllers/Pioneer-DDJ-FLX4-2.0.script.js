@@ -1033,6 +1033,7 @@ PioneerDDJFLX4.loadShiftPressed = function(_channel, control, value, _status, _g
 // - LOW may control more than one stem volume at once
 // - MID / HIGH control one stem each
 // - Separate soft-takeover state for EQ mode and STEM mode
+// - Automatically reset pickup state when switching between EQ and STEM mode
 ///////////////////////////////////////////////////////////////
 
 // ---------- config ----------
@@ -1072,6 +1073,13 @@ PioneerDDJFLX4.eqStemPickup = PioneerDDJFLX4.eqStemPickup || {
         eq:   { high: false, mid: false, low: false },
         stem: { high: false, mid: false, low: false },
     },
+};
+
+// ---------- track last active mode per deck ----------
+// This avoids relying on external shift handlers to reset pickup state.
+PioneerDDJFLX4.eqStemLastMode = PioneerDDJFLX4.eqStemLastMode || {
+    "[Channel1]": "eq",
+    "[Channel2]": "eq",
 };
 
 // ---------- helpers ----------
@@ -1186,6 +1194,20 @@ PioneerDDJFLX4._resetEqStemPickupAll = function() {
     PioneerDDJFLX4._resetEqStemPickupForDeck("[Channel2]");
 };
 
+// Detect mode changes locally and reset pickup state immediately.
+// This makes EQ/STEM takeover robust even if external shift handlers do nothing.
+PioneerDDJFLX4._syncEqStemMode = function(channelGroup) {
+    const currentMode = PioneerDDJFLX4._eqStemModeName(channelGroup);
+    const previousMode = PioneerDDJFLX4.eqStemLastMode[channelGroup];
+
+    if (previousMode !== currentMode) {
+        PioneerDDJFLX4._resetEqStemPickupForDeck(channelGroup);
+        PioneerDDJFLX4.eqStemLastMode[channelGroup] = currentMode;
+    }
+
+    return currentMode;
+};
+
 PioneerDDJFLX4._setEqValue = function(channelGroup, band, value) {
     const eqGroup = PioneerDDJFLX4._eqGroupFromChannelGroup(channelGroup);
     const eqKey = PioneerDDJFLX4._eqKeyFromBand(band);
@@ -1203,7 +1225,7 @@ PioneerDDJFLX4._setStemValue = function(channelGroup, band, value) {
 
 PioneerDDJFLX4._routeEqOrStem = function(channelGroup, band, value14bit) {
     const normalized = PioneerDDJFLX4._clamp01(value14bit / 16383);
-    const mode = PioneerDDJFLX4._eqStemModeName(channelGroup);
+    const mode = PioneerDDJFLX4._syncEqStemMode(channelGroup);
 
     if (!PioneerDDJFLX4._softTakeoverPass(channelGroup, mode, band, normalized)) {
         return;
