@@ -1,76 +1,104 @@
 # Changelog
 
-## Unreleased
+All notable changes to this project will be documented in this file.
+
+## [Unreleased]
 
 ### Added
+- Shift-based stem volume control on EQ knobs
+  - Shift + LOW controls drums + bass stem volume
+  - Shift + MID controls melody / instruments stem volume
+  - Shift + HIGH controls vocals stem volume
+- `setup-mixxx-links.sh` for linking mapping assets into Mixxx user directories
+- Support for linking assets into multiple Mixxx directories
+- C_Noise sweep effect for Beat FX
 
-- Optional vinyl brake / soft start behaviour for the PLAY button when Vinyl Mode is active
-- Config flag `PLAY_BRAKE_ON_VINYL` to enable or disable this behaviour
+### Changed
+- EQ knobs are now routed through script handlers instead of direct XML EQ bindings
+- EQ / stem handling now uses 14-bit script-side routing
+- Scratch feel improved by increasing `scratchScale`
+- Setup and control documentation updated to reflect current EQ/stem and setup behavior
+
+### Fixed
+- Added required script binding for EQ script handlers
+- Reset soft takeover state when switching between EQ and stem mode
+- Restored loop adjust behavior in `jogTurn`
+- Made vinyl mode deterministic and forced startup with vinyl off
+- Setup script now handles directories correctly when linking Mixxx assets
+- Prevented instant double from overwriting the playing deck
+- Swapped Smart CFX normal and shift behavior to match intended workflow
+- Made shift jog search controllable via playposition scaling
+- Switched shift jog search to `playposition`-based behavior and bound shift touch correctly
 
 ### Documentation
+- Updated README setup instructions
+- Updated EQ/stem control documentation
+- Documented setup script usage and current control behavior
 
-- Documented optional vinyl brake behaviour in the README
+### Repository / Setup
+- Setup script is tracked as executable
 
-## v1.0
 
-Initial public GitHub release of the custom Pioneer DDJ-FLX4 mapping.
+## [v1.1]
 
-This mapping started from the original Mixxx FLX4 mapping but has been
-heavily modified and partially rewritten to match a different workflow
-and controller behaviour.
+### Added
+- Optional vinyl brake and soft start on PLAY button
+- Configurable brake and soft start factors
+- Split controller documentation into controls and configuration reference
 
-### Major changes
+### Changed
+- Set default vinyl brake mode
+- Declared Mixxx 2.6 as the required version
+- Simplified README and moved detailed configuration into `CONFIGURATION.md`
 
-- Reworked Beat FX system with proper routing, LED feedback and
-  improved on/off behaviour
-- PAD FX implementation inspired by Hercules-style workflow
-- Complete sampler pad LED state machine
-- Refactored jogwheel handling and scratch logic
-- Reworked loop handling and loop LED behaviour
-- Reworked VU meter scaling with proper FLX4 LED zones and peak hold
-- Keyshift pad mode improvements
-- Beatjump logic aligned with direct engine mapping
-- Vinyl mode toggle support via controller command
+### Fixed
+- Deck 2 play button now uses script binding correctly
 
-### Controller behaviour improvements
+### Documentation
+- Documented optional vinyl brake behavior
+- Added detailed documentation for user configuration options
+- Added contributing guidelines
+- Simplified public repository `.gitignore`
 
-- Consistent pad mode behaviour across:
-  - Beatjump
-  - Beatloop
-  - Sampler
-  - Pad FX
-  - Keyshift
-  - Stems
-- Improved LED synchronization with Mixxx state
-- Proper initialization of LEDs and controller state
-- Improved shutdown cleanup (timers and LEDs)
 
-### Library / browsing improvements
+## [v1.0]
 
-- Improved BROWSE behaviour
-- Optional focus toggle between sidebar and track list
-- Tree expansion via dedicated control
-- Library maximize moved to SHIFT + LOAD
+Initial public release of the custom Pioneer DDJ-FLX4 mapping.
 
-### Performance / workflow improvements
+### Added
+- Initial public project structure
+- Project README
+- MIT license
+- Initial changelog
+- Mapping files moved into `controllers/`
 
+### Core controller features
+- Custom Beat FX system with per-deck routing, preset handling, LED feedback and rotary control
+- Smart CFX control with active LED feedback and shift-layer preset cycling
+- Script-based loop system with unified loop LED handling and reloop/exit logic
+- Stateful jog scratch / bend handling with loop-adjust priority
+- Per-deck vinyl mode handling via hardware command
+- Keyboard / stems pad mode state tracking and LED refresh
+- Direct-engine beatjump mapping
+- PAD FX bindings and sampler pad handling
+- Long-press and double-press actions for selected controls
+- Configurable browse focus behavior
 - Instant doubles via LOAD double press
-- Long press actions for several controls
-- Quantize / Keylock shortcut handling
-- Reloop fallback logic for Cue/Loop Call
-- Cleaner tempo range handling
-- Improved waveform zoom behaviour
+- Quantize / keylock and cue / loop workflow improvements
 
-### Internal refactoring
+### Improved
+- Waveform zoom behavior
+- Beat sync logic and tempo range cycling
+- VU meter scaling, LED zones and peak hold behavior
+- Sampler pad LED handling and sampler state logic
+- Header structure and internal script organization
+- Controller shutdown cleanup and timer handling
 
-- Large parts of the original FLX4 script replaced or rewritten
-- Cleaner controller initialization logic
-- More reliable LED state synchronization
-- Improved error handling and script stability
+### Fixed
+- Stem mute error on track load
+- Beat FX routing and shift handling
+- Loop adjust checks and browse press robustness
+- XML formatting and minor mapping corrections
 
-### Repository changes
-
-- Mapping moved to GitHub
-- Added README
-- Added MIT license
-- Added project structure with `controllers/` directory
+### Documentation
+- README and controller documentation added and refined
