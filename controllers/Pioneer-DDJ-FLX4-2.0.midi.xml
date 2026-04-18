@@ -760,6 +760,7 @@
         <status>0xB0</status>
         <midino>0x27</midino>
         <options>
+          <script-binding />
           <fourteen-bit-lsb />
         </options>
       </control>
@@ -770,6 +771,7 @@
         <status>0xB0</status>
         <midino>0x2B</midino>
         <options>
+          <script-binding />
           <fourteen-bit-lsb />
         </options>
       </control>
@@ -780,6 +782,7 @@
         <status>0xB0</status>
         <midino>0x2F</midino>
         <options>
+          <script-binding />
           <fourteen-bit-lsb />
         </options>
       </control>
@@ -790,6 +793,7 @@
         <status>0xB0</status>
         <midino>0x07</midino>
         <options>
+          <script-binding />
           <fourteen-bit-msb />
         </options>
       </control>
@@ -800,6 +804,7 @@
         <status>0xB0</status>
         <midino>0x0B</midino>
         <options>
+          <script-binding />
           <fourteen-bit-msb />
         </options>
       </control>
@@ -810,6 +815,7 @@
         <status>0xB0</status>
         <midino>0x0F</midino>
         <options>
+          <script-binding />
           <fourteen-bit-msb />
         </options>
       </control>
@@ -820,6 +826,7 @@
         <status>0xB1</status>
         <midino>0x27</midino>
         <options>
+          <script-binding />
           <fourteen-bit-lsb />
         </options>
       </control>
@@ -830,6 +837,7 @@
         <status>0xB1</status>
         <midino>0x2B</midino>
         <options>
+          <script-binding />
           <fourteen-bit-lsb />
         </options>
       </control>
@@ -840,6 +848,7 @@
         <status>0xB1</status>
         <midino>0x2F</midino>
         <options>
+          <script-binding />
           <fourteen-bit-lsb />
         </options>
       </control>
@@ -850,6 +859,7 @@
         <status>0xB1</status>
         <midino>0x07</midino>
         <options>
+          <script-binding />
           <fourteen-bit-msb />
         </options>
       </control>
@@ -860,6 +870,7 @@
         <status>0xB1</status>
         <midino>0x0B</midino>
         <options>
+          <script-binding />
           <fourteen-bit-msb />
         </options>
       </control>
@@ -870,6 +881,7 @@
         <status>0xB1</status>
         <midino>0x0F</midino>
         <options>
+          <script-binding />
           <fourteen-bit-msb />
         </options>
       </control>
