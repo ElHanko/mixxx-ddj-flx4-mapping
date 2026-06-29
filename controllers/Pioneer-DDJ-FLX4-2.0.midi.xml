@@ -716,40 +716,44 @@
       <control>
         <description>TRIM - rotate</description>
         <group>[Channel1]</group>
-        <key>pregain</key>
+        <key>PioneerDDJFLX4.trimLsb</key>
         <status>0xB0</status>
         <midino>0x24</midino>
         <options>
+          <script-binding />
           <fourteen-bit-lsb />
         </options>
       </control>
       <control>
         <description>TRIM - rotate</description>
         <group>[Channel1]</group>
-        <key>pregain</key>
+        <key>PioneerDDJFLX4.trimMsb</key>
         <status>0xB0</status>
         <midino>0x04</midino>
         <options>
+          <script-binding />
           <fourteen-bit-msb />
         </options>
       </control>
       <control>
         <description>TRIM - rotate</description>
         <group>[Channel2]</group>
-        <key>pregain</key>
+        <key>PioneerDDJFLX4.trimLsb</key>
         <status>0xB1</status>
         <midino>0x24</midino>
         <options>
+          <script-binding />
           <fourteen-bit-lsb />
         </options>
       </control>
       <control>
         <description>TRIM - rotate</description>
         <group>[Channel2]</group>
-        <key>pregain</key>
+        <key>PioneerDDJFLX4.trimMsb</key>
         <status>0xB1</status>
         <midino>0x04</midino>
         <options>
+          <script-binding />
           <fourteen-bit-msb />
         </options>
       </control>

@@ -1005,6 +1005,55 @@ PioneerDDJFLX4.loadShiftPressed = function(_channel, control, value, _status, _g
 };
 
 ///////////////////////////////////////////////////////////////
+// TRIM / CFX GUARD
+//
+// The FLX4 appears to send additional TRIM MIDI messages while
+// moving the CFX knob in the outer range.
+// Therefore TRIM is routed through JS and ignored shortly after
+// CFX movement.
+///////////////////////////////////////////////////////////////
+
+PioneerDDJFLX4.trimCfxGuardMs =
+    Number.isFinite(PioneerDDJFLX4.trimCfxGuardMs)
+        ? PioneerDDJFLX4.trimCfxGuardMs
+        : 2000;
+
+PioneerDDJFLX4._trimLockUntil = PioneerDDJFLX4._trimLockUntil || {
+    "[Channel1]": 0,
+    "[Channel2]": 0,
+};
+
+PioneerDDJFLX4._trim14bit = PioneerDDJFLX4._trim14bit || {
+    "[Channel1]": { msb: 0 },
+    "[Channel2]": { msb: 0 },
+};
+
+PioneerDDJFLX4._lockTrimAfterCfx = function(channelGroup) {
+    PioneerDDJFLX4._trimLockUntil[channelGroup] =
+        Date.now() + PioneerDDJFLX4.trimCfxGuardMs;
+};
+
+PioneerDDJFLX4._isTrimLocked = function(channelGroup) {
+    return Date.now() < (PioneerDDJFLX4._trimLockUntil[channelGroup] || 0);
+};
+
+PioneerDDJFLX4.trimMsb = function(_channel, _control, value, _status, group) {
+    PioneerDDJFLX4._trim14bit[group].msb = value;
+};
+
+PioneerDDJFLX4.trimLsb = function(_channel, _control, value, _status, group) {
+    if (PioneerDDJFLX4._isTrimLocked(group)) {
+        return;
+    }
+
+    const msb = PioneerDDJFLX4._trim14bit[group].msb;
+    const fullValue = (msb << 7) + value;
+    const normalized = fullValue / 16383;
+
+    engine.setParameter(group, "pregain", normalized);
+};
+
+///////////////////////////////////////////////////////////////
 // EQ / STEM ROUTING (14-bit) with per-mode soft takeover
 //
 // Purpose:
@@ -2318,6 +2367,7 @@ PioneerDDJFLX4._filterKnobLast = PioneerDDJFLX4._filterKnobLast || {
  * 4. Send result to Mixxx (QuickEffectRack super1)
  */
 PioneerDDJFLX4.filterCh1Rotate = function(_channel, control, value) {
+    PioneerDDJFLX4._lockTrimAfterCfx("[Channel1]");
     if (control === 0x17) {
         if (PioneerDDJFLX4._filterKnobLast.ch1.msb === value) return;
         PioneerDDJFLX4._filterKnobLast.ch1.msb = value;
@@ -2347,6 +2397,7 @@ PioneerDDJFLX4.filterCh1Rotate = function(_channel, control, value) {
  * Only MIDI controls and target group differ.
  */
 PioneerDDJFLX4.filterCh2Rotate = function(_channel, control, value) {
+    PioneerDDJFLX4._lockTrimAfterCfx("[Channel2]");
     if (control === 0x18) {
         if (PioneerDDJFLX4._filterKnobLast.ch2.msb === value) return;
         PioneerDDJFLX4._filterKnobLast.ch2.msb = value;
