@@ -1005,18 +1005,35 @@ PioneerDDJFLX4.loadShiftPressed = function(_channel, control, value, _status, _g
 };
 
 ///////////////////////////////////////////////////////////////
-// TRIM / CFX GUARD
+// TRIM / CFX GUARD with soft takeover
 //
 // The FLX4 appears to send additional TRIM MIDI messages while
 // moving the CFX knob in the outer range.
-// Therefore TRIM is routed through JS and ignored shortly after
-// CFX movement.
+//
+// Therefore TRIM is routed through JS.
+// Protection strategy:
+// - CFX movement locks TRIM for a short time
+// - CFX movement also resets TRIM pickup state
+// - TRIM only changes pregain after soft-takeover pickup
+//
+// This prevents false TRIM messages from jumping pregain to the
+// current CFX knob position.
 ///////////////////////////////////////////////////////////////
 
 PioneerDDJFLX4.trimCfxGuardMs =
     Number.isFinite(PioneerDDJFLX4.trimCfxGuardMs)
         ? PioneerDDJFLX4.trimCfxGuardMs
         : 2000;
+
+PioneerDDJFLX4.trimPickupThreshold =
+    Number.isFinite(PioneerDDJFLX4.trimPickupThreshold)
+        ? PioneerDDJFLX4.trimPickupThreshold
+        : 0.02; // ~2 %
+
+PioneerDDJFLX4.trimPickupHoldMs =
+    Number.isFinite(PioneerDDJFLX4.trimPickupHoldMs)
+        ? PioneerDDJFLX4.trimPickupHoldMs
+        : 1000;
 
 PioneerDDJFLX4._trimLockUntil = PioneerDDJFLX4._trimLockUntil || {
     "[Channel1]": 0,
@@ -1028,13 +1045,68 @@ PioneerDDJFLX4._trim14bit = PioneerDDJFLX4._trim14bit || {
     "[Channel2]": { msb: 0 },
 };
 
+PioneerDDJFLX4._trimPickup = PioneerDDJFLX4._trimPickup || {
+    "[Channel1]": false,
+    "[Channel2]": false,
+};
+
+PioneerDDJFLX4._trimPickupTimer = PioneerDDJFLX4._trimPickupTimer || {
+    "[Channel1]": 0,
+    "[Channel2]": 0,
+};
+
+PioneerDDJFLX4._resetTrimPickup = function(group) {
+    PioneerDDJFLX4._trimPickup[group] = false;
+
+    if (PioneerDDJFLX4._trimPickupTimer[group]) {
+        engine.stopTimer(PioneerDDJFLX4._trimPickupTimer[group]);
+        PioneerDDJFLX4._trimPickupTimer[group] = 0;
+    }
+};
+
+PioneerDDJFLX4._refreshTrimPickupHold = function(group) {
+    if (PioneerDDJFLX4._trimPickupTimer[group]) {
+        engine.stopTimer(PioneerDDJFLX4._trimPickupTimer[group]);
+    }
+
+    PioneerDDJFLX4._trimPickupTimer[group] = engine.beginTimer(
+        PioneerDDJFLX4.trimPickupHoldMs,
+        function() {
+            PioneerDDJFLX4._trimPickupTimer[group] = 0;
+            PioneerDDJFLX4._trimPickup[group] = false;
+        },
+        true
+    );
+};
+
 PioneerDDJFLX4._lockTrimAfterCfx = function(channelGroup) {
     PioneerDDJFLX4._trimLockUntil[channelGroup] =
         Date.now() + PioneerDDJFLX4.trimCfxGuardMs;
+
+    // Important:
+    // After CFX movement, TRIM must be picked up again.
+    // This prevents stale pickup state from allowing false TRIM events through.
+    PioneerDDJFLX4._resetTrimPickup(channelGroup);
 };
 
 PioneerDDJFLX4._isTrimLocked = function(channelGroup) {
     return Date.now() < (PioneerDDJFLX4._trimLockUntil[channelGroup] || 0);
+};
+
+PioneerDDJFLX4._trimSoftTakeoverPass = function(group, hardwareValue) {
+    if (PioneerDDJFLX4._trimPickup[group]) {
+        return true;
+    }
+
+    const currentValue = engine.getParameter(group, "pregain");
+    const diff = Math.abs(hardwareValue - currentValue);
+
+    if (diff <= PioneerDDJFLX4.trimPickupThreshold) {
+        PioneerDDJFLX4._trimPickup[group] = true;
+        return true;
+    }
+
+    return false;
 };
 
 PioneerDDJFLX4.trimMsb = function(_channel, _control, value, _status, group) {
@@ -1042,16 +1114,26 @@ PioneerDDJFLX4.trimMsb = function(_channel, _control, value, _status, group) {
 };
 
 PioneerDDJFLX4.trimLsb = function(_channel, _control, value, _status, group) {
-    if (PioneerDDJFLX4._isTrimLocked(group)) {
-        return;
-    }
-
     const msb = PioneerDDJFLX4._trim14bit[group].msb;
     const fullValue = (msb << 7) + value;
     const normalized = fullValue / 16383;
 
+    if (PioneerDDJFLX4._isTrimLocked(group)) {
+        PioneerDDJFLX4._resetTrimPickup(group);
+        return;
+    }
+
+    if (!PioneerDDJFLX4._trimSoftTakeoverPass(group, normalized)) {
+        return;
+    }
+
     engine.setParameter(group, "pregain", normalized);
+    PioneerDDJFLX4._refreshTrimPickupHold(group);
 };
+
+///////////////////////////////////////////////////////////////
+// END TRIM / CFX GUARD
+///////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////
 // EQ / STEM ROUTING (14-bit) with per-mode soft takeover
