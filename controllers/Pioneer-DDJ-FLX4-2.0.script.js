@@ -2373,19 +2373,25 @@ PioneerDDJFLX4.smartCfxPress = function(_ch, control, value, _status, _group) {
     const g2 = PioneerDDJFLX4._qfxGroup(2);
 
     if (isShiftVariant) {
-        // Shift: toggle Smart CFX on/off
-        PioneerDDJFLX4._smartCfx.enabled = !PioneerDDJFLX4._smartCfx.enabled;
-
-        engine.setValue(g1, "enabled", PioneerDDJFLX4._smartCfx.enabled ? 1 : 0);
-        engine.setValue(g2, "enabled", PioneerDDJFLX4._smartCfx.enabled ? 1 : 0);
-
-        PioneerDDJFLX4.setLed(0x96, 0x00, PioneerDDJFLX4._smartCfx.enabled);
+        // Shift: cycle Smart CFX / QuickEffect preset
+        engine.setValue(g1, "next_chain_preset", 1);
+        engine.setValue(g2, "next_chain_preset", 1);
         return;
     }
 
-    // Normal: cycle effect preset
-    engine.setValue(g1, "next_chain_preset", 1);
-    engine.setValue(g2, "next_chain_preset", 1);
+    // Normal: toggle Smart CFX on/off
+    const enabled =
+        engine.getValue(g1, "enabled") > 0 ||
+        engine.getValue(g2, "enabled") > 0;
+
+    const nextEnabled = !enabled;
+
+    PioneerDDJFLX4._smartCfx.enabled = nextEnabled;
+
+    engine.setValue(g1, "enabled", nextEnabled ? 1 : 0);
+    engine.setValue(g2, "enabled", nextEnabled ? 1 : 0);
+
+    PioneerDDJFLX4.setLed(0x96, 0x00, nextEnabled);
 };
 
 /**
