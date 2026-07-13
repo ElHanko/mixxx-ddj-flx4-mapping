@@ -38,7 +38,7 @@
 //     * deck play state
 //     * controller vinyl mode
 //     * touch state
-// - Shifted jog behavior for fast seek / high-speed bend
+// - Shifted jog behavior for direct track-position search
 // - Loop-adjust mode overrides normal jog behavior
 //
 // Hotcues
@@ -291,13 +291,14 @@ PioneerDDJFLX4.bendScale = 0.8;
 //
 PioneerDDJFLX4.loopAdjustMultiply = 50;
 
-// Multiplier for fast track seeking when turning the jog wheel with SHIFT held.
+// Base playposition step per MIDI tick for Shift + Jog search.
+// Higher values scan through the track faster.
 //
-PioneerDDJFLX4.fastSeekScale = 50;
+PioneerDDJFLX4.jogSearchScale = 0.00015;
 
 // Multiplier for Shift + Jog search when platter touch is held.
 // Higher value = much faster scanning through the track.
-PioneerDDJFLX4.shiftSearchTouchMultiplier = 1.0;
+PioneerDDJFLX4.shiftSearchTouchMultiplier = 2.0;
 
 
 // -----------------------------------------------------------------------------
@@ -378,7 +379,6 @@ PioneerDDJFLX4._smartCfx = { enabled: false };
 
 PioneerDDJFLX4.wheelTouch = [false, false];
 PioneerDDJFLX4._scratchEnabled = [false, false];
-PioneerDDJFLX4._scratchAction = ["bend", "bend"];
 
 if (!Array.isArray(PioneerDDJFLX4._vinylWanted)) {
     PioneerDDJFLX4._vinylWanted = [false, false];
@@ -418,7 +418,6 @@ PioneerDDJFLX4.beta = PioneerDDJFLX4.alpha / 32;
 PioneerDDJFLX4.jogPPR = PioneerDDJFLX4.jogPPR || 720;
 PioneerDDJFLX4.jogRPM = PioneerDDJFLX4.jogRPM || (33 + 1 / 3);
 PioneerDDJFLX4.scratchScale = PioneerDDJFLX4.scratchScale || 1.8;
-PioneerDDJFLX4.seekScratchMultiplier = PioneerDDJFLX4.seekScratchMultiplier || 4.0;
 
 PioneerDDJFLX4.PADMODE = {
     HOTCUE:   "hotcue",
@@ -3185,7 +3184,8 @@ PioneerDDJFLX4.cycleTempoRange = function(_ch, _ctrl, value, _status, group) {
 // - Loop-adjust has priority (your existing _handleJogLoopAdjust hook stays).
 // - Touch decides: scratch if (vinylMode ON) OR (deck not playing), else bend.
 // - Turn: scratchTick when scratching, else jog bend.
-// - Optional Shift-Touch: seek-scratch (good for quick searches).
+// - Shift + Jog searches directly through playposition.
+// - Shift + platter touch applies an optional search-speed multiplier.
 //
 // Notes:
 // - FLX4 wheel turn values are centered at 64 (0..127). We convert to signed by (v - 64).
@@ -3193,24 +3193,12 @@ PioneerDDJFLX4.cycleTempoRange = function(_ch, _ctrl, value, _status, group) {
 // - Per-deck vinylMode avoids “one side affects the other” bugs.
 ///////////////////////////////////////////////////////////////
 
-// ---------- config ----------
-PioneerDDJFLX4.jogPPR = PioneerDDJFLX4.jogPPR || 720;            // typical Pioneer jog resolution
-PioneerDDJFLX4.jogRPM = PioneerDDJFLX4.jogRPM || (33 + 1/3);     // platter RPM
-// Make scratch params explicit (avoid relying on "this" shape)
-// If you already define alpha/beta elsewhere, these keep your values.
-PioneerDDJFLX4.alpha = (Number.isFinite(PioneerDDJFLX4.alpha) ? PioneerDDJFLX4.alpha : 1.0);
-PioneerDDJFLX4.beta  = (Number.isFinite(PioneerDDJFLX4.beta)  ? PioneerDDJFLX4.beta  : 1.0);
-
-PioneerDDJFLX4.scratchScale = PioneerDDJFLX4.scratchScale || 1.0; // can tune
-PioneerDDJFLX4.seekScratchMultiplier = PioneerDDJFLX4.seekScratchMultiplier || 4.0;
-
 // ---------- state ----------
 // Single source of truth:
 // _vinylWanted stores the intended per-deck vinyl state.
 // Do not infer vinyl state back from incoming jog CCs.
 PioneerDDJFLX4.wheelTouch = PioneerDDJFLX4.wheelTouch || [false, false];    // per deck side
 PioneerDDJFLX4._scratchEnabled = PioneerDDJFLX4._scratchEnabled || [false, false];
-PioneerDDJFLX4._scratchAction = PioneerDDJFLX4._scratchAction || ["bend", "bend"]; // "scratch"|"seek"|"bend"
 
 // Helper: enable scratch for deckNum (1/2)
 PioneerDDJFLX4._scratchEnable = function(deckNum) {
@@ -3223,8 +3211,6 @@ PioneerDDJFLX4._scratchDisable = function(deckNum, ramp) {
     // "ramp" true makes it feel less abrupt, but if you hate it: set false.
     engine.scratchDisable(deckNum, !!ramp);
     PioneerDDJFLX4._scratchEnabled[deckNum - 1] = false;
-    // After release we fall back to bend mode.
-    PioneerDDJFLX4._scratchAction[deckNum - 1] = "bend";
 };
 
  // ---------- touch handlers ----------
@@ -3247,11 +3233,8 @@ PioneerDDJFLX4._scratchDisable = function(deckNum, ramp) {
          const wantScratch = (!playing) || !!PioneerDDJFLX4._vinylWanted[deckIdx];
 
          if (wantScratch) {
-             PioneerDDJFLX4._scratchAction[deckIdx] = "scratch";
              PioneerDDJFLX4._scratchEnable(deckNum);
          } else {
-             PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
-
              // ensure scratch is off if it was on
              if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
                  PioneerDDJFLX4._scratchDisable(deckNum);
@@ -3263,8 +3246,6 @@ PioneerDDJFLX4._scratchDisable = function(deckNum, ramp) {
      // Touch released
      if (PioneerDDJFLX4._scratchEnabled[deckIdx]) {
          PioneerDDJFLX4._scratchDisable(deckNum, true);
-     } else {
-         PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
      }
  };
 
@@ -3325,16 +3306,7 @@ PioneerDDJFLX4.jogTurn = function(channel, _control, value, _status, group) {
     // If Mixxx is currently scratching, always send scratchTick for PLATTER turns (0x22 AND 0x23).
     // Side jog (0x21) must always remain bend.
     if (_control !== 0x21 && engine.isScratching(deckNum)) {
-        const action = PioneerDDJFLX4._scratchAction[deckIdx];
-
-        if (action === "seek") {
-            engine.scratchTick(
-                deckNum,
-                delta * PioneerDDJFLX4.scratchScale * PioneerDDJFLX4.seekScratchMultiplier
-            );
-        } else {
-            engine.scratchTick(deckNum, delta * PioneerDDJFLX4.scratchScale);
-        }
+        engine.scratchTick(deckNum, delta * PioneerDDJFLX4.scratchScale);
         return;
     }
 
@@ -3348,10 +3320,10 @@ PioneerDDJFLX4.jogSearch = function(_channel, _control, value, _status, group) {
 
     if (delta === 0) return;
 
-    let step = delta * 0.00015; // deutlich feiner als vorher
+    let step = delta * PioneerDDJFLX4.jogSearchScale;
 
     if (PioneerDDJFLX4._shiftSearchTouch[deckIdx]) {
-        step *= 2.0; // statt 6
+        step *= PioneerDDJFLX4.shiftSearchTouchMultiplier;
     }
 
     const pos = engine.getValue(group, "playposition");
@@ -3404,7 +3376,6 @@ PioneerDDJFLX4._applyVinylState = function(deckIdx, on) {
     // if turning OFF, ensure we don't stay in scratching
     if (!state) {
         if (PioneerDDJFLX4._scratchEnabled[deckIdx]) PioneerDDJFLX4._scratchDisable(deckIdx + 1);
-        PioneerDDJFLX4._scratchAction[deckIdx] = "bend";
     }
 
     // LED currently disabled / unassigned:
@@ -3993,50 +3964,113 @@ PioneerDDJFLX4.pitchPadShiftPressed = function(_channel, _control, _value, _stat
 //
 
 PioneerDDJFLX4.shutdown = function() {
+    const stopTimer = function(timerId) {
+        if (timerId === undefined || timerId === null || timerId === 0 || timerId === -1) {
+            return;
+        }
+
+        try {
+            engine.stopTimer(timerId);
+        } catch (e) {}
+    };
+
+    const deckGroups = ["[Channel1]", "[Channel2]"];
+
+    // Stop the recurring keepalive first so no new controller traffic is
+    // generated while the remaining runtime state is being torn down.
+    stopTimer(PioneerDDJFLX4.keepAliveTimer);
+    PioneerDDJFLX4.keepAliveTimer = 0;
+
     // --- Peak latch timers ---
-    if (PioneerDDJFLX4._peakTimerL) engine.stopTimer(PioneerDDJFLX4._peakTimerL);
-    if (PioneerDDJFLX4._peakTimerR) engine.stopTimer(PioneerDDJFLX4._peakTimerR);
+    stopTimer(PioneerDDJFLX4._peakTimerL);
+    stopTimer(PioneerDDJFLX4._peakTimerR);
     PioneerDDJFLX4._peakTimerL = 0;
     PioneerDDJFLX4._peakTimerR = 0;
     PioneerDDJFLX4._peakL = 0;
     PioneerDDJFLX4._peakR = 0;
 
-    // --- Stop ALL sampler blink timers (wichtig) ---
+    // --- Delayed LOAD / instant-double timers ---
+    deckGroups.forEach(function(group) {
+        stopTimer(PioneerDDJFLX4._loadPress.timer[group]);
+        PioneerDDJFLX4._loadPress.timer[group] = 0;
+        PioneerDDJFLX4._loadPress.waiting[group] = false;
+    });
+
+    // --- Sampler long-press timers ---
+    for (const samplerGroup in PioneerDDJFLX4._samplerHold.timer) {
+        stopTimer(PioneerDDJFLX4._samplerHold.timer[samplerGroup]);
+        PioneerDDJFLX4._samplerHold.timer[samplerGroup] = 0;
+    }
+    for (const samplerGroup in PioneerDDJFLX4._samplerHold.fired) {
+        PioneerDDJFLX4._samplerHold.fired[samplerGroup] = false;
+    }
+
+    // --- Quantize / keylock long-press timers ---
+    for (const group in PioneerDDJFLX4._quantizeLP.timer) {
+        stopTimer(PioneerDDJFLX4._quantizeLP.timer[group]);
+        PioneerDDJFLX4._quantizeLP.timer[group] = null;
+    }
+    for (const group in PioneerDDJFLX4._quantizeLP.fired) {
+        PioneerDDJFLX4._quantizeLP.fired[group] = false;
+    }
+
+    // --- TRIM soft-takeover hold timers ---
+    deckGroups.forEach(function(group) {
+        stopTimer(PioneerDDJFLX4._trimPickupTimer[group]);
+        PioneerDDJFLX4._trimPickupTimer[group] = 0;
+        PioneerDDJFLX4._trimPickup[group] = false;
+        PioneerDDJFLX4._trimLockUntil[group] = 0;
+    });
+
+    // --- Vinyl brake watchers and active transport effects ---
+    for (let deckIdx = 0; deckIdx < 2; deckIdx++) {
+        stopTimer(PioneerDDJFLX4._brakeWatchTimer[deckIdx]);
+        PioneerDDJFLX4._brakeWatchTimer[deckIdx] = -1;
+        PioneerDDJFLX4._brakeInProgress[deckIdx] = false;
+        PioneerDDJFLX4._brakeCompleted[deckIdx] = false;
+        PioneerDDJFLX4._stopAllVinylFx(deckIdx + 1);
+    }
+
+    // --- Loop-adjust timeout timers and state ---
+    deckGroups.forEach(function(group, deckIdx) {
+        stopTimer(PioneerDDJFLX4._loopAdjustTimeoutTimer[group]);
+        PioneerDDJFLX4._loopAdjustTimeoutTimer[group] = undefined;
+        PioneerDDJFLX4.loopAdjustIn[deckIdx] = false;
+        PioneerDDJFLX4.loopAdjustOut[deckIdx] = false;
+        PioneerDDJFLX4._loopPendingOut[group] = false;
+    });
+
+    // --- Sampler blink timers ---
     if (PioneerDDJFLX4.timersSampler) {
         for (const chanStr in PioneerDDJFLX4.timersSampler) {
-            const chan = Number(chanStr);
-            const controls = PioneerDDJFLX4.timersSampler[chan];
+            const controls = PioneerDDJFLX4.timersSampler[chanStr];
             if (!controls) continue;
 
             for (const ctrlStr in controls) {
-                const t = controls[ctrlStr];
-                if (t !== undefined && t !== 0) {
-                    engine.stopTimer(t);
-                }
+                stopTimer(controls[ctrlStr]);
                 controls[ctrlStr] = undefined;
             }
         }
     }
 
-    // loop blink timer (pro Deckgruppe) defensiv stoppen
+    // --- Loop blink timers ---
     if (PioneerDDJFLX4.timersLoop) {
         for (const g in PioneerDDJFLX4.timersLoop) {
             const t = PioneerDDJFLX4.timersLoop[g]?.loopBlink;
-            if (t) engine.stopTimer(t);
+            stopTimer(t);
             if (PioneerDDJFLX4.timersLoop[g]) PioneerDDJFLX4.timersLoop[g].loopBlink = undefined;
         }
     }
-    // --- stop hotcue timers ---
-    ["[Channel1]", "[Channel2]"].forEach(function(group) {
-        if (PioneerDDJFLX4._hotcueBlinkTimer[group]) {
-            engine.stopTimer(PioneerDDJFLX4._hotcueBlinkTimer[group]);
-            PioneerDDJFLX4._hotcueBlinkTimer[group] = 0;
-        }
-        if (PioneerDDJFLX4._hotcueBankFlashTimer[group]) {
-            engine.stopTimer(PioneerDDJFLX4._hotcueBankFlashTimer[group]);
-            PioneerDDJFLX4._hotcueBankFlashTimer[group] = 0;
-        }
+
+    // --- Hotcue blink and bank-feedback timers ---
+    deckGroups.forEach(function(group) {
+        stopTimer(PioneerDDJFLX4._hotcueBlinkTimer[group]);
+        stopTimer(PioneerDDJFLX4._hotcueBankFlashTimer[group]);
+        PioneerDDJFLX4._hotcueBlinkTimer[group] = 0;
+        PioneerDDJFLX4._hotcueBankFlashTimer[group] = 0;
+        PioneerDDJFLX4._hotcueBlinkState[group] = false;
     });
+
     // --- Reset VU meter bargraph (CC 0x02) ---
     // Deck 1: 0xB0, Deck 2: 0xB1
     midi.sendShortMsg(0xB0, 0x02, 0x00);
@@ -4071,9 +4105,4 @@ PioneerDDJFLX4.shutdown = function() {
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.beatFx, false);
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.shiftBeatFx, false);
 
-    // keepalive timer stoppen (defensiv)
-    if (PioneerDDJFLX4.keepAliveTimer) {
-        engine.stopTimer(PioneerDDJFLX4.keepAliveTimer);
-        PioneerDDJFLX4.keepAliveTimer = 0;
-    }
 };

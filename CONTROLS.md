@@ -172,7 +172,11 @@ The script tracks the controller’s internal vinyl mode and uses it as input fo
 
 ## Shift + platter rotate
 
-* Fast seek / accelerated bend
+* Search directly through the track position
+
+## Shift + platter touch
+
+* Increase Shift + platter search speed while held
 
 ## Loop-adjust priority
 
@@ -287,6 +291,14 @@ Mapped to **Shift + Channel Cue buttons**
 ---
 
 # Beat FX Section
+
+## Preset requirement
+
+Beat FX navigation uses fixed absolute preset positions. All supplied effect
+chains named `01_` through `14_` must be installed without renaming or removing
+individual presets. Additional chain presets must not change their sorted
+positions. Otherwise the selected group or variant can point to a different
+effect.
 
 ## FX SELECT
 
@@ -490,7 +502,6 @@ All LEDs are script-driven and follow Mixxx engine state.
 Examples:
 
 * `BROWSE_FOCUS_TOGGLE_ONLY`
-* `BROWSE_LONGPRESS_MS`
 * `SAMPLER_LONGPRESS_MS`
 * `QUANTIZE_LONGPRESS_MS`
 * `LOOP_ADJUST_MODE`

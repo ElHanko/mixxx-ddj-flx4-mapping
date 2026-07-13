@@ -17,11 +17,14 @@ All notable changes to this project will be documented in this file.
 - EQ knobs are now routed through script handlers instead of direct XML EQ bindings
 - EQ / stem handling now uses 14-bit script-side routing
 - Scratch feel improved by increasing `scratchScale`
+- Shift + jog search now uses the configurable `jogSearchScale` and `shiftSearchTouchMultiplier` values
+- Removed obsolete seek-scratch configuration and unreachable seek-scratch state
 - Setup and control documentation updated to reflect current EQ/stem and setup behavior
 
 ### Fixed
 - Added required script binding for EQ script handlers
 - Reset soft takeover state when switching between EQ and stem mode
+- Stop and reset all mapping-owned timers during controller shutdown
 - Restored loop adjust behavior in `jogTurn`
 - Made vinyl mode deterministic and forced startup with vinyl off
 - Setup script now handles directories correctly when linking Mixxx assets
@@ -32,8 +35,12 @@ All notable changes to this project will be documented in this file.
 
 ### Documentation
 - Updated README setup instructions
+- Reformatted and reorganized the README
 - Updated EQ/stem control documentation
 - Documented setup script usage and current control behavior
+- Corrected loop-adjust step and timeout configuration descriptions
+- Documented the fixed Beat FX preset-order requirement and conflict behavior
+- Aligned browser, Shift+LOAD and loop-call documentation with script behavior
 
 ### Repository / Setup
 - Setup script is tracked as executable

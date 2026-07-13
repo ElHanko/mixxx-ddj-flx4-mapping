@@ -49,7 +49,7 @@
         </options>
       </control>
       <control>
-        <description>BROWSE +SHIFT - press - Move cursor between track list and tree view</description>
+        <description>BROWSE +SHIFT - press - currently unused</description>
         <group>[Library]</group>
         <key>PioneerDDJFLX4.browsePress</key>
         <status>0x96</status>
@@ -92,7 +92,7 @@
         </options>
       </control>
       <control>
-        <description>SHIFT + LOAD (DECK2) - press - currently unused</description>
+        <description>SHIFT + LOAD (DECK2) - press - navigate right / open library folder</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.loadShiftPressed</key>
         <status>0x96</status>
@@ -227,7 +227,7 @@
         </options>
       </control>
       <control>
-        <description>JOG DIAL PLATTER +SHIFT (DECK1) - rotate - Search (Fast Pitch bend)</description>
+        <description>JOG DIAL PLATTER +SHIFT (DECK1) - rotate - Search through track position</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.jogSearch</key>
         <status>0xB0</status>
@@ -248,8 +248,7 @@
         </options>
       </control>
       <control>
-        <description>JOG DIAL PLATTER +SHIFT (DECK1) - touch - enable (on touch) / disable (on release) highspeed
-                    Pitch bend</description>
+        <description>JOG DIAL PLATTER +SHIFT (DECK1) - touch - Increase search speed while held</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.jogTouchShift</key>
         <status>0x90</status>
@@ -289,7 +288,7 @@
         </options>
       </control>
       <control>
-        <description>JOG DIAL PLATTER +SHIFT (DECK2) - rotate - Search (Fast Pitch bend)</description>
+        <description>JOG DIAL PLATTER +SHIFT (DECK2) - rotate - Search through track position</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.jogSearch</key>
         <status>0xB1</status>
@@ -310,8 +309,7 @@
         </options>
       </control>
       <control>
-        <description>JOG DIAL PLATTER +SHIFT (DECK2) - touch - enable (on touch) / disable (on release) highspeed
-                    Pitch bend</description>
+        <description>JOG DIAL PLATTER +SHIFT (DECK2) - touch - Increase search speed while held</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.jogTouchShift</key>
         <status>0x91</status>
@@ -592,7 +590,7 @@
         </options>
       </control>
       <control>
-        <description>CUE/LOOP CALL LEFT (DECK1) - press - double active loop</description>
+        <description>CUE/LOOP CALL RIGHT (DECK1) - press - double active loop</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.cueLoopCallRight</key>
         <status>0x90</status>
@@ -612,7 +610,7 @@
         </options>
       </control>
       <control>
-        <description>CUE/LOOP CALL LEFT (DECK2) - press - double active loop</description>
+        <description>CUE/LOOP CALL RIGHT (DECK2) - press - double active loop</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.cueLoopCallRight</key>
         <status>0x91</status>

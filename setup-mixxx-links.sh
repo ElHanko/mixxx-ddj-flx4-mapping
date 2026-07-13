@@ -3,41 +3,62 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# alle Zielverzeichnisse
 MIXXX_DIRS=(
     "${HOME}/.mixxx"
     "${HOME}/.mixxx-test"
 )
 
-link_dir() {
-    local name="$1"
+link_file() {
+    local src="$1"
+    local target="$2"
 
-    for base in "${MIXXX_DIRS[@]}"; do
-        local src="${SCRIPT_DIR}/${name}"
-        local dst="${base}/${name}"
+    if [ -L "$target" ]; then
+        rm -f "$target"
+    elif [ -e "$target" ]; then
+        echo "[WARN] Existing file or directory left unchanged: $target" >&2
+        return
+    fi
 
-        [ -d "$src" ] || continue
+    ln -s "$src" "$target"
+    echo "Linked: $target -> $src"
+}
 
-        mkdir -p "$dst"
+link_tree() {
+    local src="$1"
+    local dst="$2"
 
-        for file in "$src"/*; do
-            [ -e "$file" ] || continue
+    mkdir -p "$dst"
 
-            local target="${dst}/$(basename "$file")"
+    for entry in "$src"/*; do
+        [ -e "$entry" ] || continue
 
-            if [ -L "$target" ] || [ -f "$target" ]; then
-                rm -f "$target"
-            elif [ -d "$target" ]; then
-                rm -rf "$target"
+        local target="${dst}/$(basename "$entry")"
+
+        if [ -d "$entry" ]; then
+            if [ -e "$target" ] && [ ! -d "$target" ]; then
+                echo "[WARN] Existing file blocks directory; left unchanged: $target" >&2
+                continue
             fi
-
-            ln -s "$file" "$target"
-            echo "[$base] Linked: $target -> $file"
-        done
+            link_tree "$entry" "$target"
+        else
+            link_file "$entry" "$target"
+        fi
     done
 }
 
-link_dir "controllers"
-link_dir "effects"
+link_into_mixxx_dirs() {
+    local name="$1"
+    local src="${SCRIPT_DIR}/${name}"
+
+    [ -d "$src" ] || return
+
+    for base in "${MIXXX_DIRS[@]}"; do
+        local dst="${base}/${name}"
+        link_tree "$src" "$dst"
+    done
+}
+
+link_into_mixxx_dirs "controllers"
+link_into_mixxx_dirs "effects"
 
 echo "Fertig."

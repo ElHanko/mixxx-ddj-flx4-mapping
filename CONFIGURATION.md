@@ -21,17 +21,7 @@ Toggle only between:
 false  
 Use full Mixxx focus cycling.
 
-Default: false
-
----
-
-## BROWSE_LONGPRESS_MS
-
-Reserved for future long-press handling of the browse encoder.
-
-Currently not used.
-
-Default: 300
+Default: true
 
 ---
 
@@ -73,15 +63,11 @@ Selects loop adjustment model.
 
 Options:
 
-simple  
-Basic Mixxx-style loop adjustment  
+- `simple` — Basic Mixxx-style loop adjustment using `loopAdjustMultiply`.
+- `workflow` — Stateful loop workflow with pending loop-out state and
+  beat-relative jog adjustment using `loopAdjustStepBeats`.
 
-workflow  
-Stateful loop workflow with:
-
-• pending loop-out state  
-• jog-based loop edge editing  
-• optional timeout  
+Both modes support jog-based loop edge editing and the optional adjust timeout.
 
 Default: simple
 
@@ -91,7 +77,9 @@ Default: simple
 
 Step size for jog-based loop edge adjustment.
 
-Used in both modes.
+Only used in `workflow` mode.
+
+The `simple` mode uses `loopAdjustMultiply` instead.
 
 Default: 0.02
 
@@ -101,7 +89,8 @@ Default: 0.02
 
 Timeout for automatic exit of loop-adjust mode.
 
-Only relevant in `workflow` mode.
+Used in both `simple` and `workflow` mode. The timeout is restarted whenever
+the jog wheel adjusts a loop edge.
 
 Default: 5000 ms
 
@@ -131,13 +120,21 @@ Default: 32 beats
 
 # Jog Behavior
 
-## fastSeekScale
+## jogSearchScale
 
-Multiplier for Shift + jog fast seek.
+Base `playposition` step per MIDI tick for Shift + jog search.
 
-Higher value = faster movement.
+Higher values scan through the track faster.
 
-Default: 150
+Default: 0.00015
+
+---
+
+## shiftSearchTouchMultiplier
+
+Additional multiplier while the platter is touched during Shift + jog search.
+
+Default: 2.0
 
 ---
 
@@ -185,15 +182,7 @@ Default: 33⅓
 
 Scaling factor for scratch movement.
 
-Default: 1.0
-
----
-
-## seekScratchMultiplier
-
-Speed multiplier for seek-style scratch (Shift + touch).
-
-Default: 4.0
+Default: 1.8
 
 ---
 
