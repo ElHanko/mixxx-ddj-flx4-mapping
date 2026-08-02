@@ -1008,6 +1008,27 @@
           <Script-Binding />
         </options>
       </control>
+      <!-- SMART FADER -->
+      <control>
+        <description>SMART FADER - press/release - slip gestures</description>
+        <group>[App]</group>
+        <key>PioneerDDJFLX4.smartFaderPress</key>
+        <status>0x96</status>
+        <midino>0x01</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
+      <control>
+        <description>SMART FADER +SHIFT - press/release - keylock and key-reset gestures</description>
+        <group>[App]</group>
+        <key>PioneerDDJFLX4.smartFaderPress</key>
+        <status>0x96</status>
+        <midino>0x09</midino>
+        <options>
+          <Script-Binding />
+        </options>
+      </control>
       <!-- BEAT FX SECTION START -->
       <control>
         <description>BEAT FX SELECT - press - cycle Beat FX groups</description>
