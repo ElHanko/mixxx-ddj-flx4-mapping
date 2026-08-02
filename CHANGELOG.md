@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- Smart Fader tap and hold gestures for slip, keylock, and key reset
 - Shift-based stem volume control on EQ knobs
   - Shift + LOW controls drums + bass stem volume
   - Shift + MID controls melody / instruments stem volume

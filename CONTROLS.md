@@ -335,6 +335,37 @@ effect.
 
 * Cycle QuickEffect preset
 
+## Smart Fader button
+
+### Tap
+
+* Toggle slip mode on both decks
+
+### Hold
+
+* Enable slip mode on both decks while held
+* Restore each deck's previous slip state on release
+
+### Left Shift + tap
+
+* Toggle keylock on Deck 1
+
+### Right Shift + tap
+
+* Toggle keylock on Deck 2
+
+### Left Shift + hold
+
+* Reset key on Deck 1
+
+### Right Shift + hold
+
+* Reset key on Deck 2
+
+Both Shifts + press is reserved (no action). The Smart Fader button LED is
+never driven: writing its address (0x96 0x01) arms the FLX4's onboard
+smart-fader engine, which moves the mid EQs. Slip state is shown on screen.
+
 ## Filter knobs
 
 * 14-bit control

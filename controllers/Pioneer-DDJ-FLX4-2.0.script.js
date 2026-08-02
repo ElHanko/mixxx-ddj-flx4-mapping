@@ -79,6 +79,10 @@
 // - 14-bit filter knob handling
 // - Optional response shaping around center position
 //
+// Smart Fader
+// - Tap / hold gesture separation with press-time Shift snapshots
+// - Slip, keylock and key-reset shortcuts
+//
 // Looping
 // - Two loop models:
 //     * simple (direct)
@@ -107,7 +111,6 @@
 // Not Implemented
 // -----------------------------------------------------------------------------
 //
-// - Smart Fader
 // - Dedicated Vinyl LED feedback
 // - Backspin inertia simulation
 // - Additional experimental pad layers
@@ -210,6 +213,13 @@ PioneerDDJFLX4.SAMPLER_LONGPRESS_MS = 350;
 // Long press  → toggle keylock
 //
 PioneerDDJFLX4.QUANTIZE_LONGPRESS_MS = 350;
+
+// Time threshold (milliseconds) for SMART FADER button long press.
+//
+// Tap  -> toggle slip / keylock depending on Shift
+// Hold -> momentary slip / reset key depending on Shift
+//
+PioneerDDJFLX4.SMART_FADER_LONGPRESS_MS = 330;
 
 //beatFx
 // Preset order expected:
@@ -376,6 +386,15 @@ PioneerDDJFLX4._beatFxKnob = { msb: 0, lsb: 0 };
 PioneerDDJFLX4._beatFxKnobLast = { msb: -1, lsb: -1 };
 
 PioneerDDJFLX4._smartCfx = { enabled: false };
+
+PioneerDDJFLX4._smartFader = {
+    pressed: false,
+    timer: 0,
+    held: false,
+    shiftDeck1: false,
+    shiftDeck2: false,
+    slipBefore: [0, 0],
+};
 
 PioneerDDJFLX4.wheelTouch = [false, false];
 PioneerDDJFLX4._scratchEnabled = [false, false];
@@ -2393,6 +2412,93 @@ PioneerDDJFLX4.smartCfxPress = function(_ch, control, value, _status, _group) {
     PioneerDDJFLX4.setLed(0x96, 0x00, nextEnabled);
 };
 
+// --- SMART FADER ---
+
+PioneerDDJFLX4._smartFaderHold = function() {
+    const state = PioneerDDJFLX4._smartFader;
+    if (!state.pressed) return;
+
+    state.timer = 0;
+    state.held = true;
+
+    if (state.shiftDeck1 && state.shiftDeck2) {
+        // both shifts held: reserved, no action
+        return;
+    }
+
+    if (state.shiftDeck1) {
+        script.triggerControl("[Channel1]", "reset_key");
+        return;
+    }
+
+    if (state.shiftDeck2) {
+        script.triggerControl("[Channel2]", "reset_key");
+        return;
+    }
+
+    state.slipBefore = [
+        engine.getValue("[Channel1]", "slip_enabled"),
+        engine.getValue("[Channel2]", "slip_enabled"),
+    ];
+    engine.setValue("[Channel1]", "slip_enabled", 1);
+    engine.setValue("[Channel2]", "slip_enabled", 1);
+};
+
+PioneerDDJFLX4.smartFaderPress = function(_channel, _control, value, _status, _group) {
+    const state = PioneerDDJFLX4._smartFader;
+
+    if (value === 0x7F) {
+        if (state.pressed) return;
+
+        state.pressed = true;
+        state.held = false;
+        state.shiftDeck1 = !!PioneerDDJFLX4._shiftDeck1;
+        state.shiftDeck2 = !!PioneerDDJFLX4._shiftDeck2;
+
+        if (state.timer) engine.stopTimer(state.timer);
+        state.timer = engine.beginTimer(
+            PioneerDDJFLX4.SMART_FADER_LONGPRESS_MS,
+            PioneerDDJFLX4._smartFaderHold,
+            true
+        );
+        return;
+    }
+
+    if (value !== 0x00 || !state.pressed) return;
+
+    state.pressed = false;
+    if (state.timer) {
+        engine.stopTimer(state.timer);
+        state.timer = 0;
+    }
+
+    if (state.held) {
+        if (!state.shiftDeck1 && !state.shiftDeck2) {
+            engine.setValue("[Channel1]", "slip_enabled", state.slipBefore[0]);
+            engine.setValue("[Channel2]", "slip_enabled", state.slipBefore[1]);
+        }
+        return;
+    }
+
+    if (state.shiftDeck1 && state.shiftDeck2) return;
+
+    if (state.shiftDeck1) {
+        script.toggleControl("[Channel1]", "keylock");
+        return;
+    }
+
+    if (state.shiftDeck2) {
+        script.toggleControl("[Channel2]", "keylock");
+        return;
+    }
+
+    const slipOn =
+        engine.getValue("[Channel1]", "slip_enabled") > 0 ||
+        engine.getValue("[Channel2]", "slip_enabled") > 0;
+    engine.setValue("[Channel1]", "slip_enabled", slipOn ? 0 : 1);
+    engine.setValue("[Channel2]", "slip_enabled", slipOn ? 0 : 1);
+};
+
 /**
  * Shapes a linear value (0..1) into a symmetric curve around the center (0.5).
  *
@@ -3980,6 +4086,18 @@ PioneerDDJFLX4.shutdown = function() {
     // generated while the remaining runtime state is being torn down.
     stopTimer(PioneerDDJFLX4.keepAliveTimer);
     PioneerDDJFLX4.keepAliveTimer = 0;
+
+    // --- SMART FADER long-press timer and momentary slip ---
+    const smartFader = PioneerDDJFLX4._smartFader;
+    stopTimer(smartFader.timer);
+    if (smartFader.pressed && smartFader.held && !smartFader.shiftDeck1 && !smartFader.shiftDeck2) {
+        deckGroups.forEach(function(group, deckIdx) {
+            engine.setValue(group, "slip_enabled", smartFader.slipBefore[deckIdx]);
+        });
+    }
+    smartFader.timer = 0;
+    smartFader.pressed = false;
+    smartFader.held = false;
 
     // --- Peak latch timers ---
     stopTimer(PioneerDDJFLX4._peakTimerL);
