@@ -1630,7 +1630,7 @@ PioneerDDJFLX4.hotcueBankCount = 4;
 // "goto"    -> jump to hotcue and remain stopped
 // "play"    -> jump to hotcue and continue playing
 //
-PioneerDDJFLX4.HOTCUE_STOPPED_MODE = "play";
+PioneerDDJFLX4.HOTCUE_STOPPED_MODE = "preview";
 
 
 // -----------------------------------------------------------------------------

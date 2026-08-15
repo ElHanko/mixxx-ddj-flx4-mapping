@@ -414,7 +414,7 @@ Available modes:
 * `goto` → jump to the hotcue and remain stopped
 * `play` → jump to the hotcue and continue playing
 
-Default: `play`
+Default: `preview`
 
 ## LED behavior
 
