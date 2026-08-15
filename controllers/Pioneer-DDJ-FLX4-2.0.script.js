@@ -1624,14 +1624,13 @@ PioneerDDJFLX4.playPressed = function(_channel, _control, value, _status, group)
 
 PioneerDDJFLX4.hotcueBankCount = 4;
 
-// If true:
-// - deck stopped + existing hotcue pressed -> play while held
-// - release -> stop and jump back to that hotcue
+// Behavior when pressing an existing hotcue while the deck is stopped.
 //
-// If false:
-// - existing hotcue always behaves like normal activate/goto
+// "preview" -> play while pad is held; stop and return on release
+// "goto"    -> jump to hotcue and remain stopped
+// "play"    -> jump to hotcue and continue playing
 //
-PioneerDDJFLX4.HOTCUE_PREVIEW_ON_HOLD = true;
+PioneerDDJFLX4.HOTCUE_STOPPED_MODE = "play";
 
 
 // -----------------------------------------------------------------------------
@@ -1824,7 +1823,7 @@ PioneerDDJFLX4.cycleHotcueBank = function(group) {
 
 // -----------------------------------------------------------------------------
 // HOTCUE PAD INPUT
-// normal layer: activate / preview
+// normal layer: activate / stopped-deck behavior
 // shift layer: clear
 // -----------------------------------------------------------------------------
 
@@ -1844,10 +1843,10 @@ PioneerDDJFLX4.hotcuePad = function(_channel, control, value, status, group) {
     const hotcueNumber = PioneerDDJFLX4._hotcueNumberFromPad(group, padIndex);
     const baseName = `hotcue_${hotcueNumber}`;
 
-    // Note-Off
+    // Note-Off is only relevant for preview mode.
     if (value === 0x00) {
         if (!isShiftLayer &&
-            PioneerDDJFLX4.HOTCUE_PREVIEW_ON_HOLD &&
+            PioneerDDJFLX4.HOTCUE_STOPPED_MODE === "preview" &&
             PioneerDDJFLX4._hotcuePreview[group] === hotcueNumber) {
 
             PioneerDDJFLX4._hotcuePreview[group] = 0;
@@ -1879,13 +1878,31 @@ PioneerDDJFLX4.hotcuePad = function(_channel, control, value, status, group) {
         return;
     }
 
-    // stopped deck -> optional preview while held
-    if (!playing && PioneerDDJFLX4.HOTCUE_PREVIEW_ON_HOLD) {
-        engine.setValue(group, `${baseName}_goto`, 1);
-        engine.setValue(group, "play", 1);
-        PioneerDDJFLX4._hotcuePreview[group] = hotcueNumber;
-        PioneerDDJFLX4.updateHotcueLeds(group);
-        return;
+    // Existing hotcue on a stopped deck.
+    if (!playing) {
+        switch (PioneerDDJFLX4.HOTCUE_STOPPED_MODE) {
+        case "preview":
+            // Play only while the pad is held.
+            engine.setValue(group, `${baseName}_goto`, 1);
+            engine.setValue(group, "play", 1);
+            PioneerDDJFLX4._hotcuePreview[group] = hotcueNumber;
+            PioneerDDJFLX4.updateHotcueLeds(group);
+            return;
+
+        case "goto":
+            // Jump to the hotcue but remain stopped.
+            engine.setValue(group, `${baseName}_goto`, 1);
+            PioneerDDJFLX4.updateHotcueLeds(group);
+            return;
+
+        case "play":
+        default:
+            // Jump to the hotcue and continue playing.
+            engine.setValue(group, `${baseName}_goto`, 1);
+            engine.setValue(group, "play", 1);
+            PioneerDDJFLX4.updateHotcueLeds(group);
+            return;
+        }
     }
 
     // normal activate while playing

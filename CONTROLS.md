@@ -395,16 +395,26 @@ Short visual feedback indicates active bank:
 
 * empty → set
 * playing → jump
-* stopped → optional preview
+* stopped → configurable behavior:
+  * `preview` → play while held; stop and return on release
+  * `goto` → jump to hotcue and remain stopped
+  * `play` → jump to hotcue and continue playing
 
 ### Shift
 
 * clear
 
-## Preview-on-hold (optional)
+## Stopped-deck behavior
 
-* press → play from cue
-* release → stop + return
+Controlled by `HOTCUE_STOPPED_MODE`.
+
+Available modes:
+
+* `preview` → play from the hotcue while the pad is held; stop and return on release
+* `goto` → jump to the hotcue and remain stopped
+* `play` → jump to the hotcue and continue playing
+
+Default: `play`
 
 ## LED behavior
 
@@ -510,7 +520,7 @@ Examples:
 * `STEMS_PAD5_8_MODE`
 * `PLAY_BRAKE_ON_VINYL`
 * `hotcueBankCount`
-* `HOTCUE_PREVIEW_ON_HOLD`
+* `HOTCUE_STOPPED_MODE`
 
 ---
 
