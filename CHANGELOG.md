@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
-- Added configurable stopped-deck Hot Cue behavior (`preview`, `goto`, `play`), with `preview` as the default to continue playback from a pressed Hot Cue.
+- Added configurable stopped-deck Hot Cue behavior (`preview`, `goto`, `play`) while keeping `preview` as the default.
 - Shift-based stem volume control on EQ knobs
   - Shift + LOW controls drums + bass stem volume
   - Shift + MID controls melody / instruments stem volume
