@@ -638,9 +638,6 @@ for (let i = 1; i <= samplerCount; ++i) {
     PioneerDDJFLX4.samplerLedUpdate(0, sg, 0);
 }
 
-    engine.makeConnection("[Channel1]", "track_loaded", PioneerDDJFLX4.trackLoadedLED);
-    engine.makeConnection("[Channel2]", "track_loaded", PioneerDDJFLX4.trackLoadedLED);
-
     // play the "track loaded" animation on both decks at startup
     midi.sendShortMsg(0x9F, 0x00, 0x7F);
     midi.sendShortMsg(0x9F, 0x01, 0x7F);
@@ -884,10 +881,10 @@ PioneerDDJFLX4.vuMeterUpdate = function(value, group) {
     const max = PioneerDDJFLX4.VU.MAX;
     let newVal = min + Math.round(v * (max - min));
 
+    if (v < 0.02) newVal = 0x00;
+
     if (group === "[Channel1]" && PioneerDDJFLX4._peakL) newVal = Math.max(newVal, PioneerDDJFLX4.VU.RED_START);
     else if (group === "[Channel2]" && PioneerDDJFLX4._peakR) newVal = Math.max(newVal, PioneerDDJFLX4.VU.RED_START);
-
-    if (v < 0.02) newVal = 0x00;
 
     switch (group) {
     case "[Channel1]":
@@ -1486,7 +1483,7 @@ PioneerDDJFLX4._cancelBrakeWatch = function(deckIdx) {
     if (t !== -1) {
         try {
             engine.stopTimer(t);
-        } catch (e) {}
+        } catch (e) { void e; }
 
         PioneerDDJFLX4._brakeWatchTimer[deckIdx] = -1;
     }
@@ -1505,13 +1502,13 @@ PioneerDDJFLX4._stopAllVinylFx = function(deck) {
         if (typeof engine.isBrakeActive === "function" && engine.isBrakeActive(deck)) {
             engine.brake(deck, false);
         }
-    } catch (e) {}
+    } catch (e) { void e; }
 
     try {
         if (typeof engine.isSoftStartActive === "function" && engine.isSoftStartActive(deck)) {
             engine.softStart(deck, false);
         }
-    } catch (e) {}
+    } catch (e) { void e; }
 };
 
 
@@ -1530,7 +1527,7 @@ PioneerDDJFLX4._startBrakeWatch = function(deckIdx, group) {
 
     PioneerDDJFLX4._brakeWatchTimer[deckIdx] = engine.beginTimer(50, function() {
 
-        let done = false;
+        let done;
 
         if (typeof engine.isBrakeActive === "function") {
             done = !engine.isBrakeActive(deck);
@@ -1952,7 +1949,7 @@ PioneerDDJFLX4._beatFxTargets = function() {
 //   alphabetically stable order in Mixxx.
 // - If presets are added/removed/renamed, update the table below.
 // - This implementation treats the internal mapping state as the source of
-//   truth and always applies the same preset delta to both Beat FX units.
+//   truth and always requests the same preset index for both Beat FX units.
 // - Manual preset changes in the Mixxx GUI will desync this state.
 
 /**
@@ -1997,38 +1994,7 @@ PioneerDDJFLX4._getBeatFxDefaultVariant = function(groupIndex) {
 };
 
 /**
- * Read the currently loaded Beat FX preset slot of one unit.
- *
- * Mixxx uses:
- *   -1 = invalid / unsaved
- *    0 = empty/passthrough preset ("---")
- *    1 = first real preset
- *    2 = second real preset
- *    ...
- */
-PioneerDDJFLX4._getBeatFxUnitLoadedSlot = function(u) {
-    return engine.getValue(u, "loaded_chain_preset");
-};
-
-/**
- * Step one Beat FX unit by a relative number of presets.
- *
- * Positive delta -> next_chain_preset
- * Negative delta -> prev_chain_preset
- */
-PioneerDDJFLX4._stepBeatFxUnitPresetBy = function(u, delta) {
-    if (!delta) return;
-
-    const stepControl = delta > 0 ? "next_chain_preset" : "prev_chain_preset";
-    const steps = Math.abs(delta);
-
-    for (let i = 0; i < steps; i++) {
-        engine.setValue(u, stepControl, 1);
-    }
-};
-
-/**
- * Force one Beat FX unit to a specific internal absolute preset index.
+ * Request a specific internal absolute preset index for one Beat FX unit.
  *
  * Internal mapping index:
  *   0 = first real preset file (01_ECHO_1_4)
@@ -2040,33 +2006,33 @@ PioneerDDJFLX4._stepBeatFxUnitPresetBy = function(u, delta) {
  *   1 = first real preset
  *   2 = second real preset
  *   ...
+ * @returns {boolean} Whether a valid target was requested.
  */
 PioneerDDJFLX4._setBeatFxUnitToAbsolute = function(u, targetAbsolute) {
-    const currentSlot = PioneerDDJFLX4._getBeatFxUnitLoadedSlot(u);
-    if (currentSlot < 0) return;
-
     const targetSlot = targetAbsolute + 1; // convert internal index -> Mixxx slot
-    const delta = targetSlot - currentSlot;
+    if (targetSlot < 0 || targetSlot >= engine.getValue(u, "num_chain_presets")) {
+        return false;
+    }
 
-    PioneerDDJFLX4._stepBeatFxUnitPresetBy(u, delta);
+    engine.setValue(u, "loaded_chain_preset", targetSlot);
+    return true;
 };
 
 /**
- * Force both Beat FX units to the same absolute preset index.
- *
- * The mapping state is still the source of truth for the TARGET,
- * but each unit is moved from its own actual current Mixxx slot.
+ * Request the same absolute preset index for both Beat FX units.
+ * @returns {boolean} Whether both units received a valid target request.
  */
 PioneerDDJFLX4._setBothBeatFxUnitsToAbsoluteFromState = function(targetAbsolute) {
-    PioneerDDJFLX4._setBeatFxUnitToAbsolute(PioneerDDJFLX4._beatFx.unit1, targetAbsolute);
-    PioneerDDJFLX4._setBeatFxUnitToAbsolute(PioneerDDJFLX4._beatFx.unit2, targetAbsolute);
+    const unit1Set = PioneerDDJFLX4._setBeatFxUnitToAbsolute(PioneerDDJFLX4._beatFx.unit1, targetAbsolute);
+    const unit2Set = PioneerDDJFLX4._setBeatFxUnitToAbsolute(PioneerDDJFLX4._beatFx.unit2, targetAbsolute);
+    return unit1Set && unit2Set;
 };
 
 /**
  * Set Beat FX group + variant.
  *
  * The internal mapping state is treated as the source of truth.
- * Both Beat FX units are always stepped to the same target preset.
+ * Both Beat FX units receive the same target preset index.
  */
 PioneerDDJFLX4._setBeatFxGroupVariant = function(groupIndex, variantIndex) {
     const group = PioneerDDJFLX4._beatFxPresetGroups[groupIndex];
@@ -2075,8 +2041,9 @@ PioneerDDJFLX4._setBeatFxGroupVariant = function(groupIndex, variantIndex) {
 
     const targetAbsolute = group.presets[variantIndex];
 
-    // Move both units using the current internal state as reference.
-    PioneerDDJFLX4._setBothBeatFxUnitsToAbsoluteFromState(targetAbsolute);
+    if (!PioneerDDJFLX4._setBothBeatFxUnitsToAbsoluteFromState(targetAbsolute)) {
+        return;
+    }
 
     // Update internal state afterwards.
     PioneerDDJFLX4._beatFxPresetState.groupIndex = groupIndex;
@@ -2151,18 +2118,7 @@ PioneerDDJFLX4._nextBeatFxVariant = function() {
 PioneerDDJFLX4._initBeatFx = function() {
     const groupIndex = 0;
     const variantIndex = PioneerDDJFLX4._getBeatFxDefaultVariant(groupIndex);
-    const targetAbsolute = PioneerDDJFLX4._beatFxPresetGroups[groupIndex].presets[variantIndex];
-
-    // Assume startup state begins at preset 0 in the mapping logic.
-    PioneerDDJFLX4._beatFxPresetState.groupIndex = 0;
-    PioneerDDJFLX4._beatFxPresetState.variantIndex = 0;
-    PioneerDDJFLX4._beatFxPresetState.absoluteIndex = 0;
-
-    PioneerDDJFLX4._setBothBeatFxUnitsToAbsoluteFromState(targetAbsolute);
-
-    PioneerDDJFLX4._beatFxPresetState.groupIndex = groupIndex;
-    PioneerDDJFLX4._beatFxPresetState.variantIndex = variantIndex;
-    PioneerDDJFLX4._beatFxPresetState.absoluteIndex = targetAbsolute;
+    PioneerDDJFLX4._setBeatFxGroupVariant(groupIndex, variantIndex);
 };
 
 // ---- helpers: unit index, routing key, slot state ----
@@ -2230,7 +2186,7 @@ PioneerDDJFLX4._armBeatFxUnit = function(u) {
         : (PioneerDDJFLX4._beatFx.assign.ch2 ? 1 : 0);
 
     // route ON for its intended deck, OFF otherwise
-    try { engine.setValue(u, routeKey, enable); } catch (e) {}
+    try { engine.setValue(u, routeKey, enable); } catch (e) { void e; }
 };
 
 // ---- LED ----
@@ -2339,7 +2295,7 @@ PioneerDDJFLX4._beatFxSetUnitAndSlots = function(u, on) {
 
         const routeKey = PioneerDDJFLX4._beatFxRouteKey(u);
         if (routeKey) {
-            try { engine.setValue(u, routeKey, 0); } catch (e) {}
+            try { engine.setValue(u, routeKey, 0); } catch (e) { void e; }
         }
         return;
     }
@@ -2634,12 +2590,12 @@ PioneerDDJFLX4._setUnitAndSlots = function(unitIdx, group, on) {
         engine.setValue(S2, "enabled", 0);
         engine.setValue(S1, "enabled", 0);
         engine.setValue(U,  "enabled", 0);
-        try { engine.setValue(U, rk, 0); } catch (e) {}
+        try { engine.setValue(U, rk, 0); } catch (e) { void e; }
         return;
     }
 
     // ON: route + unit first, then slots
-    try { engine.setValue(U, rk, 1); } catch (e) {}
+    try { engine.setValue(U, rk, 1); } catch (e) { void e; }
     engine.setValue(U, "enabled", 1);
     engine.setValue(S1, "enabled", 1);
     engine.setValue(S2, "enabled", 1);
@@ -2884,7 +2840,7 @@ PioneerDDJFLX4._scheduleLoopAdjustTimeout = function(channelIdx, group, controlF
 };
 
 // ------------------- loop_enabled callback -------------------
-PioneerDDJFLX4.loopToggle = function(value, group, control) {
+PioneerDDJFLX4.loopToggle = function(value, group, _control) {
   const status = group === "[Channel1]" ? 0x90 : 0x91;
   const channelIdx = group === "[Channel1]" ? 0 : 1;
 
@@ -3126,8 +3082,6 @@ PioneerDDJFLX4.loopOutPressed = function(_channel, control, value, _status, grou
   if (engine.getValue(group, "track_loaded") !== 1) return;
 
   const channelIdx = (group === "[Channel1]") ? 0 : 1;
-  const st = (group === "[Channel1]") ? 0x90 : 0x91;
-
   // Trigger Mixxx loop-out
   script.triggerControl(group, "loop_out");
 
@@ -4019,7 +3973,7 @@ PioneerDDJFLX4.shutdown = function() {
 
         try {
             engine.stopTimer(timerId);
-        } catch (e) {}
+        } catch (e) { void e; }
     };
 
     const deckGroups = ["[Channel1]", "[Channel2]"];
@@ -4028,6 +3982,12 @@ PioneerDDJFLX4.shutdown = function() {
     // generated while the remaining runtime state is being torn down.
     stopTimer(PioneerDDJFLX4.keepAliveTimer);
     PioneerDDJFLX4.keepAliveTimer = 0;
+
+    deckGroups.forEach(function(group) {
+        PioneerDDJFLX4._stopHotcuePreview(group);
+        const momentary = PioneerDDJFLX4._stemMomentary[group];
+        PioneerDDJFLX4._stemMomentaryRelease(group, momentary.stemIdx1, momentary.mode);
+    });
 
     // --- Peak latch timers ---
     stopTimer(PioneerDDJFLX4._peakTimerL);
