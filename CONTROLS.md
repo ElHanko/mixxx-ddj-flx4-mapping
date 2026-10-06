@@ -75,8 +75,8 @@ Depending on configuration:
 
 ### LOAD
 
-* Load selected track
-* Double press (timing-based):
+* Load selected track after the 400 ms double-press window expires
+* Double press within 400 ms (`LOAD_DOUBLEPRESS_MS`):
 
   * Instant double from opposite deck
 
@@ -244,7 +244,9 @@ Script-controlled behavior.
 ## EQ / Gain / Faders
 
 ### Gain
-* standard high-resolution mapping
+* script-controlled high-resolution TRIM with CFX guard and pickup
+* CFX movement locks TRIM for 2000 ms; TRIM then requires pickup within 2%
+* after 1000 ms without accepted TRIM input, pickup is required again
 
 ### Channel faders
 * standard mapping
@@ -271,6 +273,7 @@ Script-controlled behavior.
   * stem mode
 * pickup state is reset automatically when switching between EQ and stem mode
 * this prevents abrupt jumps when returning from stem control to normal EQ operation
+* default pickup window: 2%; Shift stem assignments use `stemIndexMap`
 
 ## Headphone Cue buttons
 
@@ -322,6 +325,7 @@ effect.
 ## LEVEL/DEPTH
 
 * 14-bit control
+* linear response by default (`fxTuning.shapedBeatFxKnob = false`)
 
 ---
 
@@ -339,6 +343,7 @@ effect.
 
 * 14-bit control
 * optional response shaping around center
+* linear response by default (`fxTuning.shapedFilterKnob = false`)
 
 ---
 
@@ -379,6 +384,7 @@ effect.
 ## Bank switching
 
 * Press HOT CUE mode again → next bank
+* an active held preview stops and returns to its starting hotcue before switching banks
 
 ## Bank LED feedback
 
@@ -416,6 +422,9 @@ Available modes:
 
 Default: `preview`
 
+Leaving Hot Cue mode also stops an active held preview and returns to its
+starting hotcue.
+
 ## LED behavior
 
 * active → solid
@@ -440,7 +449,11 @@ Configurable:
 
 ### solo
 
-* momentary solo / mute
+* default mode
+* held pad → momentary solo; Shift + held pad → momentary hold-mute
+* release restores the previous mute state
+* the first held pad owns the action; additional momentary presses are ignored
+  until its matching release
 
 ### fx
 
@@ -468,9 +481,11 @@ Configurable:
 
 # Key Shift Mode
 
-Pads map to semitone offsets (script-defined).
+| Pad | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Semitone offset | +4 | +5 | +6 | +7 | 0 | +1 | +2 | +3 |
 
-Shift layer reserved.
+Shift layer reserved (no action).
 
 ---
 

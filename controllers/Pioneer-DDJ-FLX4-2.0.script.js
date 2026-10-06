@@ -152,7 +152,7 @@ PioneerDDJFLX4.lights = {
     deck1: {
         vuMeter: { status: 0xB0, data1: 0x02 },
         playPause: { status: 0x90, data1: 0x0B },
-        shiftPlayPause: { status: 0x90, data1: 0x47 },
+        shiftPlayPause: { status: 0x90, data1: 0x0E },
         cue: { status: 0x90, data1: 0x0C },
         shiftCue: { status: 0x90, data1: 0x48 },
         hotcueMode: { status: 0x90, data1: 0x1B },
@@ -167,7 +167,7 @@ PioneerDDJFLX4.lights = {
     deck2: {
         vuMeter: { status: 0xB1, data1: 0x02 },
         playPause: { status: 0x91, data1: 0x0B },
-        shiftPlayPause: { status: 0x91, data1: 0x47 },
+        shiftPlayPause: { status: 0x91, data1: 0x0E },
         cue: { status: 0x91, data1: 0x0C },
         shiftCue: { status: 0x91, data1: 0x48 },
         hotcueMode: { status: 0x91, data1: 0x1B },
@@ -795,19 +795,22 @@ PioneerDDJFLX4.browsePress = function(_channel, control, value, _status, _group)
 };
 
 //
-// Waveform zoom (fix: ignore release/unknown values)
+// Waveform zoom (relative SHIFT+BROWSE encoder)
 //
 
-PioneerDDJFLX4.waveformZoom = function (_ch, _ctrl, value /* 0x01 / 0x7F */, _status, _group) {
-    // FLX4 sends typically 0x7F (one dir) and 0x01 (other dir). Ignore 0x00 release etc.
-    let dir = null;
-    if (value === 0x7F) dir = "up";
-    else if (value === 0x01) dir = "down";
-    else return;
+PioneerDDJFLX4.waveformZoom = function (_ch, _ctrl, value, _status, _group) {
+    if (value === 0x00 || value === 0x40) {
+        return;
+    }
+
+    const steps = value < 0x40 ? value : value - 0x80;
+    const dir = steps < 0 ? "up" : "down";
 
     // "global" feel: apply to both decks
-    script.triggerControl("[Channel1]", "waveform_zoom_" + dir, 50);
-    script.triggerControl("[Channel2]", "waveform_zoom_" + dir, 50);
+    for (let i = 0; i < Math.abs(steps); i++) {
+        script.triggerControl("[Channel1]", "waveform_zoom_" + dir, 50);
+        script.triggerControl("[Channel2]", "waveform_zoom_" + dir, 50);
+    }
 };
 
 // -------------------
@@ -1241,8 +1244,7 @@ PioneerDDJFLX4._eqStemModeName = function(channelGroup) {
 };
 
 PioneerDDJFLX4._stemGroup = function(channelGroup, stemIndex) {
-    const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(channelGroup) + 1;
-    return `[Channel${deckIdx}_Stem${stemIndex}]`;
+    return `[${channelGroup.substring(1, channelGroup.length - 1)}_Stem${stemIndex}]`;
 };
 
 PioneerDDJFLX4._availableStemCount = function(channelGroup) {
@@ -1812,6 +1814,7 @@ PioneerDDJFLX4.flashHotcueBank = function(group) {
 };
 
 PioneerDDJFLX4.cycleHotcueBank = function(group) {
+    PioneerDDJFLX4._stopHotcuePreview(group);
     const cur = PioneerDDJFLX4.getHotcueBank(group);
     const max = Math.max(1, PioneerDDJFLX4.hotcueBankCount | 0);
     PioneerDDJFLX4.hotcueBank[group] = (cur + 1) % max;
@@ -1827,6 +1830,18 @@ PioneerDDJFLX4.cycleHotcueBank = function(group) {
 // shift layer: clear
 // -----------------------------------------------------------------------------
 
+PioneerDDJFLX4._stopHotcuePreview = function(group) {
+    const num = PioneerDDJFLX4._hotcuePreview[group] | 0;
+    if (!num) {
+        return;
+    }
+
+    PioneerDDJFLX4._hotcuePreview[group] = 0;
+    engine.setValue(group, "play", 0);
+    engine.setValue(group, `hotcue_${num}_goto`, 1);
+    PioneerDDJFLX4.updateHotcueLeds(group);
+};
+
 PioneerDDJFLX4.hotcuePad = function(_channel, control, value, status, group) {
     const note = control & 0x7F;
     const isShiftLayer = (status === 0x98 || status === 0x9A);
@@ -1836,26 +1851,21 @@ PioneerDDJFLX4.hotcuePad = function(_channel, control, value, status, group) {
         return;
     }
 
+    // Match the held pad before checking the current bank or mode.
+    if (value === 0x00) {
+        const preview = PioneerDDJFLX4._hotcuePreview[group] | 0;
+        if (!isShiftLayer && preview && (preview - 1) % 8 === padIndex) {
+            PioneerDDJFLX4._stopHotcuePreview(group);
+        }
+        return;
+    }
+
     if (PioneerDDJFLX4.padMode[group] !== PioneerDDJFLX4.PADMODE.HOTCUE) {
         return;
     }
 
     const hotcueNumber = PioneerDDJFLX4._hotcueNumberFromPad(group, padIndex);
     const baseName = `hotcue_${hotcueNumber}`;
-
-    // Note-Off is only relevant for preview mode.
-    if (value === 0x00) {
-        if (!isShiftLayer &&
-            PioneerDDJFLX4.HOTCUE_STOPPED_MODE === "preview" &&
-            PioneerDDJFLX4._hotcuePreview[group] === hotcueNumber) {
-
-            PioneerDDJFLX4._hotcuePreview[group] = 0;
-            engine.setValue(group, "play", 0);
-            engine.setValue(group, `${baseName}_goto`, 1);
-            PioneerDDJFLX4.updateHotcueLeds(group);
-        }
-        return;
-    }
 
     if (value !== 0x7F) {
         return;
@@ -2467,7 +2477,7 @@ PioneerDDJFLX4._filterKnobLast = PioneerDDJFLX4._filterKnobLast || {
  * Steps:
  * 1. Combine MSB + LSB into a 14-bit value
  * 2. Normalize to 0..1
- * 3. Apply center curve (better filter behavior)
+ * 3. Apply center curve if shapedFilterKnob is enabled (default: false)
  * 4. Send result to Mixxx (QuickEffectRack super1)
  */
 PioneerDDJFLX4.filterCh1Rotate = function(_channel, control, value) {
@@ -2640,9 +2650,6 @@ PioneerDDJFLX4.updatePadFxUI = function(group) {
     const unitIdx = PioneerDDJFLX4._fxUnitsForDeckAndMode(group);
     if (!unitIdx) return;
 
-    // auto-arm if needed (prevents “it’s on but does nothing”)
-    PioneerDDJFLX4._autoArmIfNeeded(unitIdx, group);
-
     const mode = PioneerDDJFLX4.padMode[group];
     const base = (mode === "padfx1") ? 0x10 : 0x50; // pad notes: FX1=16..23, FX2=80..87
 
@@ -2698,8 +2705,10 @@ PioneerDDJFLX4.padFxPadPressed = function(_ch, control, value, _st, group) {
         const S = PioneerDDJFLX4._S(unitIdx, idx);
         const cur = engine.getValue(S, "enabled") > 0.5;
         engine.setValue(S, "enabled", cur ? 0 : 1);
-        // auto-arm prevents “slot on but routed off”
-        PioneerDDJFLX4._autoArmIfNeeded(unitIdx, group);
+        // Arm unit and routing only when the user enables a slot.
+        if (!cur) {
+            PioneerDDJFLX4._autoArmIfNeeded(unitIdx, group);
+        }
         PioneerDDJFLX4.updatePadFxUI(group);
         return;
     }
@@ -2734,12 +2743,14 @@ PioneerDDJFLX4.padFxPadPressed = function(_ch, control, value, _st, group) {
 // mode switches (call these from your PAD MODE buttons)
 PioneerDDJFLX4.setPadModePadFx1 = function(_ch, _ctrl, value, _st, group) {
     if (value !== 0x7F) return;
+    PioneerDDJFLX4._stopHotcuePreview(group);
     PioneerDDJFLX4.padMode[group] = "padfx1";
     PioneerDDJFLX4.updatePadFxUI(group);
 };
 
 PioneerDDJFLX4.setPadModePadFx2 = function(_ch, _ctrl, value, _st, group) {
     if (value !== 0x7F) return;
+    PioneerDDJFLX4._stopHotcuePreview(group);
     PioneerDDJFLX4.padMode[group] = "padfx2";
     PioneerDDJFLX4.updatePadFxUI(group);
 };
@@ -2978,6 +2989,10 @@ PioneerDDJFLX4._handleJogLoopAdjust = function(channelIdx, group, jogDelta /*sig
   if (!loopOn) return false;
 
   if (!PioneerDDJFLX4.loopAdjustIn[channelIdx] && !PioneerDDJFLX4.loopAdjustOut[channelIdx]) return false;
+
+    if (jogDelta === 0) {
+        return true;
+    }
 
   const dir = jogDelta > 0 ? 1 : -1;
   if (PioneerDDJFLX4.loopAdjustIn[channelIdx])  PioneerDDJFLX4._adjustLoopEdge(group, "in",  dir);
@@ -3396,7 +3411,7 @@ PioneerDDJFLX4._applyVinylState = function(deckIdx, on) {
     }
 
     // LED currently disabled / unassigned:
-    // PioneerDDJFLX4.updateVinylLed?.(deckIdx, state);
+    // PioneerDDJFLX4.updateVinylLed(deckIdx, state);
 };
 
 PioneerDDJFLX4.vinylTogglePressed = function(_channel, _control, value, _status, group) {
@@ -3507,6 +3522,11 @@ PioneerDDJFLX4.padModeKeyPressed = function(_channel, _control, value, _status, 
     if (value !== 0x7F) return;
 
     const ch = (_status === 0x90) ? "[Channel1]" : "[Channel2]";
+
+    if (PioneerDDJFLX4.padMode[ch] === PioneerDDJFLX4.PADMODE.HOTCUE &&
+        [0x69, 0x1E, 0x6B, 0x20, 0x6D, 0x22, 0x6F].indexOf(_control) !== -1) {
+        PioneerDDJFLX4._stopHotcuePreview(ch);
+    }
 
     // KEYBOARD MODE = STEMS
     if (_control === 0x69) {
@@ -3712,8 +3732,8 @@ PioneerDDJFLX4.toggleQuantize = function (_channel, _control, value, _status, gr
 // Shift+Pads 1–4: "Only stem X active" (mute others)
 //
 // Pads 5–8: configurable via STEMS_PAD5_8_MODE
-//   - "fx"   (default): toggle Stem QuickEffect enabled, Shift = next preset
-//   - "solo" ( momentary):
+//   - "fx": toggle Stem QuickEffect enabled, Shift = next preset
+//   - "solo" (default, momentary):
 //        Pad held        -> SOLO (only that stem unmuted, others muted)
 //        Shift + held    -> HOLD-MUTE (only that stem muted, others unmuted)
 //        Release         -> restore previous mute state
@@ -3741,18 +3761,14 @@ PioneerDDJFLX4._stemCount = function(channelGroup) {
     return Math.max(0, Math.min(4, engine.getValue(channelGroup, "stem_count") | 0));
 };
 
-PioneerDDJFLX4._stemGroup = function(channelGroup, stemIdx1) {
-    return `[${channelGroup.substring(1, channelGroup.length - 1)}_Stem${stemIdx1}]`;
-};
-
 PioneerDDJFLX4._stemQfxGroup = function(channelGroup, stemIdx1) {
     return `[QuickEffectRack1_[${channelGroup.substring(1, channelGroup.length - 1)}_Stem${stemIdx1}]]`;
 };
 
 // ------------------- MOMENTARY SOLO STATE -------------------
 PioneerDDJFLX4._stemMomentary = PioneerDDJFLX4._stemMomentary || {
-    "[Channel1]": { active: false, prev: [0,0,0,0] },
-    "[Channel2]": { active: false, prev: [0,0,0,0] },
+    "[Channel1]": { active: false, stemIdx1: 0, mode: "", prev: [0,0,0,0] },
+    "[Channel2]": { active: false, stemIdx1: 0, mode: "", prev: [0,0,0,0] },
 };
 
 PioneerDDJFLX4._stemMomentaryApply = function(group, stemIdx1, mode /*"solo"|"holdmute"*/) {
@@ -3760,7 +3776,12 @@ PioneerDDJFLX4._stemMomentaryApply = function(group, stemIdx1, mode /*"solo"|"ho
     if (stemIdx1 < 1 || stemIdx1 > stemCount) return;
 
     const st = PioneerDDJFLX4._stemMomentary[group] ||
-        (PioneerDDJFLX4._stemMomentary[group] = { active:false, prev:[0,0,0,0] });
+        (PioneerDDJFLX4._stemMomentary[group] = { active:false, stemIdx1:0, mode:"", prev:[0,0,0,0] });
+
+    // The first held pad owns the snapshot until its matching release.
+    if (st.active) {
+        return;
+    }
 
     // Snapshot current mutes (1..4, egal ob vorhanden – safe)
     for (let s = 1; s <= 4; s++) {
@@ -3768,6 +3789,8 @@ PioneerDDJFLX4._stemMomentaryApply = function(group, stemIdx1, mode /*"solo"|"ho
         st.prev[s - 1] = engine.getValue(sg, "mute") > 0 ? 1 : 0;
     }
     st.active = true;
+    st.stemIdx1 = stemIdx1;
+    st.mode = mode;
 
     // Apply momentary behavior
     for (let s = 1; s <= stemCount; s++) {
@@ -3780,9 +3803,11 @@ PioneerDDJFLX4._stemMomentaryApply = function(group, stemIdx1, mode /*"solo"|"ho
     }
 };
 
-PioneerDDJFLX4._stemMomentaryRelease = function(group) {
+PioneerDDJFLX4._stemMomentaryRelease = function(group, stemIdx1, mode) {
     const st = PioneerDDJFLX4._stemMomentary[group];
-    if (!st || !st.active) return;
+    if (!st || !st.active || st.stemIdx1 !== stemIdx1 || st.mode !== mode) {
+        return;
+    }
 
     const stemCount = PioneerDDJFLX4._stemCount(group);
     for (let s = 1; s <= stemCount; s++) {
@@ -3790,6 +3815,8 @@ PioneerDDJFLX4._stemMomentaryRelease = function(group) {
         engine.setValue(sg, "mute", st.prev[s - 1] ? 1 : 0);
     }
     st.active = false;
+    st.stemIdx1 = 0;
+    st.mode = "";
 };
 
 // ------------------- LED REFRESH (pull current values once) -------------------
@@ -3849,8 +3876,11 @@ PioneerDDJFLX4.stemFxPadPressed = function(_channel, control, value, _status, gr
 
     if (PioneerDDJFLX4.STEMS_PAD5_8_MODE === "solo") {
         // momentary SOLO (needs Script-Binding to receive value 0x00 on release — du hast Script-Binding)
-        if (value === 0x7F) PioneerDDJFLX4._stemMomentaryApply(group, stemIdx1, "solo");
-        else if (value === 0x00) PioneerDDJFLX4._stemMomentaryRelease(group);
+        if (value === 0x7F) {
+            PioneerDDJFLX4._stemMomentaryApply(group, stemIdx1, "solo");
+        } else if (value === 0x00) {
+            PioneerDDJFLX4._stemMomentaryRelease(group, stemIdx1, "solo");
+        }
         return;
     }
 
@@ -3869,8 +3899,11 @@ PioneerDDJFLX4.stemFxPadShiftPressed = function(_channel, control, value, _statu
 
     if (PioneerDDJFLX4.STEMS_PAD5_8_MODE === "solo") {
         // momentary HOLD-MUTE
-        if (value === 0x7F) PioneerDDJFLX4._stemMomentaryApply(group, stemIdx1, "holdmute");
-        else if (value === 0x00) PioneerDDJFLX4._stemMomentaryRelease(group);
+        if (value === 0x7F) {
+            PioneerDDJFLX4._stemMomentaryApply(group, stemIdx1, "holdmute");
+        } else if (value === 0x00) {
+            PioneerDDJFLX4._stemMomentaryRelease(group, stemIdx1, "holdmute");
+        }
         return;
     }
 
@@ -3936,7 +3969,7 @@ PioneerDDJFLX4.stemCountChanged = function(_value, group /* [Channel1]/[Channel2
 PioneerDDJFLX4._keyShiftPadToSemitone = function(padIndex0to7) {
     // padIndex: 0..7 entspricht Pads 1..8
     const map = [4, 5, 6, 7, 0, 1, 2, 3];
-    return map[padIndex0to7] ?? 0;
+    return map[padIndex0to7] === undefined ? 0 : map[padIndex0to7];
 };
 
 PioneerDDJFLX4.pitchAdjusted = function(_value, group, _control) {
@@ -3969,9 +4002,7 @@ PioneerDDJFLX4.pitchPadPressed = function(_channel, control, value, _status, gro
     engine.setValue(group, "pitch_adjust", semitone);
 };
 
-// SHIFT-Funktion: wenn du (wie im Handbuch) später „Anzeige/Pitch-Range ändern“ willst,
-// MUSS man das als eigenen Offset/Bank implementieren.
-// Solange du das nicht sauber nachbaust: lieber gar nichts tun, statt „irgendwie“.
+// Shift layer is reserved and performs no action.
 PioneerDDJFLX4.pitchPadShiftPressed = function(_channel, _control, _value, _status, _group) {
     // absichtlich leer
 };
@@ -4048,6 +4079,13 @@ PioneerDDJFLX4.shutdown = function() {
         PioneerDDJFLX4._stopAllVinylFx(deckIdx + 1);
     }
 
+    // --- Scratch and jog-touch state ---
+    for (let deckIdx = 0; deckIdx < 2; deckIdx++) {
+        PioneerDDJFLX4._scratchDisable(deckIdx + 1, false);
+        PioneerDDJFLX4.wheelTouch[deckIdx] = false;
+        PioneerDDJFLX4._shiftSearchTouch[deckIdx] = false;
+    }
+
     // --- Loop-adjust timeout timers and state ---
     deckGroups.forEach(function(group, deckIdx) {
         stopTimer(PioneerDDJFLX4._loopAdjustTimeoutTimer[group]);
@@ -4073,9 +4111,11 @@ PioneerDDJFLX4.shutdown = function() {
     // --- Loop blink timers ---
     if (PioneerDDJFLX4.timersLoop) {
         for (const g in PioneerDDJFLX4.timersLoop) {
-            const t = PioneerDDJFLX4.timersLoop[g]?.loopBlink;
-            stopTimer(t);
-            if (PioneerDDJFLX4.timersLoop[g]) PioneerDDJFLX4.timersLoop[g].loopBlink = undefined;
+            const timers = PioneerDDJFLX4.timersLoop[g];
+            if (timers) {
+                stopTimer(timers.loopBlink);
+                timers.loopBlink = undefined;
+            }
         }
     }
 

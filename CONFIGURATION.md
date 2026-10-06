@@ -106,6 +106,15 @@ Default: 4
 
 # Navigation
 
+## LOAD_DOUBLEPRESS_MS
+
+Window for detecting LOAD double press (Instant Doubles).
+Single-press loading waits until this window expires.
+
+Default: 400 ms
+
+---
+
 ## quickJumpSize
 
 Step size for quick jump actions.
@@ -188,6 +197,33 @@ Default: 1.8
 
 # STEMS
 
+## eqStemPickupThreshold
+
+Pickup window for EQ knobs in both normal EQ mode and Shift stem-volume mode.
+Values use the normalized 0–1 range.
+
+Default: 0.02 (2%)
+
+---
+
+## stemIndexMap
+
+Assigns stem indices to Shift + EQ knobs:
+
+```js
+stemIndexMap = {
+    low: [1, 2],
+    mid: [3],
+    high: [4]
+};
+```
+
+The default assumes Stem1 = drums, Stem2 = bass, Stem3 = melody/instruments,
+Stem4 = vocals. Verify the order of your stem files in Mixxx before changing
+this map. It applies to EQ stem-volume control, not the STEMS pads.
+
+---
+
 ## STEMS_PAD5_8_MODE
 
 Controls behavior of pads 5–8 in STEMS mode.
@@ -233,3 +269,54 @@ vinylFx = {
     brakeFactor: 10,
     softStartFactor: 15
 };
+```
+
+---
+
+# Hotcues
+
+## HOTCUE_STOPPED_MODE
+
+Behavior when an existing hotcue is pressed on a stopped deck:
+
+- `preview` — play while held; stop and return to the hotcue on release.
+- `goto` — jump to the hotcue and remain stopped.
+- `play` — jump to the hotcue and continue playing.
+
+Default: preview
+
+Bank changes and leaving Hot Cue mode also stop an active preview and return
+to its starting hotcue.
+
+## hotcueBankCount
+
+Number of banks with eight hotcues each.
+
+Default: 4 (hotcues 1–32)
+
+---
+
+# TRIM / CFX Guard
+
+CFX movement temporarily locks TRIM and resets its pickup state to reject
+spurious TRIM messages from the controller. TRIM resumes after the guard
+expires and the physical knob reaches the current software value.
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `trimCfxGuardMs` | 2000 ms | TRIM lock duration after CFX movement |
+| `trimPickupThreshold` | 0.02 (2%) | Pickup window in the normalized 0–1 range |
+| `trimPickupHoldMs` | 1000 ms | Inactivity timeout before TRIM must be picked up again |
+
+---
+
+# FX Response
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `fxTuning.shapedBeatFxKnob` | false | Enable custom curves for Beat FX LEVEL/DEPTH (`super1`, Shift: `mix`) |
+| `fxTuning.shapedFilterKnob` | false | Enable a symmetric center curve for CFX filter knobs |
+
+Both knobs use a linear response by default. When shaping is enabled, the
+curve exponents are `beatFxSuperExp = 1.5`, `beatFxMixExp = 1.2` and
+`filterCenterExp = 1.8`.
