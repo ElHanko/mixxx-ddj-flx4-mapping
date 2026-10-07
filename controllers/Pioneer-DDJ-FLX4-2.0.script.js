@@ -1554,6 +1554,12 @@ PioneerDDJFLX4._startBrakeWatch = function(deckIdx, group) {
 PioneerDDJFLX4.playPressed = function(_channel, _control, value, _status, group) {
 
     if (value !== 0x7F) return;
+    // Commit a running Hotcue preview to normal playback.
+    if (PioneerDDJFLX4._hotcuePreview[group]) {
+        PioneerDDJFLX4._hotcuePreview[group] = 0;
+        PioneerDDJFLX4.updateHotcueLeds(group);
+        return;
+    }
 
     const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
     const deck = deckIdx + 1;
