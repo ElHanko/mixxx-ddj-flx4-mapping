@@ -41,7 +41,37 @@ are added. Both profiles' `controllers/` directories should contain links to:
 Existing regular files are left unchanged, with a warning if they block a
 project file. Existing symlinks at matching project paths are replaced, even
 if they point elsewhere; check those paths before running the script. Files at
-other paths are left unchanged. Linking Extended does not activate it.
+other paths are left unchanged. Linking Extended does not activate it. This
+default command creates no Extended XML; Basic remains the default mapping.
+
+### Optional Extended preset
+
+To install Basic and Extended as separate presets, run:
+
+```bash
+./setup-mixxx-links.sh --extended-copy
+```
+
+This first performs the normal symlink installation, then generates
+`Pioneer-DDJ-FLX4-2.0-Extended.midi.xml` as a regular file in both
+`~/.mixxx/controllers/` and `~/.mixxx-test/controllers/`. The repository's Basic
+XML and its symlinks are unchanged.
+
+Fully exit and restart Mixxx. You can then select either **Pioneer DDJ-FLX4
+(Basic)** or **Pioneer DDJ-FLX4 (Extended)** in the controller settings. The
+Extended preset loads Basic first, followed by the Extended script with
+`functionprefix=""`; both scripts use the same global namespace.
+
+Run `./setup-mixxx-links.sh --extended-copy` again after changes to the Basic
+XML to refresh both Extended copies. A generated-file comment identifies copies
+owned by the script. Their local edits are replaced on regeneration; existing
+foreign files, directories and symlinks at the Extended XML paths cause an error
+and are left unchanged. The normal installation's symlink behavior described
+above still applies to controller scripts and effect chains.
+
+To disable Extended, select the Basic preset. To remove the additional preset,
+delete only the generated `Pioneer-DDJ-FLX4-2.0-Extended.midi.xml` files from
+both profiles and restart Mixxx.
 
 ### Manual setup
 
@@ -53,37 +83,6 @@ If you do not want to use symlinks:
 
 Basic Beat FX uses the existing Mixxx EffectUnit1 configuration and requires no
 custom chains. The supplied chains support the optional Extended workflow.
-
-### Enable Extended manually (advanced / developer setup)
-
-Basic alone is the default. To test or use Extended, first ensure
-`Pioneer-DDJ-FLX4-extended-scripts.js` is present in the active profile's
-`controllers/` directory. For the repository/symlink setup, rerun
-`./setup-mixxx-links.sh` so it is also linked in `~/.mixxx/controllers/` and
-`~/.mixxx-test/controllers/`. For manual setup, copy the Extended script there.
-
-In `Pioneer-DDJ-FLX4-2.0.midi.xml`, add Extended **after Basic** inside
-`<scriptfiles>`:
-
-```xml
-<scriptfiles>
-    <file filename="Pioneer-DDJ-FLX4-2.0.script.js"
-          functionprefix="PioneerDDJFLX4"/>
-    <file filename="Pioneer-DDJ-FLX4-extended-scripts.js"
-          functionprefix=""/>
-</scriptfiles>
-```
-
-Extended deliberately uses `functionprefix=""` and shares Basic's global
-`PioneerDDJFLX4` namespace. It wraps Basic's init/shutdown; there is no second
-lifecycle. Basic must load first, followed by Extended in the same script engine.
-
-Fully exit and restart Mixxx after changing the XML. To disable Extended,
-remove the second `<file>` entry and restart Mixxx again. With symlink setup,
-editing the profile's XML edits the repository file and affects both linked
-profiles. Keep this local activation change out of the default repository XML.
-This is the current manual activation path; a dedicated Extended installer is
-not provided.
 
 ## Repository layout
 
@@ -103,7 +102,7 @@ not provided.
 
 - `controllers/` contains the MIDI routing and JavaScript implementation.
 - `effects/chains/` contains the presets used by Beat FX and Smart CFX.
-- `setup-mixxx-links.sh` installs the mapping through symlinks.
+- `setup-mixxx-links.sh` installs symlinks and optionally generates an Extended preset.
 - [`CONTROLS.md`](CONTROLS.md) is the complete control reference.
 - [`CONFIGURATION.md`](CONFIGURATION.md) documents script configuration.
 - [`CHANGELOG.md`](CHANGELOG.md) contains the version history.
