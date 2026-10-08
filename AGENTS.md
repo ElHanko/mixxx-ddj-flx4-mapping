@@ -1,123 +1,172 @@
-# AGENTS.md — Pioneer DDJ-FLX4 Mixxx Mapping
+# AGENTS.md
 
 ## Scope
 
 These instructions apply to the entire repository.
 
-This repository contains the actively developed Pioneer DDJ-FLX4 controller
-mapping for Mixxx. The long-term goal is to contribute a reviewed variant as a
-complete replacement for the DDJ-FLX4 mapping currently shipped with Mixxx.
+This repository contains the Pioneer DDJ-FLX4 controller mapping for Mixxx.
 
-The repository is **not** merely a staging area for an upstream patch. `main`
-remains the canonical standalone/development version of the mapping.
+The current goal is to refactor the existing mapping into:
 
-## Human ownership and AI-assistance policy
+1. a clean and maintainable Basic mapping suitable for Mixxx upstream;
+2. an optional Extended layer that builds on Basic without duplicating it.
 
-This project may use Codex or other AI tools as an assistant for analysis,
-refactoring, code generation, documentation, and review.
+## Primary design rule: KISS
 
-For work intended for Mixxx upstream, follow Mixxx's current AI-agent policy:
+Keep it simple.
 
-- Do not autonomously create, update, reopen, or submit pull requests.
-- Do not autonomously create, update, or reopen issues, bug reports, or feature
-  requests.
-- Do not autonomously reply to Mixxx pull-request review comments.
-- Do not autonomously `git commit` or `git push` changes intended for upstream.
-- The human contributor must review and deliberately approve the final changes.
-- Functional controller changes must be tested by a human with the real
-  DDJ-FLX4 and a real DJ setup before upstream submission.
-- Text written autonomously by an AI agent for an upstream PR, commit-message
-  body, code comment, or documentation must follow the disclaimer requirements
-  in the current Mixxx `AGENTS.md`.
-
-When working only in this repository, edit files when explicitly asked, but do
-not commit, push, create branches, or publish anything unless the human user
-explicitly requests that action.
-
-## Repository / branch model
-
-### `main`
-
-`main` is the complete standalone and development version.
-
-Changes belong in `main` when they are generally beneficial and do not exist
-only to satisfy upstream packaging or policy. Examples:
-
-- ES7 / Mixxx runtime compatibility fixes
-- bug fixes
-- lint fixes
-- removal of dead code
-- timer / connection cleanup
-- clearer internal structure
-- safer state handling
-- concise, useful comments
-- removal of temporary development notes
-- documentation corrections
-- refactors that intentionally preserve behavior
-
-Do not deliberately reduce functionality in `main` merely to make a future
-Mixxx pull request smaller.
-
-### `mixxx-pr`
-
-A persistent `mixxx-pr` branch will be created from a cleaned-up `main`.
-
-It contains only changes that are specifically required or deliberately chosen
-for the upstream Mixxx version, for example:
-
-- upstream metadata
-- upstream file naming / paths
-- removal of standalone branding such as `(Custom)`
-- upstream-specific defaults
-- upstream-specific packaging decisions
-- behavior changes requested or justified specifically for inclusion in Mixxx
-
-General fixes should normally be made in `main` first and then merged into
-`mixxx-pr`.
+This is a DJ controller mapping, not a safety-critical system.
 
 Prefer:
 
+- simple code over clever code;
+- fewer states over more states;
+- fewer timers and callbacks over additional coordination;
+- existing Mixxx functionality over custom infrastructure;
+- deleting unnecessary code over adding abstractions;
+- direct solutions over generic frameworks;
+- real controller behavior over hypothetical edge cases.
+
+Do not introduce state machines, resource managers, wrapper frameworks,
+compatibility layers, or defensive infrastructure unless they clearly reduce
+existing complexity.
+
+A refactor is successful when the resulting mapping is easier to understand,
+test, and maintain.
+
+The future Basic mapping should be simpler than the current mapping.
+
+## Branch model
+
+### `main`
+
+`main` is the stable standalone version.
+
+It should remain usable while the larger refactor is in progress.
+
+### `refactor/mixxx-upstream`
+
+This is the current working branch for potentially destructive refactoring.
+
+Work here includes:
+
+- confirmed bug fixes;
+- lint cleanup;
+- lifecycle cleanup;
+- Components JS evaluation/migration;
+- simplification;
+- Basic extraction;
+- Extended overlay architecture;
+- installation tooling;
+- upstream preparation.
+
+Keep changes in small, understandable commits.
+
+Do not merge this branch back into `main` until the resulting mapping has been
+reviewed and hardware-tested.
+
+### Future Mixxx pull request
+
+The final upstream contribution will be prepared separately from the finished
+Basic mapping against the appropriate branch of `mixxxdj/mixxx`.
+
+Do not turn this repository into a second copy of the Mixxx source tree.
+
+## Basic mapping
+
+Basic is the primary mapping.
+
+Basic must:
+
+- work completely without Extended;
+- provide predictable DDJ-FLX4 operation;
+- cover useful normal controller functionality;
+- follow Mixxx conventions where practical;
+- avoid dependencies on project-specific effect presets;
+- avoid highly personal or surprising workflows;
+- reduce unnecessary complexity compared with the current mapping.
+
+Do not make Basic artificially minimal.
+
+Useful functionality may remain when it is intuitive, maintainable, and does
+not require disproportionate complexity.
+
+When choosing between two implementations with equivalent behavior, prefer the
+simpler one.
+
+## Extended mapping
+
+Extended is optional functionality layered on top of Basic.
+
+Extended must:
+
+- use the same Basic implementation;
+- never duplicate the complete mapping;
+- be loaded after Basic;
+- override or extend only what it needs;
+- keep common bug fixes and shared behavior in Basic;
+- own and clean up its own additional timers/connections/state.
+
+The intended architecture is:
+
 ```text
-main -> fix/refactor -> merge into mixxx-pr
+Pioneer-DDJ-FLX4-script.js
+        Basic
+          |
+          v
+Pioneer-DDJ-FLX4-extended-scripts.js
+        optional overlay
 ```
 
-Do not let `mixxx-pr` become an independently maintained second implementation.
+Basic must remain fully usable when the Extended script is absent.
 
-### Mixxx fork
+Do not maintain separate Basic and Extended copies of the same implementation.
 
-The final Mixxx pull-request branch is prepared separately in the user's fork of
-`mixxxdj/mixxx`.
+## Extended installation
 
-The intended controller replacement paths are:
+Extended may later have manual installation instructions and an installer.
 
-```text
-res/controllers/Pioneer-DDJ-FLX4.midi.xml
-res/controllers/Pioneer-DDJ-FLX4-script.js
-```
+The installer may install:
 
-The current Mixxx 2.6 mapping already uses those paths and the function prefix
-`PioneerDDJFLX4`.
+- the Extended JavaScript file;
+- an Extended user mapping XML;
+- required effect-chain presets or other supporting files.
 
-The preferred final Mixxx commit should represent the finished mapping
-replacement, not the entire development history of this standalone repository.
+Do not modify system-installed Mixxx files in place.
 
-## Upstream target
+In particular, do not patch files under `/usr/share/...`.
 
-Unless explicitly changed by the human contributor, evaluate upstream
-compatibility against the Mixxx `2.6` branch.
+Prefer a user mapping under the active Mixxx profile.
 
-Do not silently switch the target to `main`, `2.5`, or another branch.
+The installer should be:
 
-When a Mixxx rule differs between branches, the target branch is authoritative
-for technical checks that affect that branch.
+- idempotent;
+- conservative with existing files;
+- able to identify files it owns;
+- reversible by a matching uninstall procedure.
 
-## JavaScript runtime compatibility
+Do not implement the installer until the Basic/Extended boundary is decided.
 
-Mixxx controller mappings run in `QJSEngine`.
+## Mixxx target
 
-For Mixxx 2.4+ the documented scripting target is ES7, excluding ES6 modules.
+Unless explicitly changed by the human contributor, target Mixxx `2.6`.
 
-The Mixxx `2.6` ESLint configuration explicitly uses:
+Do not silently switch the target to another Mixxx branch.
+
+For technical compatibility, prefer in this order:
+
+1. actual Mixxx `2.6` implementation and configuration;
+2. current applicable contribution policy;
+3. Mixxx documentation/wiki;
+4. examples from existing mappings.
+
+If these disagree, report the conflict instead of guessing.
+
+## JavaScript runtime
+
+Mixxx controller mappings use QJSEngine.
+
+For the current target:
 
 ```text
 ecmaVersion: 7
@@ -126,419 +175,282 @@ sourceType: script
 
 Therefore:
 
-- Do not introduce JavaScript syntax newer than ES7.
-- Do not use ES modules (`import`, `export`).
-- Optional chaining (`?.`) is not allowed.
-- Nullish coalescing (`??`) is not allowed.
-- Check all new syntax against ES7 rather than assuming that a modern Node.js or
-  browser feature is available.
-- Do not rely on Node.js APIs or browser DOM APIs.
-- Use Mixxx-provided controller APIs only where they are actually available in
-  the targeted Mixxx version.
+- no ES modules;
+- no optional chaining (`?.`);
+- no nullish coalescing (`??`);
+- no Node.js APIs;
+- no browser DOM APIs;
+- use only APIs available in the target Mixxx version.
 
-Compatibility changes that preserve intended behavior belong in `main`.
+Keep the global mapping namespace compatible with Mixxx's `functionprefix`
+loader.
 
-## ESLint and JavaScript style
+Do not blindly replace the global namespace `var` if doing so prevents Mixxx
+from finding the mapping object.
 
-The Mixxx target branch's `eslint.config.cjs` is the primary machine-readable
-source of truth for JavaScript linting.
+## JavaScript style
 
-For Mixxx 2.6 it includes, among other rules:
+Use the actual Mixxx target branch ESLint configuration.
 
-- `eqeqeq`: error
-- function-expression style: error
-- unused variables: error
-- atomic-update checks: error
-- 4-space indentation: warning
-- `curly`: warning
-- Unix line endings
-- semicolons
-- double-quote preference
-- `no-var`: warning
-- `prefer-const`: warning
+Fix ESLint errors.
 
-Important: older Mixxx wiki text contains some JavaScript style guidance that
-predates the current ESLint configuration. If an old prose convention conflicts
-with the target branch's actual ESLint rules, do not blindly rewrite code to
-satisfy the older convention. Report the conflict and prefer the current target
-branch's executable lint configuration unless a maintainer has explicitly said
-otherwise.
+Treat broad style warnings separately from logic changes.
 
-General rules:
+Do not mass-format a file while fixing a functional bug.
 
-- Use `===` and `!==`, not `==` and `!=`.
-- Use braces around control-flow bodies.
-- Avoid one-line functions and dense one-line conditionals.
-- Use 4 spaces; do not use tabs.
-- Avoid accidental globals.
-- Keep names readable and consistent.
-- Keep comments concise and explain *why*, especially for hardware quirks.
-- Remove chat-like, AI-like, temporary, or personal development notes before
-  upstream submission.
-- For upstream-facing code, comments and identifiers should be clear English.
-- Do not mass-reformat unrelated code.
-- Do not perform broad stylistic rewrites while fixing a specific bug unless
-  explicitly asked.
+Prefer:
+
+- `===` / `!==`;
+- `const` / `let` for local variables;
+- braces around control flow;
+- clear English names;
+- concise comments that explain why.
+
+Remove temporary, conversational, AI-like, or personal development comments
+before upstream submission.
 
 ## Components JS and JSDoc
 
-Current Mixxx `CONTRIBUTING.md` says controller mapping scripts should use the
-Components JS library and JSDoc comments.
+Current Mixxx contribution guidance favors Components JS and JSDoc.
 
-Treat this as an important upstream review requirement.
+Use Components where they simplify standard controller behavior.
 
-However, this project replaces an existing FLX4 mapping with a substantial
-working implementation. Do **not** autonomously rewrite the complete mapping to
-Components JS merely because the guideline exists.
+Do not rewrite working controller-specific logic merely to increase the amount
+of Components JS.
 
-Instead:
+Native XML ControlObjects are valid and should remain native when JavaScript or
+Components would only add complexity.
 
-1. identify where the current implementation differs from current guidance;
-2. determine whether the difference is local or architectural;
-3. propose a migration only when it has a concrete maintainability or upstream
-   benefit;
-4. preserve behavior;
-5. leave broad architectural rewrites for explicit human approval.
+For each possible migration ask:
 
-Do not label the whole mapping invalid solely because legacy/non-Components
-patterns remain.
+1. Does it remove custom code?
+2. Does it reduce state or lifecycle handling?
+3. Does it preserve the required hardware behavior?
+4. Is the result easier to understand?
 
-## XML mapping rules
+If not, keep the simpler implementation.
 
-For the MIDI XML:
+Controller-specific behavior such as hardware workarounds, protocol handling,
+special jog decoding, or necessary pickup logic may remain custom.
 
-- Keep the document valid XML.
-- Preserve the correct script file and `functionprefix` relationship.
-- Organize controls and outputs in a logical, maintainable order.
-- Do not leave mappings in arbitrary MIDI-learn generation order.
-- Use meaningful descriptions for non-obvious mappings.
-- Keep script bindings synchronized with the JavaScript implementation.
-- Check for duplicate, unreachable, stale, or conflicting bindings.
-- Preserve required soft-takeover behavior.
-- Do not mass-reorder or mass-format the entire XML unless asked or necessary.
-- Use `xmllint` for validation when available.
+## Hardware behavior
 
-For the upstream variant, use the existing official DDJ-FLX4 identity instead
-of creating a parallel custom controller entry.
-
-Current Mixxx 2.6 upstream metadata/path expectations include:
+The repository hardware reference is:
 
 ```text
-name: Pioneer DDJ-FLX4
-controller id: DDJ-FLX4
-functionprefix: PioneerDDJFLX4
-script: Pioneer-DDJ-FLX4-script.js
-manual: pioneer_ddj_FLX4
+docs/DDJ-FLX4-MIDI-REFERENCE.md
 ```
 
-Do not change these merely to follow a generic or older filename example if the
-existing official mapping already establishes the upstream name.
+Use it as the primary repository reference for DDJ-FLX4 MIDI addresses.
 
-## Mapping design guidelines
+Do not change MIDI addresses merely because another Mixxx mapping uses
+different values.
 
-Mixxx describes its controller design guidance as general guidelines, not
-absolute rules.
+For ambiguous hardware behavior, prefer testing the real DDJ-FLX4 instead of
+adding speculative code.
 
-Use them as review criteria, not as excuses to remove useful functionality.
+Hardware labels should generally keep their expected primary function.
 
-### Hardware labels
+Secondary functions are acceptable where intuitive and useful.
 
-Controls should generally perform the function suggested by their hardware
-labels.
+## Refactoring
 
-Additional or improved behavior is allowed when it makes sense for Mixxx, but
-do not sacrifice important labeled hardware functionality merely to add a
-secondary feature.
+Before changing existing logic, understand what behavior it protects.
 
-### User-configurable options
+Be particularly careful around:
 
-- Put user-facing configuration options in a clearly discoverable place.
-- Explain what each option changes.
-- Keep the number of options reasonable.
-- Prefer one good behavior when there is a clearly superior default.
-- Keep an option where genuinely different valid workflows exist.
+- jog and scratch handling;
+- MIDI relative encoders;
+- pickup / soft takeover;
+- TRIM / CFX hardware filtering;
+- press/release handling;
+- long/double presses;
+- Hotcue preview;
+- Stem momentary state;
+- loops;
+- effect routing;
+- LED state;
+- controller init/shutdown.
 
-Do not remove an option only because options are discouraged in general.
-Evaluate the actual trade-off.
+Do not preserve complexity merely because it already exists.
 
-### Layers and Shift functions
+Conversely, do not remove code merely because it looks complex before
+understanding why it exists.
 
-Layering is allowed and can be useful.
+Prefer the smallest change that fixes a confirmed problem.
 
-Avoid making the controller unnecessarily confusing.
+## Timers, connections, and state
 
-Mixxx specifically cautions against alternate functions on finite faders and
-knobs because physical positions no longer directly represent the controlled
-value. Buttons, pads, encoders, and touch controls have less of this problem.
+Avoid adding timers or persistent state unless necessary.
 
-For shifted knob/fader behavior, explicitly review:
+Reuse existing cleanup functions when possible.
 
-- pickup / soft takeover
-- state transitions
-- value jumps
-- discoverability
-- whether the alternate function is justified by hardware limitations
+Shutdown should restore temporary controller-induced states that would otherwise
+remain active.
 
-The existing Shift+EQ stem-volume workflow is therefore a design-review topic,
-not an automatic removal candidate.
+Do not build a generic lifecycle framework for a handful of resources.
 
-### LEDs
+Normal destruction of the Mixxx JS context does not require manually managing
+every object solely for theoretical completeness.
 
-- Do not make LEDs blink continuously without a temporary-state reason.
-- Do not add beat-synchronized blinking merely as decoration.
-- Play and Cue LEDs should follow Mixxx's corresponding indicator controls where
-  applicable so hardware state matches the GUI.
-- Temporary-state blinking may be acceptable when it clearly communicates a
-  transient mode.
+Solve demonstrated lifecycle problems, not imaginary ones.
 
-### Level meters
+## LEDs
 
-Controller meters should correspond meaningfully to Mixxx's on-screen level
-meters.
+Each LED should have a clear owner.
 
-In particular, red peak LEDs should correspond to clipping / `PeakIndicator`.
-Do not claim the current implementation complies until its actual scaling and
-peak behavior have been checked.
+Avoid having XML and JavaScript independently drive the same LED with conflicting
+semantics.
 
-### Samplers
+Use native Mixxx indicator ControlObjects where they correctly express the
+desired behavior.
 
-Mixxx's preferred sampler behavior is:
+Blink only when it communicates a meaningful temporary state.
 
-- empty pad: load selected track
-- loaded pad: play/retrigger from cue
-- Shift + pad while playing: stop
-- Shift + pad while loaded and stopped: eject
+Do not add decorative permanent blinking.
 
-If this mapping intentionally adds long-press behavior or another workflow,
-compare it against this baseline and explain the UX benefit. Do not remove it
-without evaluating the actual implementation.
+## Effects
 
-## Feature-preservation rule
+Beat FX and Pad FX are design-review areas.
 
-This project is intended to become a **complete replacement mapping**, not a
-minimal incremental patch.
-
-Do not recommend removing a feature merely because:
-
-- the pull request is large;
-- the stock FLX4 mapping does not already have it;
-- it is implemented in JavaScript;
-- it adds a layer;
-- it requires nontrivial state;
-- it would be easier to review without it.
-
-Features currently considered part of the intended mapping include, among
-others:
-
-- 32 Hotcues / multiple hotcue banks
-- Stems
-- Pad FX1 / Pad FX2
-- Beat FX
-- Beat Jump
-- Key Shift
-- Smart CFX behavior
-- per-deck Vinyl behavior
-- Instant Doubles
-- loop workflows
-- VU / peak-hold behavior
-- deterministic LED state
-- TRIM / CFX hardware workaround
-- scratch / jog behavior
-- Shift+EQ stem-volume control
-- configurable behavior where justified
-
-If a feature is considered problematic, state the exact reason and classify it
-as one of:
-
-- runtime / compatibility problem
-- lint / code-quality problem
-- concrete Mixxx guideline conflict
-- robustness problem
-- UX/design concern
-- documentation problem
-- packaging problem
-
-Then propose the smallest change that resolves the concrete issue.
-
-## Beat FX / effect-chain special case
-
-The mapping currently relies on custom effect-chain presets.
-
-Treat Beat FX as a specific architecture review item.
-
-Check:
-
-- how presets are selected;
-- whether selection relies on absolute numeric indexes;
-- assumptions about sorting or preset order;
-- interactions with user-created presets;
-- behavior when expected presets are missing;
-- whether bundled Mixxx effect chains can satisfy the workflow;
-- whether the Mixxx 2.6 controller API offers a more robust selection method;
-- whether additional `res/effects/chains/` files would actually be required by
-  the upstream implementation.
-
-The current preferred upstream packaging goal is to replace only the two FLX4
-controller files. If Beat FX cannot robustly work under that constraint, report
-the conflict clearly as a design decision.
+The current Beat FX implementation relies on project-specific effect presets.
 
 Do not silently remove Beat FX.
 
-## Behavior-preserving refactoring
+Do not build additional complexity around its current implementation before the
+Basic/Extended decision.
 
-Before a refactor, identify the behavior that must remain unchanged.
+If Beat FX becomes Extended, its preset-selection robustness should be fixed in
+Extended rather than making Basic depend on those presets.
 
-For hardware-specific logic, be especially conservative around:
+Basic must not depend on custom project-specific effect-chain files.
 
-- MIDI message interpretation
-- jog / scratch calculations
-- soft takeover / pickup
-- CFX/TRIM filtering
-- press / release handling
-- short / long / double press timing
-- timer cancellation
-- LED output state
-- effect routing
-- loop state
-- deck state
-- controller shutdown and reinitialization
+## Testing
 
-Do not simplify state machines merely because they look complex. First determine
-which hardware or UX behavior the state is protecting.
+Tests should protect important behavior and previously observed failures.
 
-When a refactor cannot be proven behavior-preserving through static reasoning,
-flag it for hardware testing.
+Prefer small targeted regression tests.
 
-## Timers, connections, and shutdown
+Do not build large test frameworks for unlikely edge cases.
 
-Review all timers and engine connections for lifecycle correctness.
+Before considering a change complete, run as applicable:
 
-Check that:
+- JavaScript syntax / ES7 parsing;
+- actual Mixxx ESLint;
+- XML well-formedness;
+- Script-Binding resolution;
+- relevant regression tests;
+- `git diff --check`.
 
-- obsolete timers are stopped;
-- timer IDs are cleared consistently;
-- shutdown cannot leave active callbacks that reference stale state;
-- engine connections are disconnected where required;
-- re-enabling the controller does not duplicate callbacks;
-- error handling does not hide meaningful failures.
+Static tests do not replace real hardware tests.
 
-Do not replace defensive hardware workarounds with generic code unless their
-purpose has been understood.
+Changes affecting physical controls, LEDs, timing, audio state, jog behavior,
+or workflow require DDJ-FLX4 hardware testing before the result is considered
+finished.
+
+## Licensing and provenance
+
+The mapping contains both original project work and code derived from the
+existing Mixxx DDJ-FLX4 mapping.
+
+Do not remove or obscure upstream provenance.
+
+Do not assume that the repository-wide MIT license automatically applies to
+derived Mixxx code.
+
+Before upstream submission:
+
+- preserve appropriate original attribution;
+- document derived areas where relevant;
+- use licensing compatible with the Mixxx origin for derived mapping files.
+
+Independent project tools or other independently authored files may use a
+different license where appropriate.
+
+Do not make legal claims; report provenance facts and uncertainties.
+
+## Upstream files
+
+The eventual Mixxx Basic replacement is expected to use the existing official
+paths:
+
+```text
+res/controllers/Pioneer-DDJ-FLX4.midi.xml
+res/controllers/Pioneer-DDJ-FLX4-script.js
+```
+
+The current standalone `-2.0` names do not need to be changed until the
+upstream-oriented Basic packaging is prepared.
+
+Upstream metadata and manual references should describe the final behavior, not
+an intermediate refactor state.
 
 ## Documentation
 
-The eventual upstream mapping needs a separate manual contribution in
-`mixxxdj/manual`.
+Developer implementation details belong in repository documentation.
 
-Controller documentation should cover, as applicable:
+User-facing Mixxx manual documentation should focus on:
 
-- manufacturer product page
-- Mixxx forum thread
-- short hardware description
-- OS compatibility
-- class-compliance notes
-- unsupported hardware features
-- special setup instructions
-- audio interface inputs/outputs
-- microphone routing limitations
-- labeled diagrams where legally usable
-- explanation of mapping behavior
+- setup;
+- controls;
+- workflows;
+- audio routing;
+- supported/unsupported hardware behavior;
+- relevant configuration.
 
-Do not put raw MIDI implementation detail into end-user manual text when it is
-only relevant to developers.
+Do not document unresolved design decisions as if they were final.
 
-The documentation must describe the behavior that actually ships. Do not update
-the manual ahead of an unresolved design decision and then treat the
-documentation as a reason to keep that decision.
+The MIDI reference is developer documentation, not a replacement for the Mixxx
+controller manual.
 
-## Analysis classification
+## AI-assisted upstream work
 
-When asked to audit the mapping for upstream readiness, classify findings as:
+The human contributor owns all upstream-facing work.
 
-### MAIN
+Do not autonomously:
 
-A generally beneficial change that should be made in `main` and then merged
-into `mixxx-pr`.
+- create or submit Mixxx pull requests;
+- create or update Mixxx issues;
+- answer upstream review comments;
+- commit or push upstream-targeted changes.
 
-Typical examples:
+The human must review final changes and perform real-controller testing before
+submission.
 
-- ES7 compatibility
-- real bug fixes
-- lint errors
-- dead code
-- cleanup of stale timers/connections
-- behavior-preserving refactors
-- clearer internal comments
+Follow the current Mixxx `AGENTS.md` requirements when preparing actual upstream
+text or contributions.
 
-### MIXXX-PR
+## Git and destructive actions
 
-A deliberate difference that exists only because of upstream Mixxx integration.
+Work on the currently selected branch unless explicitly instructed otherwise.
 
-Typical examples:
+Do not:
 
-- official upstream metadata
-- official upstream paths / filenames
-- upstream-only default choices
-- packaging differences
-- explicit maintainer-requested changes
+- commit;
+- push;
+- merge;
+- rebase;
+- reset;
+- force-push;
+- create or delete branches;
+- modify installed Mixxx files;
 
-### DESIGN-DECISION
+unless explicitly requested.
 
-Not objectively wrong. Requires human choice, hardware evaluation, or maintainer
-discussion.
+Do not discard unrelated user changes.
 
-Typical examples:
+## Reporting
 
-- Shift+EQ stem-volume workflow
-- Beat FX preset architecture
-- optional behaviors with multiple valid workflows
-- UX trade-offs
+Before handing work back, report:
 
-### NO-CHANGE
-
-The current implementation is valid and there is no concrete reason to change
-it.
-
-Do not invent work merely to populate every category.
-
-## Priority classification
-
-Use:
-
-- **BLOCKER** — demonstrably incompatible with the target runtime, fails a
-  mandatory check, breaks functionality, or makes the upstream mapping
-  technically invalid.
-- **SHOULD FIX** — concrete maintainability, correctness, robustness, or
-  guideline issue worth fixing before submission.
-- **NICE TO HAVE** — improvement without a clear upstream-readiness impact.
-- **DESIGN DISCUSSION** — valid implementation with a nontrivial UX or
-  architecture trade-off.
-
-A large diff by itself is not a blocker.
-
-## Verification
-
-Never claim a check passed unless it was actually run against the relevant
-files/configuration.
-
-Useful checks include:
-
-```bash
-# Syntax features known to be newer than ES7
-grep -RInE '\?\?|\?\.' controllers/
-
-# XML syntax
-xmllint --noout controllers/Pioneer-DDJ-FLX4-2.0.midi.xml
-```
-
-For ESLint, use the actual Mixxx target branch configuration. A lint run with a
-random globally installed ESLint configuration does not establish upstream
-compatibility.
-
-When working in a Mixxx checkout, run the repository's configured pre-commit
-checks for the changed files.
-
-Static checks do not replace hardware tests.
+- files changed;
+- what was changed;
+- tests actually performed;
+- tests not performed;
+- remaining known issues;
+- hardware testing still required;
+- `git status --short`;
+- whether any commit or push was performed.
 
 ## Working method for agents
 
@@ -566,7 +478,7 @@ When the human asks for implementation:
 
 ## Authoritative references
 
-Checked on 2026-08-17. Re-check these before an upstream submission because
+Checked on 2026-10-06.. Re-check these before an upstream submission because
 project policy can change.
 
 - Mixxx contribution guide:

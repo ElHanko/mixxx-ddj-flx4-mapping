@@ -2,7 +2,11 @@
 
 This file documents script configuration options available in the mapping.
 
-All values are defined directly in the script and must be modified there.
+Basic options are defined in `controllers/Pioneer-DDJ-FLX4-2.0.script.js`.
+Sections marked Extended apply only to the optional
+`controllers/Pioneer-DDJ-FLX4-extended-scripts.js`, loaded after Basic.
+Basic is the default; see [README.md](README.md#enable-extended-manually-advanced--developer-setup)
+for the current manual Extended activation path.
 
 ---
 
@@ -25,21 +29,10 @@ Default: true
 
 ---
 
-# Sampler
+# Quantize / Keylock (Extended only)
 
-## SAMPLER_LONGPRESS_MS
-
-Threshold for detecting long press on sampler pads.
-
-Used for:
-
-• stop vs trigger behavior  
-
-Default: 350 ms
-
----
-
-# Quantize / Keylock
+Basic SHIFT + Channel CUE performs BPM Tap. Extended replaces it with the
+short/long-press behavior below.
 
 ## QUANTIZE_LONGPRESS_MS
 
@@ -96,11 +89,27 @@ Default: 5000 ms
 
 ---
 
-## reloopExitBeats
+## 4BEAT/EXIT (fixed behavior)
 
-Default loop size when pressing 4BEAT/EXIT without an existing loop.
+Without an active loop, 4BEAT/EXIT starts a new four-beat loop at the current
+playback position. With an active loop, it exits. It does not reactivate a
+stored inactive loop, and the four-beat size is not configurable.
 
-Default: 4
+SHIFT + 4BEAT/EXIT has no Basic action. Extended uses Mixxx `reloop_toggle`
+for CDJ-style Reloop/Exit, without creating a new loop.
+
+---
+
+# Tempo
+
+## tempoRanges
+
+Tempo ranges cycled by SHIFT + SYNC:
+
+- Basic: ±6%, ±10%, ±16%, ±25%.
+- Extended: ±8%, ±16%, ±32%, ±64%, ±100%.
+
+Extended replaces this property when loaded after Basic.
 
 ---
 
@@ -195,7 +204,7 @@ Default: 1.8
 
 ---
 
-# STEMS
+# STEMS (Extended only)
 
 ## eqStemPickupThreshold
 
@@ -240,7 +249,11 @@ Default: solo
 
 ---
 
-# Transport / Vinyl Behavior
+# Transport / Vinyl Behavior (Extended only)
+
+Extended Vinyl Toggle currently has no controller binding. A new binding is
+an open design decision. Extended starts with Vinyl OFF; the existing
+Brake/SoftStart implementation remains present but requires Vinyl ON.
 
 ## PLAY_BRAKE_ON_VINYL
 
@@ -317,6 +330,8 @@ expires and the physical knob reaches the current software value.
 | `fxTuning.shapedBeatFxKnob` | false | Enable custom curves for Beat FX LEVEL/DEPTH (`super1`, Shift: `mix`) |
 | `fxTuning.shapedFilterKnob` | false | Enable a symmetric center curve for CFX filter knobs |
 
+The Beat FX shaping options and exponents belong to Extended. Basic Beat FX
+uses the official 2.6 mix/meta knob behavior. Filter shaping remains in Basic.
 Both knobs use a linear response by default. When shaping is enabled, the
 curve exponents are `beatFxSuperExp = 1.5`, `beatFxMixExp = 1.2` and
 `filterCenterExp = 1.8`.
