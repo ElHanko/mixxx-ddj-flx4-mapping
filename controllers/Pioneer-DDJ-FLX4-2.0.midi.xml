@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <MixxxControllerPreset schemaVersion="1" mixxxVersion="2.6">
   <info>
-    <name>Pioneer DDJ-FLX4 (Custom)</name>
+    <name>Pioneer DDJ-FLX4 (Basic)</name>
     <author>Robert904, ElHanko</author>
-    <description>Community-maintained custom Mixxx MIDI mapping for the Pioneer DDJ-FLX4.
+    <description>Community-maintained Basic Mixxx MIDI mapping for the Pioneer DDJ-FLX4.
             Not an official Pioneer or Mixxx default mapping.
             Focused on predictable behavior, consistent LED feedback
             and a Pioneer-like workflow without automation gimmicks.</description>
@@ -490,9 +490,9 @@
         </options>
       </control>
       <control>
-        <description>4BEAT/EXIT +SHIFT (DECK1) - press - Vinyl Mode</description>
+        <description>4BEAT/EXIT +SHIFT (DECK1) - press - Reserved (no action in Basic)</description>
         <group>[Channel1]</group>
-        <key>PioneerDDJFLX4.vinylTogglePressed</key>
+        <key>PioneerDDJFLX4.shiftReloopExitPressed</key>
         <status>0x90</status>
         <midino>0x50</midino>
         <options>
@@ -500,9 +500,9 @@
         </options>
       </control>
       <control>
-        <description>4BEAT/EXIT +SHIFT (DECK2) - press - Vinyl Mode</description>
+        <description>4BEAT/EXIT +SHIFT (DECK2) - press - Reserved (no action in Basic)</description>
         <group>[Channel2]</group>
-        <key>PioneerDDJFLX4.vinylTogglePressed</key>
+        <key>PioneerDDJFLX4.shiftReloopExitPressed</key>
         <status>0x91</status>
         <midino>0x50</midino>
         <options>
@@ -692,9 +692,9 @@
         </options>
       </control>
       <control>
-        <description>Shift + Left CUE - Toggle quantize on/off (Deck1)</description>
+        <description>Shift + Left CUE - Tap BPM (Deck1)</description>
         <group>[Channel1]</group>
-        <key>PioneerDDJFLX4.toggleQuantize</key>
+        <key>PioneerDDJFLX4.shiftChannelCuePressed</key>
         <status>0x90</status>
         <midino>0x68</midino>
         <options>
@@ -702,9 +702,9 @@
         </options>
       </control>
       <control>
-        <description>Shift + Right CUE - Toggle quantize on/off (Deck2)</description>
+        <description>Shift + Right CUE - Tap BPM (Deck2)</description>
         <group>[Channel2]</group>
-        <key>PioneerDDJFLX4.toggleQuantize</key>
+        <key>PioneerDDJFLX4.shiftChannelCuePressed</key>
         <status>0x91</status>
         <midino>0x68</midino>
         <options>
@@ -1010,7 +1010,7 @@
       </control>
       <!-- BEAT FX SECTION START -->
       <control>
-        <description>BEAT FX SELECT - press - cycle Beat FX groups</description>
+        <description>BEAT FX SELECT - press - select next effect</description>
         <group>[EffectRack1_EffectUnit1]</group>
         <key>PioneerDDJFLX4.beatFxSelectPressed</key>
         <status>0x94</status>
@@ -1020,7 +1020,7 @@
         </options>
       </control>
       <control>
-        <description>BEAT FX SELECT +SHIFT - press - cycle Beat FX groups backwards</description>
+        <description>BEAT FX SELECT +SHIFT - press - select previous effect</description>
         <group>[EffectRack1_EffectUnit1]</group>
         <key>PioneerDDJFLX4.beatFxSelectShiftPressed</key>
         <status>0x94</status>
@@ -1030,7 +1030,7 @@
         </options>
       </control>
       <control>
-        <description>BEAT LEFT - press - cycle variants inside current Beat FX group backwards </description>
+        <description>BEAT LEFT - press - focus previous effect slot</description>
         <group>[EffectRack1_EffectUnit1]</group>
         <key>PioneerDDJFLX4.beatFxLeftPressed</key>
         <status>0x94</status>
@@ -1040,7 +1040,7 @@
         </options>
       </control>
       <control>
-        <description>BEAT RIGHT - press - cycle variants inside current Beat FX group forward </description>
+        <description>BEAT RIGHT - press - focus next effect slot</description>
         <group>[EffectRack1_EffectUnit1]</group>
         <key>PioneerDDJFLX4.beatFxRightPressed</key>
         <status>0x94</status>
@@ -1055,7 +1055,7 @@
      1&2  -> apply both (Deck1->FX1, Deck2->FX2)
 -->
       <control>
-        <description>BEAT FX CH SELECT CH1 - slide - target Deck 1 (FX1 / EffectUnit1)</description>
+        <description>BEAT FX CH SELECT CH1 - slide - route EffectUnit1 to Deck 1</description>
         <group>[EffectRack1_EffectUnit1]</group>
         <key>PioneerDDJFLX4.beatFxChannel1</key>
         <status>0x94</status>
@@ -1065,7 +1065,7 @@
         </options>
       </control>
       <control>
-        <description>BEAT FX CH SELECT CH2 - slide - target Deck 2 (FX2 / EffectUnit2)</description>
+        <description>BEAT FX CH SELECT CH2 - slide - route EffectUnit1 to Deck 2</description>
         <group>[EffectRack1_EffectUnit1]</group>
         <key>PioneerDDJFLX4.beatFxChannel2</key>
         <status>0x95</status>
@@ -1078,7 +1078,7 @@
       <!-- normal: preset macro (super1), SHIFT: mix (dry/wet) -->
       <!-- CH1 / status 0xB4 -->
       <control>
-        <description>BEAT FX LEVEL/DEPTH - rotate (MSB) CH1</description>
+        <description>BEAT FX LEVEL/DEPTH - rotate (MSB) - Mix; SHIFT: focused effect meta</description>
         <group>[Master]</group>
         <key>PioneerDDJFLX4.beatFxLevelDepthRotate</key>
         <status>0xB4</status>
@@ -1088,7 +1088,7 @@
         </options>
       </control>
       <control>
-        <description>BEAT FX LEVEL/DEPTH - rotate (LSB) CH1</description>
+        <description>BEAT FX LEVEL/DEPTH - rotate (LSB) - Reserved for overlay</description>
         <group>[Master]</group>
         <key>PioneerDDJFLX4.beatFxLevelDepthRotate</key>
         <status>0xB4</status>
@@ -1119,7 +1119,7 @@
         </options>
       </control>
       <control>
-        <description>BEAT FX ON/OFF - press - toggle chain enabled for selected BeatFX target(s) + update LED</description>
+        <description>BEAT FX ON/OFF - press - toggle focused effect slot</description>
         <group>[EffectRack1_EffectUnit1]</group>
         <key>PioneerDDJFLX4.beatFxOnOffPressed</key>
         <status>0x94</status>
@@ -1129,7 +1129,7 @@
         </options>
       </control>
       <control>
-        <description>BEAT FX ON/OFF - press - toggle chain enabled for selected BeatFX target(s) + update LED</description>
+        <description>BEAT FX ON/OFF - press - toggle focused effect slot</description>
         <group>[EffectRack1_EffectUnit1]</group>
         <key>PioneerDDJFLX4.beatFxOnOffPressed</key>
         <status>0x95</status>
@@ -1139,7 +1139,7 @@
         </options>
       </control>
       <control>
-        <description>BEAT FX ON/OFF +SHIFT - press - disable chain for selected BeatFX target(s) + update LED</description>
+        <description>BEAT FX ON/OFF +SHIFT - press - disable all slots and reset mix</description>
         <group>[EffectRack1_EffectUnit1]</group>
         <key>PioneerDDJFLX4.beatFxOnOffShiftPressed</key>
         <status>0x94</status>
@@ -1149,7 +1149,7 @@
         </options>
       </control>
       <control>
-        <description>BEAT FX ON/OFF +SHIFT - press - disable chain for selected BeatFX target(s) + update LED</description>
+        <description>BEAT FX ON/OFF +SHIFT - press - disable all slots and reset mix</description>
         <group>[EffectRack1_EffectUnit1]</group>
         <key>PioneerDDJFLX4.beatFxOnOffShiftPressed</key>
         <status>0x95</status>
@@ -1651,11 +1651,11 @@
         </options>
       </control>
       <!-- HOT CUE MODE END -->
-      <!-- KEYBOARD MODE START -->
+      <!-- KEYBOARD MODE: Pitch Play START -->
       <control>
-        <description>PAD 1 (DECK1) KEYBOARD MODE - press - Toggle Stem 1</description>
+        <description>PAD 1 (DECK1) KEYBOARD MODE - press - Pitch Play / select initial Hotcue</description>
         <group>[Channel1]</group>
-        <key>PioneerDDJFLX4.stemMutePadPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadPressed</key>
         <status>0x97</status>
         <midino>0x40</midino>
         <options>
@@ -1663,9 +1663,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 1 +SHIFT (DECK1) KEYBOARD MODE - press - Only Stem 1 active</description>
+        <description>PAD 1 +SHIFT (DECK1) KEYBOARD MODE - press - Select Hotcue</description>
         <group>[Channel1]</group>
-        <key>PioneerDDJFLX4.stemMutePadShiftPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadShiftPressed</key>
         <status>0x98</status>
         <midino>0x40</midino>
         <options>
@@ -1673,9 +1673,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 1 (DECK2) KEYBOARD MODE - press - Toggle Stem 1</description>
+        <description>PAD 1 (DECK2) KEYBOARD MODE - press - Pitch Play / select initial Hotcue</description>
         <group>[Channel2]</group>
-        <key>PioneerDDJFLX4.stemMutePadPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadPressed</key>
         <status>0x99</status>
         <midino>0x40</midino>
         <options>
@@ -1683,9 +1683,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 1 +SHIFT (DECK2) KEYBOARD MODE - press - Only Stem 1 active</description>
+        <description>PAD 1 +SHIFT (DECK2) KEYBOARD MODE - press - Select Hotcue</description>
         <group>[Channel2]</group>
-        <key>PioneerDDJFLX4.stemMutePadShiftPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadShiftPressed</key>
         <status>0x9A</status>
         <midino>0x40</midino>
         <options>
@@ -1693,9 +1693,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 2 (DECK1) KEYBOARD MODE - press - Toggle Stem 2</description>
+        <description>PAD 2 (DECK1) KEYBOARD MODE - press - Pitch Play / select initial Hotcue</description>
         <group>[Channel1]</group>
-        <key>PioneerDDJFLX4.stemMutePadPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadPressed</key>
         <status>0x97</status>
         <midino>0x41</midino>
         <options>
@@ -1703,9 +1703,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 2 +SHIFT (DECK1) KEYBOARD MODE - press - Only Stem 2 active</description>
+        <description>PAD 2 +SHIFT (DECK1) KEYBOARD MODE - press - Select Hotcue</description>
         <group>[Channel1]</group>
-        <key>PioneerDDJFLX4.stemMutePadShiftPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadShiftPressed</key>
         <status>0x98</status>
         <midino>0x41</midino>
         <options>
@@ -1713,9 +1713,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 2 (DECK2) KEYBOARD MODE - press - Toggle Stem 2</description>
+        <description>PAD 2 (DECK2) KEYBOARD MODE - press - Pitch Play / select initial Hotcue</description>
         <group>[Channel2]</group>
-        <key>PioneerDDJFLX4.stemMutePadPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadPressed</key>
         <status>0x99</status>
         <midino>0x41</midino>
         <options>
@@ -1723,9 +1723,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 2 +SHIFT (DECK2) KEYBOARD MODE - press - Only Stem 2 active</description>
+        <description>PAD 2 +SHIFT (DECK2) KEYBOARD MODE - press - Select Hotcue</description>
         <group>[Channel2]</group>
-        <key>PioneerDDJFLX4.stemMutePadShiftPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadShiftPressed</key>
         <status>0x9A</status>
         <midino>0x41</midino>
         <options>
@@ -1733,9 +1733,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 3 (DECK1) KEYBOARD MODE - press - Toggle Stem 3</description>
+        <description>PAD 3 (DECK1) KEYBOARD MODE - press - Pitch Play / select initial Hotcue</description>
         <group>[Channel1]</group>
-        <key>PioneerDDJFLX4.stemMutePadPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadPressed</key>
         <status>0x97</status>
         <midino>0x42</midino>
         <options>
@@ -1743,9 +1743,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 3 +SHIFT (DECK1) KEYBOARD MODE - press - Only Stem 3 active</description>
+        <description>PAD 3 +SHIFT (DECK1) KEYBOARD MODE - press - Select Hotcue</description>
         <group>[Channel1]</group>
-        <key>PioneerDDJFLX4.stemMutePadShiftPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadShiftPressed</key>
         <status>0x98</status>
         <midino>0x42</midino>
         <options>
@@ -1753,9 +1753,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 3 (DECK2) KEYBOARD MODE - press - Toggle Stem 3</description>
+        <description>PAD 3 (DECK2) KEYBOARD MODE - press - Pitch Play / select initial Hotcue</description>
         <group>[Channel2]</group>
-        <key>PioneerDDJFLX4.stemMutePadPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadPressed</key>
         <status>0x99</status>
         <midino>0x42</midino>
         <options>
@@ -1763,9 +1763,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 3 +SHIFT (DECK2) KEYBOARD MODE - press - Only Stem 3 active</description>
+        <description>PAD 3 +SHIFT (DECK2) KEYBOARD MODE - press - Select Hotcue</description>
         <group>[Channel2]</group>
-        <key>PioneerDDJFLX4.stemMutePadShiftPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadShiftPressed</key>
         <status>0x9A</status>
         <midino>0x42</midino>
         <options>
@@ -1773,9 +1773,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 4 (DECK1) KEYBOARD MODE - press - Toggle Stem 4</description>
+        <description>PAD 4 (DECK1) KEYBOARD MODE - press - Pitch Play / select initial Hotcue</description>
         <group>[Channel1]</group>
-        <key>PioneerDDJFLX4.stemMutePadPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadPressed</key>
         <status>0x97</status>
         <midino>0x43</midino>
         <options>
@@ -1783,9 +1783,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 4 +SHIFT (DECK1) KEYBOARD MODE - press - Only Stem 4 active</description>
+        <description>PAD 4 +SHIFT (DECK1) KEYBOARD MODE - press - Select Hotcue</description>
         <group>[Channel1]</group>
-        <key>PioneerDDJFLX4.stemMutePadShiftPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadShiftPressed</key>
         <status>0x98</status>
         <midino>0x43</midino>
         <options>
@@ -1793,9 +1793,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 4 (DECK2) KEYBOARD MODE - press - Toggle Stem 4</description>
+        <description>PAD 4 (DECK2) KEYBOARD MODE - press - Pitch Play / select initial Hotcue</description>
         <group>[Channel2]</group>
-        <key>PioneerDDJFLX4.stemMutePadPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadPressed</key>
         <status>0x99</status>
         <midino>0x43</midino>
         <options>
@@ -1803,9 +1803,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 4 +SHIFT (DECK2) KEYBOARD MODE - press - Only Stem 4 active</description>
+        <description>PAD 4 +SHIFT (DECK2) KEYBOARD MODE - press - Select Hotcue</description>
         <group>[Channel2]</group>
-        <key>PioneerDDJFLX4.stemMutePadShiftPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadShiftPressed</key>
         <status>0x9A</status>
         <midino>0x43</midino>
         <options>
@@ -1813,9 +1813,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 5 (DECK1) KEYBOARD MODE - press - Toggle Stem 1 FX</description>
+        <description>PAD 5 (DECK1) KEYBOARD MODE - press - Pitch Play / select initial Hotcue</description>
         <group>[Channel1]</group>
-        <key>PioneerDDJFLX4.stemFxPadPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadPressed</key>
         <status>0x97</status>
         <midino>0x44</midino>
         <options>
@@ -1823,9 +1823,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 5 +SHIFT (DECK1) KEYBOARD MODE - press - Only Stem 1 FX active</description>
+        <description>PAD 5 +SHIFT (DECK1) KEYBOARD MODE - press - Select Hotcue</description>
         <group>[Channel1]</group>
-        <key>PioneerDDJFLX4.stemFxPadShiftPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadShiftPressed</key>
         <status>0x98</status>
         <midino>0x44</midino>
         <options>
@@ -1833,9 +1833,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 5 (DECK2) KEYBOARD MODE - press - Toggle Stem 1 FX</description>
+        <description>PAD 5 (DECK2) KEYBOARD MODE - press - Pitch Play / select initial Hotcue</description>
         <group>[Channel2]</group>
-        <key>PioneerDDJFLX4.stemFxPadPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadPressed</key>
         <status>0x99</status>
         <midino>0x44</midino>
         <options>
@@ -1843,9 +1843,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 5 +SHIFT (DECK2) KEYBOARD MODE - press - Only Stem 1 FX active</description>
+        <description>PAD 5 +SHIFT (DECK2) KEYBOARD MODE - press - Select Hotcue</description>
         <group>[Channel2]</group>
-        <key>PioneerDDJFLX4.stemFxPadShiftPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadShiftPressed</key>
         <status>0x9A</status>
         <midino>0x44</midino>
         <options>
@@ -1853,9 +1853,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 6 (DECK1) KEYBOARD MODE - press - Toggle Stem 2 FX</description>
+        <description>PAD 6 (DECK1) KEYBOARD MODE - press - Pitch Play / select initial Hotcue</description>
         <group>[Channel1]</group>
-        <key>PioneerDDJFLX4.stemFxPadPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadPressed</key>
         <status>0x97</status>
         <midino>0x45</midino>
         <options>
@@ -1863,9 +1863,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 6 +SHIFT (DECK1) KEYBOARD MODE - press - Only Stem 2 FX active</description>
+        <description>PAD 6 +SHIFT (DECK1) KEYBOARD MODE - press - Select Hotcue</description>
         <group>[Channel1]</group>
-        <key>PioneerDDJFLX4.stemFxPadShiftPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadShiftPressed</key>
         <status>0x98</status>
         <midino>0x45</midino>
         <options>
@@ -1873,9 +1873,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 6 (DECK2) KEYBOARD MODE - press - Toggle Stem 2 FX</description>
+        <description>PAD 6 (DECK2) KEYBOARD MODE - press - Pitch Play / select initial Hotcue</description>
         <group>[Channel2]</group>
-        <key>PioneerDDJFLX4.stemFxPadPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadPressed</key>
         <status>0x99</status>
         <midino>0x45</midino>
         <options>
@@ -1883,9 +1883,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 6 +SHIFT (DECK2) KEYBOARD MODE - press - Only Stem 2 FX active</description>
+        <description>PAD 6 +SHIFT (DECK2) KEYBOARD MODE - press - Select Hotcue</description>
         <group>[Channel2]</group>
-        <key>PioneerDDJFLX4.stemFxPadShiftPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadShiftPressed</key>
         <status>0x9A</status>
         <midino>0x45</midino>
         <options>
@@ -1893,9 +1893,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 7 (DECK1) KEYBOARD MODE - press - Toggle Stem 3 FX</description>
+        <description>PAD 7 (DECK1) KEYBOARD MODE - press - Pitch Play / select initial Hotcue</description>
         <group>[Channel1]</group>
-        <key>PioneerDDJFLX4.stemFxPadPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadPressed</key>
         <status>0x97</status>
         <midino>0x46</midino>
         <options>
@@ -1903,9 +1903,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 7 +SHIFT (DECK1) KEYBOARD MODE - press - Only Stem 3 FX active</description>
+        <description>PAD 7 +SHIFT (DECK1) KEYBOARD MODE - press - Select Hotcue</description>
         <group>[Channel1]</group>
-        <key>PioneerDDJFLX4.stemFxPadShiftPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadShiftPressed</key>
         <status>0x98</status>
         <midino>0x46</midino>
         <options>
@@ -1913,9 +1913,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 7 (DECK2) KEYBOARD MODE - press - Toggle Stem 3 FX</description>
+        <description>PAD 7 (DECK2) KEYBOARD MODE - press - Pitch Play / select initial Hotcue</description>
         <group>[Channel2]</group>
-        <key>PioneerDDJFLX4.stemFxPadPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadPressed</key>
         <status>0x99</status>
         <midino>0x46</midino>
         <options>
@@ -1923,9 +1923,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 7 +SHIFT (DECK2) KEYBOARD MODE - press - Only Stem 3 FX active</description>
+        <description>PAD 7 +SHIFT (DECK2) KEYBOARD MODE - press - Select Hotcue</description>
         <group>[Channel2]</group>
-        <key>PioneerDDJFLX4.stemFxPadShiftPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadShiftPressed</key>
         <status>0x9A</status>
         <midino>0x46</midino>
         <options>
@@ -1933,9 +1933,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 8 (DECK1) KEYBOARD MODE - press - Toggle Stem 4 FX</description>
+        <description>PAD 8 (DECK1) KEYBOARD MODE - press - Pitch Play / select initial Hotcue</description>
         <group>[Channel1]</group>
-        <key>PioneerDDJFLX4.stemFxPadPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadPressed</key>
         <status>0x97</status>
         <midino>0x47</midino>
         <options>
@@ -1943,9 +1943,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 8 +SHIFT (DECK1) KEYBOARD MODE - press - Only Stem 4 FX active</description>
+        <description>PAD 8 +SHIFT (DECK1) KEYBOARD MODE - press - Select Hotcue</description>
         <group>[Channel1]</group>
-        <key>PioneerDDJFLX4.stemFxPadShiftPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadShiftPressed</key>
         <status>0x98</status>
         <midino>0x47</midino>
         <options>
@@ -1953,9 +1953,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 8 (DECK2) KEYBOARD MODE - press - Toggle Stem 4 FX</description>
+        <description>PAD 8 (DECK2) KEYBOARD MODE - press - Pitch Play / select initial Hotcue</description>
         <group>[Channel2]</group>
-        <key>PioneerDDJFLX4.stemFxPadPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadPressed</key>
         <status>0x99</status>
         <midino>0x47</midino>
         <options>
@@ -1963,9 +1963,9 @@
         </options>
       </control>
       <control>
-        <description>PAD 8 +SHIFT (DECK2) KEYBOARD MODE - press - Only Stem 4 FX active</description>
+        <description>PAD 8 +SHIFT (DECK2) KEYBOARD MODE - press - Select Hotcue</description>
         <group>[Channel2]</group>
-        <key>PioneerDDJFLX4.stemFxPadShiftPressed</key>
+        <key>PioneerDDJFLX4.keyboardPadShiftPressed</key>
         <status>0x9A</status>
         <midino>0x47</midino>
         <options>
@@ -1976,7 +1976,7 @@
       <!-- PAD FX MODE START -->
       <!-- PAD FX1 (Deck 1) -->
       <control>
-        <description>PAD FX1 Deck1 Pad1</description>
+        <description>PAD FX1 Deck1 Pad1 - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x97</status>
@@ -1986,7 +1986,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck1 Pad1 + SHIFT</description>
+        <description>PAD FX1 Deck1 Pad1 + SHIFT - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x98</status>
@@ -1996,7 +1996,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck1 Pad2</description>
+        <description>PAD FX1 Deck1 Pad2 - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x97</status>
@@ -2006,7 +2006,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck1 Pad2 + SHIFT</description>
+        <description>PAD FX1 Deck1 Pad2 + SHIFT - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x98</status>
@@ -2016,7 +2016,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck1 Pad3</description>
+        <description>PAD FX1 Deck1 Pad3 - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x97</status>
@@ -2026,7 +2026,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck1 Pad3 + SHIFT</description>
+        <description>PAD FX1 Deck1 Pad3 + SHIFT - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x98</status>
@@ -2036,7 +2036,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck1 Pad4</description>
+        <description>PAD FX1 Deck1 Pad4 - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x97</status>
@@ -2046,7 +2046,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck1 Pad4 + SHIFT</description>
+        <description>PAD FX1 Deck1 Pad4 + SHIFT - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x98</status>
@@ -2056,7 +2056,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck1 Pad5</description>
+        <description>PAD FX1 Deck1 Pad5 - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x97</status>
@@ -2066,7 +2066,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck1 Pad5 + SHIFT</description>
+        <description>PAD FX1 Deck1 Pad5 + SHIFT - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x98</status>
@@ -2076,7 +2076,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck1 Pad6</description>
+        <description>PAD FX1 Deck1 Pad6 - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x97</status>
@@ -2086,7 +2086,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck1 Pad6 + SHIFT</description>
+        <description>PAD FX1 Deck1 Pad6 + SHIFT - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x98</status>
@@ -2096,7 +2096,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck1 Pad7</description>
+        <description>PAD FX1 Deck1 Pad7 - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x97</status>
@@ -2106,7 +2106,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck1 Pad7 + SHIFT</description>
+        <description>PAD FX1 Deck1 Pad7 + SHIFT - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x98</status>
@@ -2116,7 +2116,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck1 Pad8</description>
+        <description>PAD FX1 Deck1 Pad8 - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x97</status>
@@ -2126,7 +2126,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck1 Pad8 + SHIFT</description>
+        <description>PAD FX1 Deck1 Pad8 + SHIFT - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x98</status>
@@ -2137,7 +2137,7 @@
       </control>
       <!-- PAD FX1 (Deck 2) -->
       <control>
-        <description>PAD FX1 Deck2 Pad1</description>
+        <description>PAD FX1 Deck2 Pad1 - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x99</status>
@@ -2147,7 +2147,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck2 Pad1 + SHIFT</description>
+        <description>PAD FX1 Deck2 Pad1 + SHIFT - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x9A</status>
@@ -2157,7 +2157,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck2 Pad2</description>
+        <description>PAD FX1 Deck2 Pad2 - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x99</status>
@@ -2167,7 +2167,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck2 Pad2 + SHIFT</description>
+        <description>PAD FX1 Deck2 Pad2 + SHIFT - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x9A</status>
@@ -2177,7 +2177,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck2 Pad3</description>
+        <description>PAD FX1 Deck2 Pad3 - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x99</status>
@@ -2187,7 +2187,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck2 Pad3 + SHIFT</description>
+        <description>PAD FX1 Deck2 Pad3 + SHIFT - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x9A</status>
@@ -2197,7 +2197,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck2 Pad4</description>
+        <description>PAD FX1 Deck2 Pad4 - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x99</status>
@@ -2207,7 +2207,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck2 Pad4 + SHIFT</description>
+        <description>PAD FX1 Deck2 Pad4 + SHIFT - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x9A</status>
@@ -2217,7 +2217,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck2 Pad5</description>
+        <description>PAD FX1 Deck2 Pad5 - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x99</status>
@@ -2227,7 +2227,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck2 Pad5 + SHIFT</description>
+        <description>PAD FX1 Deck2 Pad5 + SHIFT - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x9A</status>
@@ -2237,7 +2237,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck2 Pad6</description>
+        <description>PAD FX1 Deck2 Pad6 - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x99</status>
@@ -2247,7 +2247,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck2 Pad6 + SHIFT</description>
+        <description>PAD FX1 Deck2 Pad6 + SHIFT - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x9A</status>
@@ -2257,7 +2257,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck2 Pad7</description>
+        <description>PAD FX1 Deck2 Pad7 - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x99</status>
@@ -2267,7 +2267,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck2 Pad7 + SHIFT</description>
+        <description>PAD FX1 Deck2 Pad7 + SHIFT - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x9A</status>
@@ -2277,7 +2277,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck2 Pad8</description>
+        <description>PAD FX1 Deck2 Pad8 - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x99</status>
@@ -2287,7 +2287,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX1 Deck2 Pad8 + SHIFT</description>
+        <description>PAD FX1 Deck2 Pad8 + SHIFT - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x9A</status>
@@ -2298,7 +2298,7 @@
       </control>
       <!-- PAD FX2 (Deck 1) -->
       <control>
-        <description>PAD FX2 Deck1 Pad1</description>
+        <description>PAD FX2 Deck1 Pad1 - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x97</status>
@@ -2308,7 +2308,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck1 Pad1 + SHIFT</description>
+        <description>PAD FX2 Deck1 Pad1 + SHIFT - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x98</status>
@@ -2318,7 +2318,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck1 Pad2</description>
+        <description>PAD FX2 Deck1 Pad2 - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x97</status>
@@ -2328,7 +2328,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck1 Pad2 + SHIFT</description>
+        <description>PAD FX2 Deck1 Pad2 + SHIFT - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x98</status>
@@ -2338,7 +2338,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck1 Pad3</description>
+        <description>PAD FX2 Deck1 Pad3 - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x97</status>
@@ -2348,7 +2348,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck1 Pad3 + SHIFT</description>
+        <description>PAD FX2 Deck1 Pad3 + SHIFT - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x98</status>
@@ -2358,7 +2358,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck1 Pad4</description>
+        <description>PAD FX2 Deck1 Pad4 - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x97</status>
@@ -2368,7 +2368,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck1 Pad4 + SHIFT</description>
+        <description>PAD FX2 Deck1 Pad4 + SHIFT - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x98</status>
@@ -2378,7 +2378,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck1 Pad5</description>
+        <description>PAD FX2 Deck1 Pad5 - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x97</status>
@@ -2388,7 +2388,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck1 Pad5 + SHIFT</description>
+        <description>PAD FX2 Deck1 Pad5 + SHIFT - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x98</status>
@@ -2398,7 +2398,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck1 Pad6</description>
+        <description>PAD FX2 Deck1 Pad6 - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x97</status>
@@ -2408,7 +2408,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck1 Pad6 + SHIFT</description>
+        <description>PAD FX2 Deck1 Pad6 + SHIFT - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x98</status>
@@ -2418,7 +2418,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck1 Pad7</description>
+        <description>PAD FX2 Deck1 Pad7 - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x97</status>
@@ -2428,7 +2428,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck1 Pad7 + SHIFT</description>
+        <description>PAD FX2 Deck1 Pad7 + SHIFT - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x98</status>
@@ -2438,7 +2438,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck1 Pad8</description>
+        <description>PAD FX2 Deck1 Pad8 - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x97</status>
@@ -2448,7 +2448,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck1 Pad8 + SHIFT</description>
+        <description>PAD FX2 Deck1 Pad8 + SHIFT - Not implemented in Basic</description>
         <group>[Channel1]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x98</status>
@@ -2459,7 +2459,7 @@
       </control>
       <!-- PAD FX2 (Deck 2) -->
       <control>
-        <description>PAD FX2 Deck2 Pad1</description>
+        <description>PAD FX2 Deck2 Pad1 - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x99</status>
@@ -2469,7 +2469,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck2 Pad1 + SHIFT</description>
+        <description>PAD FX2 Deck2 Pad1 + SHIFT - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x9A</status>
@@ -2479,7 +2479,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck2 Pad2</description>
+        <description>PAD FX2 Deck2 Pad2 - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x99</status>
@@ -2489,7 +2489,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck2 Pad2 + SHIFT</description>
+        <description>PAD FX2 Deck2 Pad2 + SHIFT - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x9A</status>
@@ -2499,7 +2499,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck2 Pad3</description>
+        <description>PAD FX2 Deck2 Pad3 - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x99</status>
@@ -2509,7 +2509,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck2 Pad3 + SHIFT</description>
+        <description>PAD FX2 Deck2 Pad3 + SHIFT - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x9A</status>
@@ -2519,7 +2519,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck2 Pad4</description>
+        <description>PAD FX2 Deck2 Pad4 - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x99</status>
@@ -2529,7 +2529,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck2 Pad4 + SHIFT</description>
+        <description>PAD FX2 Deck2 Pad4 + SHIFT - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x9A</status>
@@ -2539,7 +2539,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck2 Pad5</description>
+        <description>PAD FX2 Deck2 Pad5 - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x99</status>
@@ -2549,7 +2549,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck2 Pad5 + SHIFT</description>
+        <description>PAD FX2 Deck2 Pad5 + SHIFT - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x9A</status>
@@ -2559,7 +2559,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck2 Pad6</description>
+        <description>PAD FX2 Deck2 Pad6 - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x99</status>
@@ -2569,7 +2569,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck2 Pad6 + SHIFT</description>
+        <description>PAD FX2 Deck2 Pad6 + SHIFT - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x9A</status>
@@ -2579,7 +2579,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck2 Pad7</description>
+        <description>PAD FX2 Deck2 Pad7 - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x99</status>
@@ -2589,7 +2589,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck2 Pad7 + SHIFT</description>
+        <description>PAD FX2 Deck2 Pad7 + SHIFT - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x9A</status>
@@ -2599,7 +2599,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck2 Pad8</description>
+        <description>PAD FX2 Deck2 Pad8 - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x99</status>
@@ -2609,7 +2609,7 @@
         </options>
       </control>
       <control>
-        <description>PAD FX2 Deck2 Pad8 + SHIFT</description>
+        <description>PAD FX2 Deck2 Pad8 + SHIFT - Not implemented in Basic</description>
         <group>[Channel2]</group>
         <key>PioneerDDJFLX4.padFxPadPressed</key>
         <status>0x9A</status>
@@ -2951,7 +2951,7 @@
       <!-- BEAT JUMP MODE END -->
       <!-- SAMPLER MODE START -->
       <control>
-        <description>PAD 1 (LEFT) SAMPLE MODE - press - Play Sample or Load Track</description>
+        <description>PAD 1 (LEFT) SAMPLE MODE - press - Start/restart loaded sample</description>
         <group>[Sampler1]</group>
         <key>PioneerDDJFLX4.samplerPadPressed</key>
         <status>0x97</status>
@@ -2961,7 +2961,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 1 (LEFT)+SHIFT SAMPLE MODE - press - Stop Playback or Eject Track</description>
+        <description>PAD 1 (LEFT)+SHIFT SAMPLE MODE - press - Stop playback or load selected track</description>
         <group>[Sampler1]</group>
         <key>PioneerDDJFLX4.samplerPadShiftPressed</key>
         <status>0x98</status>
@@ -2971,7 +2971,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 2 (LEFT) SAMPLE MODE - press - Play Sample or Load Track</description>
+        <description>PAD 2 (LEFT) SAMPLE MODE - press - Start/restart loaded sample</description>
         <group>[Sampler2]</group>
         <key>PioneerDDJFLX4.samplerPadPressed</key>
         <status>0x97</status>
@@ -2981,7 +2981,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 2 (LEFT)+SHIFT SAMPLE MODE - press - Stop Playback or Eject Track</description>
+        <description>PAD 2 (LEFT)+SHIFT SAMPLE MODE - press - Stop playback or load selected track</description>
         <group>[Sampler2]</group>
         <key>PioneerDDJFLX4.samplerPadShiftPressed</key>
         <status>0x98</status>
@@ -2991,7 +2991,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 3 (LEFT) SAMPLE MODE - press - Play Sample or Load Track</description>
+        <description>PAD 3 (LEFT) SAMPLE MODE - press - Start/restart loaded sample</description>
         <group>[Sampler3]</group>
         <key>PioneerDDJFLX4.samplerPadPressed</key>
         <status>0x97</status>
@@ -3001,7 +3001,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 3 (LEFT)+SHIFT SAMPLE MODE - press - Stop Playback or Eject Track</description>
+        <description>PAD 3 (LEFT)+SHIFT SAMPLE MODE - press - Stop playback or load selected track</description>
         <group>[Sampler3]</group>
         <key>PioneerDDJFLX4.samplerPadShiftPressed</key>
         <status>0x98</status>
@@ -3011,7 +3011,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 4 (LEFT) SAMPLE MODE - press - Play Sample or Load Track</description>
+        <description>PAD 4 (LEFT) SAMPLE MODE - press - Start/restart loaded sample</description>
         <group>[Sampler4]</group>
         <key>PioneerDDJFLX4.samplerPadPressed</key>
         <status>0x97</status>
@@ -3021,7 +3021,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 4 (LEFT)+SHIFT SAMPLE MODE - press - Stop Playback or Eject Track</description>
+        <description>PAD 4 (LEFT)+SHIFT SAMPLE MODE - press - Stop playback or load selected track</description>
         <group>[Sampler4]</group>
         <key>PioneerDDJFLX4.samplerPadShiftPressed</key>
         <status>0x98</status>
@@ -3031,7 +3031,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 5 (LEFT) SAMPLE MODE - press - Play Sample or Load Track</description>
+        <description>PAD 5 (LEFT) SAMPLE MODE - press - Start/restart loaded sample</description>
         <group>[Sampler9]</group>
         <key>PioneerDDJFLX4.samplerPadPressed</key>
         <status>0x97</status>
@@ -3041,7 +3041,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 5 (LEFT)+SHIFT SAMPLE MODE - press - Stop Playback or Eject Track</description>
+        <description>PAD 5 (LEFT)+SHIFT SAMPLE MODE - press - Stop playback or load selected track</description>
         <group>[Sampler9]</group>
         <key>PioneerDDJFLX4.samplerPadShiftPressed</key>
         <status>0x98</status>
@@ -3051,7 +3051,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 6 (LEFT) SAMPLE MODE - press - Play Sample or Load Track</description>
+        <description>PAD 6 (LEFT) SAMPLE MODE - press - Start/restart loaded sample</description>
         <group>[Sampler10]</group>
         <key>PioneerDDJFLX4.samplerPadPressed</key>
         <status>0x97</status>
@@ -3061,7 +3061,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 6 (LEFT)+SHIFT SAMPLE MODE - press - Stop Playback or Eject Track</description>
+        <description>PAD 6 (LEFT)+SHIFT SAMPLE MODE - press - Stop playback or load selected track</description>
         <group>[Sampler10]</group>
         <key>PioneerDDJFLX4.samplerPadShiftPressed</key>
         <status>0x98</status>
@@ -3071,7 +3071,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 7 (LEFT) SAMPLE MODE - press - Play Sample or Load Track</description>
+        <description>PAD 7 (LEFT) SAMPLE MODE - press - Start/restart loaded sample</description>
         <group>[Sampler11]</group>
         <key>PioneerDDJFLX4.samplerPadPressed</key>
         <status>0x97</status>
@@ -3081,7 +3081,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 7 (LEFT)+SHIFT SAMPLE MODE - press - Stop Playback or Eject Track</description>
+        <description>PAD 7 (LEFT)+SHIFT SAMPLE MODE - press - Stop playback or load selected track</description>
         <group>[Sampler11]</group>
         <key>PioneerDDJFLX4.samplerPadShiftPressed</key>
         <status>0x98</status>
@@ -3091,7 +3091,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 8 (LEFT) SAMPLE MODE - press - Play Sample or Load Track</description>
+        <description>PAD 8 (LEFT) SAMPLE MODE - press - Start/restart loaded sample</description>
         <group>[Sampler12]</group>
         <key>PioneerDDJFLX4.samplerPadPressed</key>
         <status>0x97</status>
@@ -3101,7 +3101,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 8 (LEFT)+SHIFT SAMPLE MODE - press - Stop Playback or Eject Track</description>
+        <description>PAD 8 (LEFT)+SHIFT SAMPLE MODE - press - Stop playback or load selected track</description>
         <group>[Sampler12]</group>
         <key>PioneerDDJFLX4.samplerPadShiftPressed</key>
         <status>0x98</status>
@@ -3111,7 +3111,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 1 (RIGHT) SAMPLE MODE - press - Play Sample or Load Track</description>
+        <description>PAD 1 (RIGHT) SAMPLE MODE - press - Start/restart loaded sample</description>
         <group>[Sampler5]</group>
         <key>PioneerDDJFLX4.samplerPadPressed</key>
         <status>0x99</status>
@@ -3121,7 +3121,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 1 (Right)+SHIFT SAMPLE MODE - press - Stop Playback or Eject Track</description>
+        <description>PAD 1 (Right)+SHIFT SAMPLE MODE - press - Stop playback or load selected track</description>
         <group>[Sampler5]</group>
         <key>PioneerDDJFLX4.samplerPadShiftPressed</key>
         <status>0x9A</status>
@@ -3131,7 +3131,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 2 (RIGHT) SAMPLE MODE - press - Play Sample or Load Track</description>
+        <description>PAD 2 (RIGHT) SAMPLE MODE - press - Start/restart loaded sample</description>
         <group>[Sampler6]</group>
         <key>PioneerDDJFLX4.samplerPadPressed</key>
         <status>0x99</status>
@@ -3141,7 +3141,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 2 (Right)+SHIFT SAMPLE MODE - press - Stop Playback or Eject Track</description>
+        <description>PAD 2 (Right)+SHIFT SAMPLE MODE - press - Stop playback or load selected track</description>
         <group>[Sampler6]</group>
         <key>PioneerDDJFLX4.samplerPadShiftPressed</key>
         <status>0x9A</status>
@@ -3151,7 +3151,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 3 (RIGHT) SAMPLE MODE - press - Play Sample or Load Track</description>
+        <description>PAD 3 (RIGHT) SAMPLE MODE - press - Start/restart loaded sample</description>
         <group>[Sampler7]</group>
         <key>PioneerDDJFLX4.samplerPadPressed</key>
         <status>0x99</status>
@@ -3161,7 +3161,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 3 (Right)+SHIFT SAMPLE MODE - press - Stop Playback or Eject Track</description>
+        <description>PAD 3 (Right)+SHIFT SAMPLE MODE - press - Stop playback or load selected track</description>
         <group>[Sampler7]</group>
         <key>PioneerDDJFLX4.samplerPadShiftPressed</key>
         <status>0x9A</status>
@@ -3171,7 +3171,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 4 (RIGHT) SAMPLE MODE - press - Play Sample or Load Track</description>
+        <description>PAD 4 (RIGHT) SAMPLE MODE - press - Start/restart loaded sample</description>
         <group>[Sampler8]</group>
         <key>PioneerDDJFLX4.samplerPadPressed</key>
         <status>0x99</status>
@@ -3181,7 +3181,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 4 (Right)+SHIFT SAMPLE MODE - press - Stop Playback or Eject Track</description>
+        <description>PAD 4 (Right)+SHIFT SAMPLE MODE - press - Stop playback or load selected track</description>
         <group>[Sampler8]</group>
         <key>PioneerDDJFLX4.samplerPadShiftPressed</key>
         <status>0x9A</status>
@@ -3191,7 +3191,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 5 (RIGHT) SAMPLE MODE - press - Play Sample or Load Track</description>
+        <description>PAD 5 (RIGHT) SAMPLE MODE - press - Start/restart loaded sample</description>
         <group>[Sampler13]</group>
         <key>PioneerDDJFLX4.samplerPadPressed</key>
         <status>0x99</status>
@@ -3201,7 +3201,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 5 (Right)+SHIFT SAMPLE MODE - press - Stop Playback or Eject Track</description>
+        <description>PAD 5 (Right)+SHIFT SAMPLE MODE - press - Stop playback or load selected track</description>
         <group>[Sampler13]</group>
         <key>PioneerDDJFLX4.samplerPadShiftPressed</key>
         <status>0x9A</status>
@@ -3211,7 +3211,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 6 (RIGHT) SAMPLE MODE - press - Play Sample or Load Track</description>
+        <description>PAD 6 (RIGHT) SAMPLE MODE - press - Start/restart loaded sample</description>
         <group>[Sampler14]</group>
         <key>PioneerDDJFLX4.samplerPadPressed</key>
         <status>0x99</status>
@@ -3221,7 +3221,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 6 (Right)+SHIFT SAMPLE MODE - press - Stop Playback or Eject Track</description>
+        <description>PAD 6 (Right)+SHIFT SAMPLE MODE - press - Stop playback or load selected track</description>
         <group>[Sampler14]</group>
         <key>PioneerDDJFLX4.samplerPadShiftPressed</key>
         <status>0x9A</status>
@@ -3231,7 +3231,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 7 (RIGHT) SAMPLE MODE - press - Play Sample or Load Track</description>
+        <description>PAD 7 (RIGHT) SAMPLE MODE - press - Start/restart loaded sample</description>
         <group>[Sampler15]</group>
         <key>PioneerDDJFLX4.samplerPadPressed</key>
         <status>0x99</status>
@@ -3241,7 +3241,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 7 (Right)+SHIFT SAMPLE MODE - press - Stop Playback or Eject Track</description>
+        <description>PAD 7 (Right)+SHIFT SAMPLE MODE - press - Stop playback or load selected track</description>
         <group>[Sampler15]</group>
         <key>PioneerDDJFLX4.samplerPadShiftPressed</key>
         <status>0x9A</status>
@@ -3251,7 +3251,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 8 (RIGHT) SAMPLE MODE - press - Play Sample or Load Track</description>
+        <description>PAD 8 (RIGHT) SAMPLE MODE - press - Start/restart loaded sample</description>
         <group>[Sampler16]</group>
         <key>PioneerDDJFLX4.samplerPadPressed</key>
         <status>0x99</status>
@@ -3261,7 +3261,7 @@
         </options>
       </control>
       <control>
-        <description>PAD 8 (Right)+SHIFT SAMPLE MODE - press - Stop Playback or Eject Track</description>
+        <description>PAD 8 (Right)+SHIFT SAMPLE MODE - press - Stop playback or load selected track</description>
         <group>[Sampler16]</group>
         <key>PioneerDDJFLX4.samplerPadShiftPressed</key>
         <status>0x9A</status>

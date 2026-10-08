@@ -1,6 +1,8 @@
-# Pioneer DDJ-FLX4 (Custom) — Controller Reference
+# Pioneer DDJ-FLX4 — Basic and optional Extended controls
 
-This file documents the current control layout and behavior of the custom Mixxx mapping for the Pioneer DDJ-FLX4.
+This file documents the Basic mapping for Mixxx 2.6. Basic works on its own and
+does not require the supplied custom effect chains. The optional Extended
+overlay changes only the controls listed in the Extended section below.
 
 It is intended as a practical reference for users and contributors.
 
@@ -8,15 +10,13 @@ It is intended as a practical reference for users and contributors.
 
 ## Scope
 
-This mapping is not the stock Mixxx mapping. Several behaviors were intentionally changed to provide:
+The XML loads `Pioneer-DDJ-FLX4-2.0.script.js` (Basic). The tested transport,
+hotcue banking, jog decoding, loop workflow and TRIM/CFX guard remain shared.
+Some functions depend on script options; see `CONFIGURATION.md`.
 
-* more predictable transport behavior
-* consistent LED feedback driven by engine state
-* explicit loop workflows
-* extended pad functionality
-* improved behavior where Mixxx defaults are limited
-
-Some functions are configurable in the script. Where relevant, this document notes that behavior may depend on script options.
+Extended is activated manually by loading `Pioneer-DDJ-FLX4-extended-scripts.js`
+after Basic with `functionprefix=""`. See [the activation instructions](README.md#enable-extended-manually-advanced--developer-setup).
+The supplied XML keeps Basic alone as the default.
 
 ---
 
@@ -26,17 +26,12 @@ Some functions are configurable in the script. Where relevant, this document not
 
 Each deck has its own Shift button. Shift modifies transport, loop, pad, browser, sync, and mixer behavior depending on the section.
 
-## Vinyl mode
+## Jog / Vinyl behavior
 
-Vinyl mode is handled per deck and affects jog behavior.
-
-Toggle:
-
-* **Shift + 4BEAT/EXIT**
-
-Vinyl mode is also inferred from controller MIDI state and not treated as a purely internal flag.
-
-Depending on script configuration, Vinyl mode can optionally modify PLAY button behavior (brake / soft start).
+Basic uses platter touch for scratch and the wheel side for pitch bend, including
+while playing. It does not send a Vinyl reset at startup. SHIFT + 4BEAT/EXIT
+has no Basic action. Extended starts with Vinyl OFF. Extended Vinyl Toggle
+currently has no controller binding; a new binding remains an open design decision.
 
 ## Sync behavior
 
@@ -95,13 +90,9 @@ Depending on configuration:
 
 * Play / Pause
 
-### Optional Vinyl Brake Mode (script option)
-
-If enabled:
-
-* stopped deck → soft start
-* playing deck → brake
-* during brake → cancel and resume
+While a Hot Cue preview is held, PLAY commits it to normal playback. Releasing
+the pad afterwards does not stop playback. Brake/soft-start is available only
+in Extended.
 
 ## Shift + Play
 
@@ -133,9 +124,8 @@ If enabled:
 
 ## Shift + Sync
 
-* Cycle tempo range:
-
-* ±8% → ±16% → ±32% → ±64% → ±100%
+* Basic: ±6% → ±10% → ±16% → ±25%
+* Extended: ±8% → ±16% → ±32% → ±64% → ±100%
 
 ## Tempo fader
 
@@ -145,30 +135,14 @@ If enabled:
 
 # Jog Wheels
 
-## Platter rotate
+## Platter rotate / touch
 
-### Vinyl ON
-
-* Scratch
-
-### Vinyl OFF
-
-* Pitch bend
-
-## Platter touch
-
-Scratch is enabled if:
-
-* deck is stopped
-* or Vinyl mode is active
-
-Otherwise:
-
-* bend mode
-
-## Controller vinyl state
-
-The script tracks the controller’s internal vinyl mode and uses it as input for scratch decisions.
+* Basic: touch enables scratch; the wheel side always bends pitch.
+* Extended: touch scratches while stopped or while that deck's Vinyl mode is ON;
+  while playing with Vinyl OFF, platter movement bends pitch.
+* Touch release disables scratch with the existing ramp behavior.
+* Both controller platter CCs remain supported; post-release Vinyl-ON jitter is
+  filtered as before.
 
 ## Shift + platter rotate
 
@@ -206,12 +180,18 @@ Script-controlled behavior.
 
 ## 4BEAT/EXIT
 
-* exit / re-enable loop
-* fallback: create default loop
+* No active loop → start a new four-beat loop at the current playback position.
+* Active loop → exit.
+* An old inactive loop is never reactivated by this button.
+
+This normal-button behavior is shared by Basic and Extended.
 
 ## Shift + 4BEAT/EXIT
 
-* Toggle Vinyl mode
+* Basic: no action. Rekordbox Active Loop arm/disarm is not implemented.
+* Extended: CDJ-style Reloop/Exit via Mixxx `reloop_toggle`: exit an active loop,
+  reactivate the same stored inactive loop, or do nothing if no loop exists.
+  It does not create a new four-beat loop.
 
 ## Loop adjust
 
@@ -262,70 +242,40 @@ Script-controlled behavior.
   * **HIGH** → EQ high
 
 #### Shift
-* control stem volumes:
-  * **LOW** → drums + bass stem volume
-  * **MID** → melody / instruments stem volume
-  * **HIGH** → vocals stem volume
 
-#### Soft takeover
-* separate soft takeover is used for:
-  * EQ mode
-  * stem mode
-* pickup state is reset automatically when switching between EQ and stem mode
-* this prevents abrupt jumps when returning from stem control to normal EQ operation
-* default pickup window: 2%; Shift stem assignments use `stemIndexMap`
+Basic continues to control ordinary EQ. Extended adds stem-volume routing with
+separate EQ/stem pickup; see the optional Extended section.
 
 ## Headphone Cue buttons
 
 * toggle PFL
 
-## Quantize / Keylock
+## Shift + Channel Cue
 
-Mapped to **Shift + Channel Cue buttons**
-
-### Short press
-
-* Quantize toggle
-
-### Long press
-
-* Keylock toggle
+* Basic: tap the deck's BPM (`bpm_tap`), with no hold timer.
+* Extended: short press toggles Quantize; hold for 350 ms toggles Keylock.
 
 ---
 
-# Beat FX Section
+# Basic Beat FX
 
-## Preset requirement
+Uses Mixxx EffectUnit1 and the user's existing effects. Startup shows the effect
+focus and enables standard soft takeover; it does not load custom presets or
+change routing. The controller position query supplies the channel selector.
 
-Beat FX navigation uses fixed absolute preset positions. All supplied effect
-chains named `01_` through `14_` must be installed without renaming or removing
-individual presets. Additional chain presets must not change their sorted
-positions. Otherwise the selected group or variant can point to a different
-effect.
+| Control | Basic action |
+| --- | --- |
+| FX SELECT | Load next effect in the focused slot |
+| SHIFT + FX SELECT | Load previous effect |
+| BEAT LEFT / RIGHT | Move focus between slots 1–3 |
+| ON/OFF | Toggle focused slot |
+| SHIFT + ON/OFF | Disable all three slots and set unit mix to zero |
+| LEVEL/DEPTH | Unit mix (official 2.6 7-bit behavior) |
+| SHIFT + LEVEL/DEPTH | Focused slot meta parameter |
+| Channel selector | Route Unit1 to Deck1, Deck2, or both |
 
-## FX SELECT
-
-* Cycle FX groups
-* Shift → cycle backward
-
-## BEAT LEFT / RIGHT
-
-* Cycle variants within current group
-
-## ON/OFF
-
-* toggle all slots
-* partial state → reset
-
-## Routing
-
-* Unit1 → Deck1
-* Unit2 → Deck2
-
-## LEVEL/DEPTH
-
-* 14-bit control
-* linear response by default (`fxTuning.shapedBeatFxKnob = false`)
+Basic needs no project-specific chain names or preset order. Custom dual-unit
+Beat FX is optional Extended behavior described below.
 
 ---
 
@@ -355,11 +305,13 @@ effect.
 
 ## Keyboard Mode
 
-* repurposed as STEMS
+* Basic: Hotcue Pitch Play (SHIFT + HOT CUE); every entry begins with Hotcue selection.
+* Extended: STEMS instead of Keyboard/Pitch Play (SHIFT + HOT CUE).
 
 ## Pad FX1 / Pad FX2
 
-* custom FX layers
+* Basic: not implemented; pads stay dark and perform no effect action.
+* Extended: the previous custom FX layers.
 
 ## Beat Jump / Beat Loop
 
@@ -367,7 +319,7 @@ effect.
 
 ## Sampler Mode
 
-* trigger / stop / eject
+* start/restart loaded samples; SHIFT stops or loads a selected track
 
 ## Key Shift Mode
 
@@ -433,31 +385,30 @@ starting hotcue.
 
 ---
 
-# STEMS Mode
+# Keyboard Pitch Play (Basic)
 
-## Pads 1–4
+1. Press SHIFT + HOT CUE to enter Keyboard mode. Every entry begins with Hotcue
+   selection; available hotcues in the current bank light up.
+2. Press a lit pad to select its hotcue. This selection press does not play it.
+3. Play the chosen hotcue at the pitches below. A stopped deck previews while
+   held and stops on release; a playing deck jumps using native Mixxx hotcue
+   activation.
+4. SHIFT + any pad selects another existing hotcue in the current bank.
 
-* mute toggle
+Pressing SHIFT + HOT CUE again while already in Keyboard also returns to Hotcue
+selection. Pitch Play becomes available only after selecting a hotcue. Leaving
+Keyboard or returning to selection releases a held Keyboard hotcue. Loading
+another track also clears the selection.
 
-### Shift
+Empty pads do not create hotcues. Keyboard uses the current Hot Cue bank; switch
+banks in Hot Cue mode first to select hotcues 9–32.
 
-* isolate
+| Pad | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Semitone offset | +4 | +5 | +6 | +7 | 0 | +1 | +2 | +3 |
 
-## Pads 5–8
-
-Configurable:
-
-### solo
-
-* default mode
-* held pad → momentary solo; Shift + held pad → momentary hold-mute
-* release restores the previous mute state
-* the first held pad owns the action; additional momentary presses are ignored
-  until its matching release
-
-### fx
-
-* stem FX control
+SHIFT + Pads 7/8 also select hotcues; range shifting is not implemented. Pitch
+changes use Mixxx's deck pitch adjustment and remain after leaving Keyboard.
 
 ---
 
@@ -469,9 +420,13 @@ Configurable:
 
 ## Behavior
 
-* press → play / load
-* long press → stop
-* shift → stop / eject
+* press → start/restart a loaded sample from the beginning of the track
+* normal press on an empty pad → no action
+* SHIFT + playing pad → stop
+* SHIFT + stopped/empty pad → load the selected library track (replaces a stopped sample)
+* release → no additional action
+
+There is no sampler long-press action or hold timer, in either variant.
 
 ## LEDs
 
@@ -493,7 +448,9 @@ Shift layer reserved (no action).
 
 ## General
 
-All LEDs are script-driven and follow Mixxx engine state.
+LED feedback follows Mixxx engine state. Transport, PFL and Sync use native
+XML outputs; mode, hotcue, loop, sampler and effect feedback also use the
+existing script callbacks.
 
 ## Hotcues
 
@@ -508,11 +465,11 @@ All LEDs are script-driven and follow Mixxx engine state.
 
 * explicit state machine
 
-## Pad FX
+## Pad FX (Extended only)
 
 * slot / unit / routing state
 
-## STEMS
+## STEMS (Extended only)
 
 * mute / FX / availability
 
@@ -522,29 +479,129 @@ All LEDs are script-driven and follow Mixxx engine state.
 
 ---
 
-# Configurable Script Options
+# Optional Extended controls
 
-Examples:
+Extended reuses Basic for controls not listed here, including Hotcue preview
+and its PLAY commit, Key Shift, Sampler, Instant Doubles, Browse and normal loops.
 
-* `BROWSE_FOCUS_TOGGLE_ONLY`
-* `SAMPLER_LONGPRESS_MS`
-* `QUANTIZE_LONGPRESS_MS`
-* `LOOP_ADJUST_MODE`
-* `loopAdjustStepBeats`
-* `loopAdjustTimeoutMs`
-* `STEMS_PAD5_8_MODE`
-* `PLAY_BRAKE_ON_VINYL`
-* `hotcueBankCount`
-* `HOTCUE_STOPPED_MODE`
+## Keyboard → STEMS
+
+SHIFT + HOT CUE opens Stems instead of Basic's Keyboard/Pitch Play.
+
+### Pads 1–4
+
+* mute toggle
+
+### Shift
+
+* isolate
+
+### Pads 5–8
+
+Configurable:
+
+### solo
+
+* default mode
+* held pad → momentary solo; Shift + held pad → momentary hold-mute
+* release restores the previous mute state
+* the first held pad owns the action; additional momentary presses are ignored
+  until its matching release
+
+### fx
+
+* stem FX control
+
+
+## SHIFT + EQ → Stem volume
+
+* LOW → drums + bass; MID → melody/instruments; HIGH → vocals.
+* Assignments use `stemIndexMap`; verify the stem order of your tracks.
+* Each deck has separate EQ/stem pickup state, reset on mode changes (2% window).
+
+## SHIFT + 4BEAT/EXIT
+
+* CDJ-style Reloop/Exit via Mixxx `reloop_toggle`.
+* Active loop → exit; stored inactive loop → reloop the same loop.
+* No previous loop → no new loop is created.
+
+## Vinyl / PLAY
+
+* Extended Vinyl Toggle currently has no controller binding; a new binding
+  remains an open design decision.
+* The existing Brake/SoftStart code remains available and requires Vinyl ON.
+* `PLAY_BRAKE_ON_VINYL` defaults to false.
+* When enabled with Vinyl ON: stopped → soft start; playing → brake;
+  press during brake → cancel and resume.
+* PLAY still commits a held Hotcue preview using Basic's implementation.
+
+## SHIFT + Channel Cue
+
+* Short press → Quantize toggle.
+* Hold for 350 ms (`QUANTIZE_LONGPRESS_MS`) → Keylock toggle.
+* The release after a long press does not toggle Quantize.
+
+## Custom Beat FX
+
+* FX SELECT cycles groups (SHIFT cycles backwards).
+* BEAT LEFT/RIGHT selects variants within a group.
+* ON/OFF toggles the selected units and all their slots; a partial ON state is
+  switched fully OFF. SHIFT + ON/OFF disables the selected targets.
+* Unit1 → Deck1, Unit2 → Deck2; the selector chooses the active target(s).
+* LEVEL/DEPTH is 14-bit: `super1`; SHIFT controls unit mix.
+* Extended initializes the custom presets and dual routing at startup.
+
+This preserves the current preset-position requirement: all supplied chains
+`01_` through `14_` must keep their sorted positions. Extra presets or renamed/
+missing chains can select a different effect. Manual GUI preset changes can
+also desynchronize the remembered group/variant; robust name-based selection
+remains a separate design point.
+
+## Pad FX1 / Pad FX2
+
+Pad FX1 uses Unit1/2; Pad FX2 uses Unit3/4 for Deck1/2 respectively.
+
+| Pads | Action |
+| --- | --- |
+| 1–3 | Toggle effect slots 1–3; turning a slot ON arms its unit and own-deck route |
+| 4 | Toggle unit enabled |
+| 5 | Toggle own-deck routing |
+| 6 | Toggle other-deck routing |
+| 7 | No action |
+| 8 | Toggle unit and all slots |
+
+Normal and SHIFT layers share these Pad FX actions. Turning a slot OFF does not
+re-enable a manually disabled unit or route. Units 1/2 are shared with Extended
+Beat FX, as before.
+
+## Shutdown
+
+Extended restores a held Stem solo/hold-mute, stops brake/soft-start and its
+watchers, cancels Quantize/Keylock hold timers and disconnects its added engine
+connections. Basic handles common Hotcue, scratch, load, loop and LED cleanup.
 
 ---
 
-# Known Differences
+# Configurable Script Options
 
-* No persistent Beat Sync mode
-* Engine-driven LED behavior
-* Custom pad layers
-* Optional vinyl brake behavior
+Basic options include `BROWSE_FOCUS_TOGGLE_ONLY`, `LOOP_ADJUST_MODE`,
+`loopAdjustStepBeats`, `loopAdjustTimeoutMs`, `hotcueBankCount` and
+`HOTCUE_STOPPED_MODE`.
+
+Extended options include `STEMS_PAD5_8_MODE`, `stemIndexMap`,
+`eqStemPickupThreshold`, `PLAY_BRAKE_ON_VINYL`, `vinylFx`,
+`QUANTIZE_LONGPRESS_MS` and the custom Beat FX knob curves.
+
+---
+
+# Remaining differences
+
+* SHIFT + CUE/LOOP CALL retains 32-beat quick jumps, not Memory Cue navigation.
+* Active Loop arm/disarm and Keyboard range shifting are not implemented.
+* PAD FX1 / PAD FX2 are unavailable in Basic; Smart Fader is not implemented.
+* Sync retains the existing one-shot / persistent-lock Mixxx workflow.
+* Extended Beat FX retains its fixed preset-order and GUI-state limitations.
+* Extended Vinyl Toggle still needs a controller binding.
 
 ---
 
@@ -557,4 +614,4 @@ When changing behavior:
 3. update this file
 4. document actual behavior only
 
-Script overrides XML if conflicts exist.
+The XML routes controls to Basic handlers; Extended overrides only its defined hooks.
