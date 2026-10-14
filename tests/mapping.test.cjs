@@ -523,7 +523,9 @@ test("Overlay runs Basic init once, custom init once, with one keepalive", () =>
     assert.equal(h.get(unit, "loaded_chain_preset"), 3);
     assert.equal(h.get("[EffectRack1_EffectUnit2]", "loaded_chain_preset"), 3);
     assert.ok(h.connections.some(c => c.control === "stem_count"));
-    assert.ok(h.messages.some(([s, n, v]) => s === 0x90 && n === 0x17 && v === 0));
+    assert.deepEqual(plain(h.m._vinylWanted), [false, false]);
+    assert.deepEqual(h.messages.filter(([s, n]) => [0x90, 0x91].includes(s) && n === 0x17),
+        [[0x90, 0x17, 0], [0x91, 0x17, 0]]);
 });
 
 test("Extended Keyboard keeps Stem owner safety and matching restore", () => {
@@ -583,33 +585,75 @@ test("Extended SHIFT + EQ keeps Stem routing, pickup and deck-local SHIFT", () =
     assert.equal(h.m.eqStemLastMode[decks[1]], "eq");
 });
 
-test("Extended SHIFT + 4BEAT uses only reloop_toggle, never Vinyl or a new 4-beat loop", () => {
-    decks.forEach(group => {
+test("Extended SHIFT + 4BEAT toggles Vinyl on press without changing loops", () => {
+    decks.forEach((group, index) => {
         ["none", "stored", "active"].forEach(state => {
             const h = mapping(true);
+            const status = 0x90 + index;
             h.seed(group, "track_loaded", 1);
             h.seed(group, "loop_enabled", state === "active" ? 1 : 0);
             h.seed(group, "loop_start_position", state === "none" ? -1 : 100);
             h.seed(group, "loop_end_position", state === "none" ? -1 : 200);
             h.writes.length = 0;
             h.messages.length = 0;
-            h.press("shiftReloopExitPressed", group);
-            assert.deepEqual(h.writes, [[group, "reloop_toggle", 1]]);
-            h.press("shiftReloopExitPressed", group, 0, 0x90, 0);
-            assert.deepEqual(h.writes, [[group, "reloop_toggle", 1]], "Release does nothing");
-            assert.deepEqual(plain(h.m._vinylWanted), [false, false]);
-            assert.equal(h.messages.length, 0, "No hardware Vinyl command");
+            const timers = h.timers.size;
+            const messages = [];
+            [true, false].forEach(on => {
+                h.press("shiftReloopExitPressed", group, 0x50, status);
+                const expected = [false, false];
+                expected[index] = on;
+                messages.push([status, 0x17, on ? 0x7F : 0]);
+                assert.deepEqual(plain(h.m._vinylWanted), expected);
+                assert.equal(h.m.jogVinylEnabled(group), on);
+                assert.deepEqual(h.messages, messages, "One hardware command per press");
+                [0, 1].forEach(value => {
+                    h.press("shiftReloopExitPressed", group, 0x50, status, value);
+                    assert.deepEqual(plain(h.m._vinylWanted), expected, "Only 0x7F toggles");
+                    assert.deepEqual(h.messages, messages, "No hardware command on release");
+                });
+                assert.deepEqual(h.writes, [], "No reloop_toggle or other loop control");
+                assert.equal(h.timers.size, timers, "No additional timers");
+            });
         });
     });
 });
 
-test("Extended Vinyl helper still sets each deck's hardware vinyl state", () => {
+test("Extended Vinyl toggles both decks independently", () => {
     const h = mapping(true);
-    h.m._applyVinylState(1, true);
-    assert.deepEqual(plain(h.m._vinylWanted), [false, true]);
-    assert.ok(h.messages.some(([s, n, v]) => s === 0x91 && n === 0x17 && v === 0x7F));
-    assert.equal(h.m.jogVinylEnabled(decks[0]), false);
-    assert.equal(h.m.jogVinylEnabled(decks[1]), true);
+    [[0, [true, false]], [1, [true, true]], [0, [false, true]], [1, [false, false]]]
+        .forEach(([index, expected]) => {
+            h.press("shiftReloopExitPressed", decks[index], 0x50, 0x90 + index);
+            assert.deepEqual(plain(h.m._vinylWanted), expected);
+            assert.deepEqual(decks.map(group => h.m.jogVinylEnabled(group)), expected);
+        });
+});
+
+test("Extended Vinyl toggle switches playing platter touch between bend and scratch", () => {
+    decks.forEach((group, index) => {
+        const h = mapping(true);
+        const status = 0x90 + index;
+        h.seed(group, "play", 1);
+        [false, true, false].forEach(on => {
+            if (h.m.jogVinylEnabled(group) !== on) {
+                h.press("shiftReloopExitPressed", group, 0x50, status);
+            }
+            h.writes.length = 0;
+            h.fxCalls.length = 0;
+            h.press("jogTouch", group, 0x36, status);
+            assert.equal(h.scratch.has(index + 1), on);
+            h.press("jogTurn", group, on ? 0x22 : 0x23, 0xB0 + index, 65);
+            if (on) {
+                assert.ok(h.fxCalls.some(call => call[0] === "tick"
+                    && call[1] === index + 1 && call[2] === 1.8));
+                assert.deepEqual(h.writes, []);
+            } else {
+                assert.deepEqual(h.writes, [[group, "jog", 0.8]]);
+                assert.deepEqual(h.fxCalls, []);
+            }
+            h.press("jogTouch", group, 0x36, status, 0);
+            assert.equal(h.scratch.has(index + 1), false);
+        });
+    });
 });
 
 test("Extended PLAY uses Basic by default, optional softstart/brake can cancel", () => {

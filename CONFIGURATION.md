@@ -95,8 +95,8 @@ Without an active loop, 4BEAT/EXIT starts a new four-beat loop at the current
 playback position. With an active loop, it exits. It does not reactivate a
 stored inactive loop, and the four-beat size is not configurable.
 
-SHIFT + 4BEAT/EXIT has no Basic action. Extended uses Mixxx `reloop_toggle`
-for CDJ-style Reloop/Exit, without creating a new loop.
+SHIFT + 4BEAT/EXIT has no Basic action. In Extended it toggles Vinyl ON/OFF
+independently for each deck. Both decks start with Vinyl OFF.
 
 ---
 
@@ -251,9 +251,11 @@ Default: solo
 
 # Transport / Vinyl Behavior (Extended only)
 
-Extended Vinyl Toggle currently has no controller binding. A new binding is
-an open design decision. Extended starts with Vinyl OFF; the existing
-Brake/SoftStart implementation remains present but requires Vinyl ON.
+Extended starts with Vinyl OFF on both decks. SHIFT + 4BEAT/EXIT toggles Vinyl
+ON/OFF for that deck. Vinyl ON enables platter-touch scratching during playback;
+Vinyl OFF keeps playback pitch bend, with scratch still available while stopped.
+The existing Brake/SoftStart implementation requires Vinyl ON and is disabled
+by default.
 
 ## PLAY_BRAKE_ON_VINYL
 

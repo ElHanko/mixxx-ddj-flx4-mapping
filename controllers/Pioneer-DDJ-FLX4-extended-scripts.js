@@ -1072,9 +1072,11 @@ PioneerDDJFLX4._applyVinylState = function(deckIdx, on) {
 
 };
 
+// Keep the shared XML handler name for compatibility; Extended uses it for Vinyl.
 PioneerDDJFLX4.shiftReloopExitPressed = function(_channel, _control, value, _status, group) {
     if (value === 0x7F) {
-        script.triggerControl(group, "reloop_toggle");
+        const deckIdx = PioneerDDJFLX4._deckIndexFromGroup(group);
+        PioneerDDJFLX4._applyVinylState(deckIdx, !PioneerDDJFLX4._vinylWanted[deckIdx]);
     }
 };
 

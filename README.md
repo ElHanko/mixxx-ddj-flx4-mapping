@@ -36,7 +36,7 @@ Stems, Pad FX and custom Beat FX presets.
 - **Extended Beat FX and Pad FX:** browse Echo, Reverb, Trans, Flanger and Phaser
   presets, and control effect slots and routing from Pad FX1 / FX2.
 - **Smart CFX in both variants:** toggle Mixxx QuickEffect and cycle its presets
-  with SHIFT. Extended also adds Quantize/Keylock shortcuts and Reloop/Exit.
+  with SHIFT. Extended also adds Quantize/Keylock shortcuts and a per-deck Vinyl toggle.
 
 ## Basic vs. Extended
 
@@ -52,7 +52,7 @@ controls for stem and effect performance.
 | Pad FX1 / FX2 | Unassigned | Effect slots, unit enable and routing |
 | Beat FX | Native Mixxx effects | Custom preset groups and variants |
 | SHIFT + Channel CUE | BPM Tap | Short press: Quantize; hold: Keylock |
-| SHIFT + 4BEAT/EXIT | Unassigned | Reloop/Exit for the stored loop |
+| SHIFT + 4BEAT/EXIT | Unassigned | Vinyl ON/OFF for that deck |
 | SHIFT + SYNC tempo ranges | ±6 / 10 / 16 / 25% | ±8 / 16 / 32 / 64 / 100% |
 | Additional effect chains | Not required | Supplied chains required |
 
@@ -163,10 +163,11 @@ refresh the local Extended presets. The repository's Basic XML stays unchanged.
 - Manual preset changes in the Mixxx GUI can also put Extended's remembered
   group/variant out of step. A dedicated profile such as `.mixxx-test` is useful
   when your other effect chains conflict with the required order.
-- Extended starts with Vinyl OFF and currently has no controller binding to
-  toggle it. Scratch is available while stopped; platter movement bends pitch
-  during playback with Vinyl OFF. The optional brake/soft-start implementation
-  requires Vinyl ON and is disabled by default. See [Configuration](CONFIGURATION.md).
+- Extended starts with Vinyl OFF on both decks. SHIFT + 4BEAT/EXIT toggles Vinyl
+  independently for each deck. With Vinyl ON, platter touch scratches during
+  playback; with Vinyl OFF, platter movement bends pitch during playback.
+  Scratch remains available while stopped. The optional brake/soft-start
+  implementation requires Vinyl ON and is disabled by default. See [Configuration](CONFIGURATION.md).
 
 </details>
 

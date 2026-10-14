@@ -30,8 +30,9 @@ Each deck has its own Shift button. Shift modifies transport, loop, pad, browser
 
 Basic uses platter touch for scratch and the wheel side for pitch bend, including
 while playing. It does not send a Vinyl reset at startup. SHIFT + 4BEAT/EXIT
-has no Basic action. Extended starts with Vinyl OFF. Extended Vinyl Toggle
-currently has no controller binding; a new binding remains an open design decision.
+has no Basic action. Extended starts with Vinyl OFF on both decks; SHIFT +
+4BEAT/EXIT toggles Vinyl ON/OFF independently for each deck. Vinyl ON enables
+platter-touch scratching during playback; Vinyl OFF keeps playback pitch bend.
 
 ## Sync behavior
 
@@ -189,9 +190,8 @@ This normal-button behavior is shared by Basic and Extended.
 ## Shift + 4BEAT/EXIT
 
 * Basic: no action. Rekordbox Active Loop arm/disarm is not implemented.
-* Extended: CDJ-style Reloop/Exit via Mixxx `reloop_toggle`: exit an active loop,
-  reactivate the same stored inactive loop, or do nothing if no loop exists.
-  It does not create a new four-beat loop.
+* Extended: toggle Vinyl ON/OFF for that deck. Both decks start with Vinyl OFF.
+  The normal 4BEAT/EXIT loop action is unchanged.
 
 ## Loop adjust
 
@@ -521,14 +521,14 @@ Configurable:
 
 ## SHIFT + 4BEAT/EXIT
 
-* CDJ-style Reloop/Exit via Mixxx `reloop_toggle`.
-* Active loop → exit; stored inactive loop → reloop the same loop.
-* No previous loop → no new loop is created.
+* Toggles Vinyl ON/OFF independently for each deck.
+* Vinyl ON → platter touch scratches during playback.
+* Vinyl OFF → platter movement bends pitch during playback; touch still
+  scratches while stopped.
 
 ## Vinyl / PLAY
 
-* Extended Vinyl Toggle currently has no controller binding; a new binding
-  remains an open design decision.
+* Both decks start with Vinyl OFF; toggle it with SHIFT + 4BEAT/EXIT.
 * The existing Brake/SoftStart code remains available and requires Vinyl ON.
 * `PLAY_BRAKE_ON_VINYL` defaults to false.
 * When enabled with Vinyl ON: stopped → soft start; playing → brake;
@@ -601,7 +601,6 @@ Extended options include `STEMS_PAD5_8_MODE`, `stemIndexMap`,
 * PAD FX1 / PAD FX2 are unavailable in Basic; Smart Fader is not implemented.
 * Sync retains the existing one-shot / persistent-lock Mixxx workflow.
 * Extended Beat FX retains its fixed preset-order and GUI-state limitations.
-* Extended Vinyl Toggle still needs a controller binding.
 
 ---
 

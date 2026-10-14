@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 - C_Noise sweep effect for Beat FX
 
 ### Changed
+- Extended SHIFT + 4BEAT/EXIT now toggles Vinyl instead of Reloop/Exit; Basic remains unassigned.
 - EQ knobs are now routed through script handlers instead of direct XML EQ bindings
 - EQ / stem handling now uses 14-bit script-side routing
 - Scratch feel improved by increasing `scratchScale`
@@ -23,11 +24,12 @@ All notable changes to this project will be documented in this file.
 - Setup and control documentation updated to reflect current EQ/stem and setup behavior
 
 ### Fixed
+- Restored Extended's independent per-deck Vinyl toggle on SHIFT + 4BEAT/EXIT, including platter-touch scratching during playback (#8).
 - Added required script binding for EQ script handlers
 - Reset soft takeover state when switching between EQ and stem mode
 - Stop and reset all mapping-owned timers during controller shutdown
 - Restored loop adjust behavior in `jogTurn`
-- Made vinyl mode deterministic and forced startup with vinyl off
+- Made Extended vinyl mode deterministic and forced startup with vinyl off on both decks
 - Setup script now handles directories correctly when linking Mixxx assets
 - Prevented instant double from overwriting the playing deck
 - Swapped Smart CFX normal and shift behavior to match intended workflow
